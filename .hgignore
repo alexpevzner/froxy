@@ -1,0 +1,10 @@
+syntax: glob
+
+bin/*
+*.o
+*.orig
+pkg/*
+.*.swp
+tags
+core
+core.*
