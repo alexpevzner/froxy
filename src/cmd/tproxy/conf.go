@@ -6,8 +6,12 @@ import (
 	"time"
 )
 
-const LISTEN_PORT = 8888
-const CONNECT_TIMEOUT = 10 * time.Second
+const (
+	CONNECT_TIMEOUT = 10 * time.Second
+
+	DEFAULT_CLIENT_CFG = "client.cfg"
+	DEFAULT_SERVER_CFG = "server.cfg"
+)
 
 //
 // Server configuration
