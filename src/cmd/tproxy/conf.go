@@ -17,19 +17,19 @@ const (
 // Server configuration
 //
 type CfgServer struct {
-	Port  int               `hcl:port`  // TCP port
-	Users map[string]string `hcl:users` // Users[login] = password
-	Sites []string          `hcl:sites` // List of tunneled sites
+	Port  int               // TCP port
+	Users map[string]string // Users[login] = password
 }
 
 //
 // Client configuration
 //
 type CfgClient struct {
-	Port     int    `hcl:port`     // TCP port
-	Server   string `hcl:server`   // Server URL
-	Login    string `hcl:login`    // User login
-	Password string `hcl:password` // User password
+	Port     int      // TCP port
+	Server   string   // Server URL
+	Login    string   // User login
+	Password string   // User password
+	Sites    []string // List of tunneled sites
 }
 
 //
@@ -75,14 +75,6 @@ func LoadCfgServer(path string) (*CfgServer, error) {
 	}
 
 	cfg.Users = s.KeysHash()
-
-	// Get sites
-	s, err = ini.GetSection("sites")
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.Sites = strings.Fields(s.Body())
 
 	return cfg, err
 }
@@ -142,6 +134,14 @@ func LoadCfgClient(path string) (*CfgClient, error) {
 	}
 
 	cfg.Password = k.String()
+
+	// Get sites
+	s, err = ini.GetSection("sites")
+	if err != nil {
+		return nil, err
+	}
+
+	cfg.Sites = strings.Fields(s.Body())
 
 	return cfg, err
 }
