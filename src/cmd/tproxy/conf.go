@@ -2,6 +2,7 @@ package main
 
 import (
 	"github.com/go-ini/ini"
+	"net/url"
 	"strings"
 	"time"
 )
@@ -26,7 +27,7 @@ type CfgServer struct {
 //
 type CfgClient struct {
 	Port     int      // TCP port
-	Server   string   // Server URL
+	Server   *url.URL // Server URL
 	Login    string   // User login
 	Password string   // User password
 	Sites    []string // List of tunneled sites
@@ -37,12 +38,7 @@ type CfgClient struct {
 //
 func LoadCfgServer(path string) (*CfgServer, error) {
 	// Load INI file
-	ini, err := ini.LoadSources(
-		ini.LoadOptions{
-			UnparseableSections: []string{"sites"},
-		},
-		path,
-	)
+	ini, err := ini.Load(path)
 
 	if err != nil {
 		return nil, err
@@ -84,7 +80,12 @@ func LoadCfgServer(path string) (*CfgServer, error) {
 //
 func LoadCfgClient(path string) (*CfgClient, error) {
 	// Load INI file
-	ini, err := ini.Load(path)
+	ini, err := ini.LoadSources(
+		ini.LoadOptions{
+			UnparseableSections: []string{"sites"},
+		},
+		path,
+	)
 
 	if err != nil {
 		return nil, err
@@ -119,7 +120,10 @@ func LoadCfgClient(path string) (*CfgClient, error) {
 		return nil, err
 	}
 
-	cfg.Server = k.String()
+	cfg.Server, err = url.Parse(k.String())
+	if err != nil {
+		return nil, err
+	}
 
 	k, err = s.GetKey("login")
 	if err != nil {

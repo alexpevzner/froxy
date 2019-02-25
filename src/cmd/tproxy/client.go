@@ -9,6 +9,8 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
 	"tproxy/log"
 )
 
@@ -18,6 +20,7 @@ import (
 type tproxyClient struct {
 	cfg     *CfgClient   // Client configuration
 	httpSrv *http.Server // Local HTTP server instance
+	router  *Router      // Request router
 }
 
 // ----- Proxying regular HTTP requests (GET/PUT/HEAD etc) -----
@@ -25,6 +28,26 @@ type tproxyClient struct {
 // Regular HTTP request handler
 //
 func (proxy *tproxyClient) handleRegularHttp(w http.ResponseWriter, r *http.Request) {
+	forward := proxy.router.Route(r.URL)
+	log.Debug("forward=%v", forward)
+	log.Debug("host=%v", r.Host)
+
+	httpRemoveHopByHopHeaders(r.Header)
+	if forward {
+		r.URL, _ = url.Parse(proxy.cfg.Server.String() + "/exec?" + r.URL.String())
+		r.Header.Set("X-Tproxy-Host", r.Host)
+		r.Host = proxy.cfg.Server.Host
+
+		h := r.Header.Get("Proxy-Authorization")
+		if h != "" {
+			r.Header.Set("X-Tproxy-Authorization", h)
+			r.Header.Del("Proxy-Authorization")
+		}
+	}
+
+	dump, _ := httputil.DumpRequest(r, false)
+	log.Debug("===== request =====\n%s", dump)
+
 	resp, err := http.DefaultTransport.RoundTrip(r)
 	if err != nil {
 		log.Debug("  %s", err)
@@ -32,22 +55,24 @@ func (proxy *tproxyClient) handleRegularHttp(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	proxy.copyHttpHeaders(w.Header(), resp.Header)
+	if forward {
+		if resp.StatusCode == http.StatusUnauthorized {
+			h := resp.Header.Get("X-Tproxy-Authenticate")
+			if h != "" {
+				resp.StatusCode = http.StatusProxyAuthRequired
+				resp.Header.Set("Proxy-Authenticate", h)
+			}
+		}
+	}
+
+	dump, _ = httputil.DumpResponse(resp, false)
+	log.Debug("===== response =====\n%s", dump)
+
+	httpCopyHeaders(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
 
 	resp.Body.Close()
-}
-
-//
-// Copy HTTP headers
-//
-func (proxy *tproxyClient) copyHttpHeaders(dst, src http.Header) {
-	for k, vv := range src {
-		for _, v := range vv {
-			dst.Add(k, v)
-		}
-	}
 }
 
 // ----- Proxying CONNECT request -----
@@ -90,6 +115,7 @@ func (proxy *tproxyClient) transferData(destination io.WriteCloser, source io.Re
 func (proxy *tproxyClient) httpHandler(w http.ResponseWriter, r *http.Request) {
 	log.Debug("%s %s %s", r.Proto, r.Method, r.URL)
 
+	// Handle request
 	if r.Method == http.MethodConnect {
 		proxy.handleConnect(w, r)
 	} else {
@@ -120,13 +146,16 @@ func newTproxyClient(cfgPath string) (*tproxyClient, error) {
 
 	// Create tproxyClient structure
 	proxy := &tproxyClient{
-		cfg: cfg,
+		cfg:    cfg,
+		router: NewRouter(),
 	}
 
 	proxy.httpSrv = &http.Server{
 		Addr:    fmt.Sprintf("127.1:%d", cfg.Port),
 		Handler: http.HandlerFunc(proxy.httpHandler),
 	}
+
+	proxy.router.SetSites(cfg.Sites)
 
 	return proxy, nil
 }

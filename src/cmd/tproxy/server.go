@@ -5,10 +5,15 @@
 package main
 
 import (
+	"bytes"
 	"crypto/subtle"
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
+	"net/http/httputil"
+	"net/url"
+	"strings"
 	"tproxy/log"
 )
 
@@ -32,7 +37,39 @@ func (server *tproxyServer) httpConnHandler(w http.ResponseWriter, r *http.Reque
 // /exec handler - executes regular HTTP requests
 //
 func (server *tproxyServer) httpExecHandler(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Not implemented", http.StatusInternalServerError)
+	var err error
+
+	r.URL, err = url.Parse(r.URL.RawQuery)
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusBadGateway)
+		return
+	}
+
+	r.Host = r.Header.Get("X-Tproxy-Host")
+	r.Header.Del("X-Tproxy-Host")
+	r.Header.Del("X-Tproxy-Authorization")
+
+	httpRemoveHopByHopHeaders(r.Header)
+	r.RequestURI = ""
+
+	dump, _ := httputil.DumpRequest(r, false)
+	log.Debug("===== decoded request =====\n%s", dump)
+
+	resp, err := http.DefaultTransport.RoundTrip(r)
+	if err != nil {
+		log.Debug("  %s", err)
+		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+
+	dump, _ = httputil.DumpResponse(resp, false)
+	log.Debug("===== response =====\n%s", dump)
+
+	httpCopyHeaders(w.Header(), resp.Header)
+	w.WriteHeader(resp.StatusCode)
+	io.Copy(w, resp.Body)
+
+	resp.Body.Close()
 }
 
 //
@@ -46,11 +83,13 @@ func (server *tproxyServer) httpAuthHandler(w http.ResponseWriter, r *http.Reque
 // HTTP request handler
 //
 func (server *tproxyServer) httpHandler(w http.ResponseWriter, r *http.Request) {
+	dump, _ := httputil.DumpRequest(r, false)
+	log.Debug("===== request =====\n%s", dump)
+
 	// Handle user authentication
-	user, password, ok := r.BasicAuth()
+	user, password, ok := server.getProxyUserPassword(r)
 	if !ok || len(user) == 0 || len(password) == 0 {
-		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-		http.Error(w, "Authentication Required", http.StatusUnauthorized)
+		server.statusUnauthorized(w, r)
 		return
 	}
 
@@ -69,13 +108,51 @@ func (server *tproxyServer) httpHandler(w http.ResponseWriter, r *http.Request) 
 		len(pwd_bytes) == len(good_pwd_bytes)
 
 	if !ok {
-		w.Header().Set("WWW-Authenticate", `Basic realm="Restricted"`)
-		http.Error(w, "Not authorized", http.StatusUnauthorized)
+		server.statusUnauthorized(w, r)
 		return
 	}
 
 	// Now forward request to multiplexer
 	server.mux.ServeHTTP(w, r)
+}
+
+//
+// Get proxy authentication credentials
+//
+func (server *tproxyServer) getProxyUserPassword(r *http.Request) (user, password string, ok bool) {
+	auth := r.Header.Get("X-Tproxy-Authorization")
+	if auth == "" {
+		return
+	}
+
+	log.Debug("auth=%s", auth)
+
+	const prefix = "Basic "
+	if len(auth) < len(prefix) || !strings.EqualFold(auth[:len(prefix)], prefix) {
+		return
+	}
+
+	decoded, err := base64.StdEncoding.DecodeString(auth[len(prefix):])
+	if err != nil {
+		return
+	}
+
+	log.Debug("decoded=%s", decoded)
+	sep := bytes.IndexByte(decoded, ':')
+	if sep < 0 {
+		return
+	}
+
+	return string(decoded[:sep]), string(decoded[sep+1:]), true
+}
+
+//
+// Finish request with the http.StatusUnauthorized response
+//
+func (server *tproxyServer) statusUnauthorized(w http.ResponseWriter, r *http.Request) {
+	w.Header().Set("X-Tproxy-Authenticate", `Basic realm="Tproxy authentication required"`)
+	http.Error(w, "Not authorized", http.StatusUnauthorized)
+
 }
 
 //
