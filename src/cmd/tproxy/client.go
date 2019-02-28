@@ -211,7 +211,7 @@ func newTproxyClient(cfgPath string) (*tproxyClient, error) {
 	}
 
 	proxy.httpSrv = &http.Server{
-		Addr:    fmt.Sprintf("127.1:%d", cfg.Port),
+		Addr:    fmt.Sprintf("127.0.0.1:%d", cfg.Port),
 		Handler: http.HandlerFunc(proxy.httpHandler),
 	}
 
