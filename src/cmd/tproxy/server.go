@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -30,7 +31,21 @@ type tproxyServer struct {
 // /conn handler - handles CONNECT requests
 //
 func (server *tproxyServer) httpConnHandler(w http.ResponseWriter, r *http.Request) {
-	http.Error(w, "Not implemented", http.StatusInternalServerError)
+	// Establish destination connection
+	dest_conn, err := net.DialTimeout("tcp", r.URL.RawQuery, CONNECT_TIMEOUT)
+
+	if err != nil {
+		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		return
+	}
+
+	// Switch to websocket mode
+	ws, err := websockUpgrade(w, r)
+	if err != nil {
+		return
+	}
+
+	ioTransferData(ws, dest_conn)
 }
 
 //

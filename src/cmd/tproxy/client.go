@@ -108,14 +108,16 @@ func (proxy *tproxyClient) handleConnectViaProxy(w http.ResponseWriter, r *http.
 	log.Debug("dial %s", url)
 	dest_websocket, resp, err := websockDial(url, hdr)
 
-	if resp != nil {
+	switch {
+	case dest_websocket != nil:
+		proxy.organizeDataConnection(w, dest_websocket)
+	case resp != nil:
 		proxy.returnHttpResponse(w, resp, true)
-		return
+	case err != nil:
+		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+	default:
+		panic("internal error")
 	}
-
-	_ = err
-
-	proxy.organizeDataConnection(w, dest_websocket)
 }
 
 //
@@ -128,7 +130,6 @@ func (proxy *tproxyClient) handleConnectDirectly(w http.ResponseWriter, r *http.
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
-	w.WriteHeader(http.StatusOK)
 
 	proxy.organizeDataConnection(w, dest_conn)
 }
@@ -152,6 +153,8 @@ func (proxy *tproxyClient) handleConnect(w http.ResponseWriter, r *http.Request)
 // Organize bidirectional data transfer between local and remote connections
 //
 func (proxy *tproxyClient) organizeDataConnection(w http.ResponseWriter, dest_conn io.ReadWriteCloser) {
+	w.WriteHeader(http.StatusOK)
+
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
 		http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
@@ -162,17 +165,7 @@ func (proxy *tproxyClient) organizeDataConnection(w http.ResponseWriter, dest_co
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 	}
 
-	go proxy.transferData(dest_conn, client_conn)
-	go proxy.transferData(client_conn, dest_conn)
-}
-
-//
-// Transfer data between two connections
-//
-func (proxy *tproxyClient) transferData(destination io.WriteCloser, source io.ReadCloser) {
-	io.Copy(destination, source)
-	destination.Close()
-	source.Close()
+	ioTransferData(client_conn, dest_conn)
 }
 
 //
