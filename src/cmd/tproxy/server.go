@@ -152,7 +152,6 @@ func (server *tproxyServer) getProxyUserPassword(r *http.Request) (user, passwor
 func (server *tproxyServer) statusUnauthorized(w http.ResponseWriter, r *http.Request) {
 	w.Header().Set("X-Tproxy-Authenticate", `Basic realm="Tproxy authentication required"`)
 	http.Error(w, "Not authorized", http.StatusUnauthorized)
-
 }
 
 //

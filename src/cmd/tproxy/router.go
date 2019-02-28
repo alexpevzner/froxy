@@ -9,6 +9,7 @@ import (
 	"path"
 	"strings"
 	"sync"
+	"tproxy/log"
 )
 
 //
@@ -36,14 +37,17 @@ func (r *Router) Route(url *url.URL) (forward bool) {
 	r.lock.Lock()
 	defer r.lock.Unlock()
 
-	for s, _ := range r.sites {
+	for pattern, _ := range r.sites {
 		var ok bool
 
-		if strings.IndexByte(s, '/') != -1 {
-			ok, _ = path.Match(s, url.Host+url.Path)
-		} else {
-			ok, _ = path.Match(s, url.Host)
+		log.Debug("%#v %s %s", url, url.Host, url.Hostname())
+		target := url.Hostname()
+		if strings.IndexByte(pattern, '/') != -1 {
+			target += url.Path
 		}
+		ok, _ = path.Match(pattern, target)
+
+		log.Debug("ROUTE %s %s %v", pattern, target, ok)
 
 		if ok {
 			return true
