@@ -12,8 +12,7 @@ import (
 
 //----- Program options -----
 var (
-	opt_cfg    = flag.String("f", "", "Path to configuration file")
-	opt_server = flag.Bool("s", false, "Server mode")
+	opt_cfg = flag.String("f", "", "Path to configuration file")
 )
 
 //
@@ -35,10 +34,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	// Run in appropriate mode
-	if *opt_server {
-		runServer(*opt_cfg)
-	} else {
-		runClient(*opt_cfg)
-	}
+	// Run client
+	runClient(*opt_cfg)
 }

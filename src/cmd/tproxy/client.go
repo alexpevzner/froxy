@@ -7,10 +7,8 @@ package main
 import (
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httputil"
-	"net/url"
 	"tproxy/log"
 )
 
@@ -27,54 +25,44 @@ type tproxyClient struct {
 //
 // Regular HTTP request handler
 //
-func (proxy *tproxyClient) handleRegularHttp(w http.ResponseWriter, r *http.Request) {
-	forward := proxy.router.Route(r.URL)
-	log.Debug("forward=%v", forward)
-	log.Debug("host=%v", r.Host)
+func (proxy *tproxyClient) handleRegularHttp(
+	w http.ResponseWriter,
+	r *http.Request,
+	transport Transport) {
 
 	httpRemoveHopByHopHeaders(r.Header)
-	if forward {
-		r.URL, _ = url.Parse(proxy.cfg.Server.String() + "/exec?" + r.URL.String())
-		r.Header.Set("X-Tproxy-Host", r.Host)
-		r.Host = proxy.cfg.Server.Host
+	/*
+		if forward {
+			r.URL, _ = url.Parse(proxy.cfg.Server.String() + "/exec?" + r.URL.String())
+			r.Header.Set("X-Tproxy-Host", r.Host)
+			r.Host = proxy.cfg.Server.Host
 
-		h := r.Header.Get("Proxy-Authorization")
-		if h != "" {
-			r.Header.Set("X-Tproxy-Authorization", h)
-			r.Header.Del("Proxy-Authorization")
+			h := r.Header.Get("Proxy-Authorization")
+			if h != "" {
+				r.Header.Set("X-Tproxy-Authorization", h)
+				r.Header.Del("Proxy-Authorization")
+			}
 		}
-	}
+	*/
 
 	dump, _ := httputil.DumpRequest(r, false)
 	log.Debug("===== request =====\n%s", dump)
 
-	resp, err := http.DefaultTransport.RoundTrip(r)
+	resp, err := transport.RoundTrip(r)
+
 	if err != nil {
 		log.Debug("  %s", err)
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
 
-	proxy.returnHttpResponse(w, resp, forward)
+	proxy.returnHttpResponse(w, resp)
 }
 
 //
 // Return HTTP response back to the client
 //
-func (proxy *tproxyClient) returnHttpResponse(w http.ResponseWriter, resp *http.Response,
-	forward bool) {
-
-	if forward {
-		if resp.StatusCode == http.StatusUnauthorized {
-			h := resp.Header.Get("X-Tproxy-Authenticate")
-			if h != "" {
-				resp.StatusCode = http.StatusProxyAuthRequired
-				resp.Header.Set("Proxy-Authenticate", h)
-				resp.Header.Del("X-Tproxy-Authenticate")
-			}
-		}
-	}
-
+func (proxy *tproxyClient) returnHttpResponse(w http.ResponseWriter, resp *http.Response) {
 	dump, _ := httputil.DumpResponse(resp, false)
 	log.Debug("===== response =====\n%s", dump)
 
@@ -87,72 +75,19 @@ func (proxy *tproxyClient) returnHttpResponse(w http.ResponseWriter, resp *http.
 
 // ----- Proxying CONNECT request -----
 //
-// HTTP CONNECT handler -- forward connection via proxy server
+// HTTP CONNECT handler
 //
-func (proxy *tproxyClient) handleConnectViaProxy(w http.ResponseWriter, r *http.Request) {
-	url := "wss"
-	if proxy.cfg.Server.Scheme != "https" {
-		url = "ws"
-	}
+func (proxy *tproxyClient) handleConnect(
+	w http.ResponseWriter,
+	r *http.Request,
+	transport Transport) {
 
-	url += "://" + proxy.cfg.Server.Host + "/conn?" + r.URL.Host
-
-	hdr := make(http.Header)
-	hdr.Set("User-Agent", "Tproxy")
-
-	h := r.Header.Get("Proxy-Authorization")
-	if h != "" {
-		hdr.Set("X-Tproxy-Authorization", h)
-	}
-
-	log.Debug("dial %s", url)
-	dest_websocket, resp, err := websockDial(url, hdr)
-
-	switch {
-	case dest_websocket != nil:
-		proxy.organizeDataConnection(w, dest_websocket)
-	case resp != nil:
-		proxy.returnHttpResponse(w, resp, true)
-	case err != nil:
-		http.Error(w, err.Error(), http.StatusServiceUnavailable)
-	default:
-		panic("internal error")
-	}
-}
-
-//
-// HTTP CONNECT handler -- connect directly
-//
-func (proxy *tproxyClient) handleConnectDirectly(w http.ResponseWriter, r *http.Request) {
-	dest_conn, err := net.DialTimeout("tcp", r.Host, CONNECT_TIMEOUT)
-
+	dest_conn, err := transport.Dial("tcp", r.Host)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
 
-	proxy.organizeDataConnection(w, dest_conn)
-}
-
-//
-// HTTP CONNECT handler
-//
-func (proxy *tproxyClient) handleConnect(w http.ResponseWriter, r *http.Request) {
-	forward := proxy.router.Route(r.URL)
-	log.Debug("forward=%v", forward)
-	log.Debug("host=%v", r.Host)
-
-	if forward {
-		proxy.handleConnectViaProxy(w, r)
-	} else {
-		proxy.handleConnectDirectly(w, r)
-	}
-}
-
-//
-// Organize bidirectional data transfer between local and remote connections
-//
-func (proxy *tproxyClient) organizeDataConnection(w http.ResponseWriter, dest_conn io.ReadWriteCloser) {
 	w.WriteHeader(http.StatusOK)
 
 	hijacker, ok := w.(http.Hijacker)
@@ -175,11 +110,22 @@ func (proxy *tproxyClient) organizeDataConnection(w http.ResponseWriter, dest_co
 func (proxy *tproxyClient) httpHandler(w http.ResponseWriter, r *http.Request) {
 	log.Debug("%s %s %s", r.Method, r.URL, r.Proto)
 
+	forward := proxy.router.Route(r.URL)
+	log.Debug("forward=%v", forward)
+	log.Debug("host=%v", r.Host)
+
+	var transport Transport
+	if forward {
+		transport = sshTransport
+	} else {
+		transport = directTransport
+	}
+
 	// Handle request
 	if r.Method == http.MethodConnect {
-		proxy.handleConnect(w, r)
+		proxy.handleConnect(w, r, transport)
 	} else {
-		proxy.handleRegularHttp(w, r)
+		proxy.handleRegularHttp(w, r, transport)
 	}
 }
 

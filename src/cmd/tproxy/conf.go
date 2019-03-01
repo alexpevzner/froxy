@@ -12,15 +12,9 @@ const (
 
 	DEFAULT_CLIENT_CFG = "client.cfg"
 	DEFAULT_SERVER_CFG = "server.cfg"
-)
 
-//
-// Server configuration
-//
-type CfgServer struct {
-	Port  int               // TCP port
-	Users map[string]string // Users[login] = password
-}
+	SSH_MAX_CONN_PER_CLIENT = 10
+)
 
 //
 // Client configuration
@@ -31,48 +25,6 @@ type CfgClient struct {
 	Login    string   // User login
 	Password string   // User password
 	Sites    []string // List of tunneled sites
-}
-
-//
-// Load Server configuration
-//
-func LoadCfgServer(path string) (*CfgServer, error) {
-	// Load INI file
-	ini, err := ini.Load(path)
-
-	if err != nil {
-		return nil, err
-	}
-
-	cfg := &CfgServer{
-		Users: make(map[string]string),
-	}
-
-	// Get http configuration
-	s, err := ini.GetSection("http")
-	if err != nil {
-		return nil, err
-	}
-
-	k, err := s.GetKey("port")
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.Port, err = k.Int()
-	if err != nil {
-		return nil, err
-	}
-
-	// Get users
-	s, err = ini.GetSection("users")
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.Users = s.KeysHash()
-
-	return cfg, err
 }
 
 //
