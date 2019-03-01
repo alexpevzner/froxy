@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/go-ini/ini"
-	"net/url"
 	"strings"
 	"time"
 )
@@ -11,7 +10,6 @@ const (
 	CONNECT_TIMEOUT = 10 * time.Second
 
 	DEFAULT_CLIENT_CFG = "client.cfg"
-	DEFAULT_SERVER_CFG = "server.cfg"
 
 	SSH_MAX_CONN_PER_CLIENT = 10
 )
@@ -20,8 +18,8 @@ const (
 // Client configuration
 //
 type CfgClient struct {
-	Port     int      // TCP port
-	Server   *url.URL // Server URL
+	Port     int      // TCP port for local HTTP proxy
+	Server   string   // Server address
 	Login    string   // User login
 	Password string   // User password
 	Sites    []string // List of tunneled sites
@@ -61,21 +59,18 @@ func LoadCfgClient(path string) (*CfgClient, error) {
 		return nil, err
 	}
 
-	// Get server configuration
-	s, err = ini.GetSection("server")
+	// Get SSH server configuration
+	s, err = ini.GetSection("ssh")
 	if err != nil {
 		return nil, err
 	}
 
-	k, err = s.GetKey("url")
+	k, err = s.GetKey("server")
 	if err != nil {
 		return nil, err
 	}
 
-	cfg.Server, err = url.Parse(k.String())
-	if err != nil {
-		return nil, err
-	}
+	cfg.Server = k.String()
 
 	k, err = s.GetKey("login")
 	if err != nil {
