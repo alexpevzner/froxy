@@ -9,15 +9,15 @@ import (
 const (
 	CONNECT_TIMEOUT = 10 * time.Second
 
-	DEFAULT_CLIENT_CFG = "tproxy.cfg"
+	DEFAULT_TPROXY_CFG = "tproxy.cfg"
 
 	SSH_MAX_CONN_PER_CLIENT = 10
 )
 
 //
-// Client configuration
+// Tproxy configuration
 //
-type CfgClient struct {
+type CfgTproxy struct {
 	Port     int      // TCP port for local HTTP proxy
 	Server   string   // Server address
 	Login    string   // User login
@@ -26,9 +26,9 @@ type CfgClient struct {
 }
 
 //
-// Load Client configuration
+// Load configuration
 //
-func LoadCfgClient(path string) (*CfgClient, error) {
+func LoadCfg(path string) (*CfgTproxy, error) {
 	// Load INI file
 	ini, err := ini.LoadSources(
 		ini.LoadOptions{
@@ -41,7 +41,7 @@ func LoadCfgClient(path string) (*CfgClient, error) {
 		return nil, err
 	}
 
-	cfg := &CfgClient{}
+	cfg := &CfgTproxy{}
 
 	// Get http configuration
 	s, err := ini.GetSection("http")

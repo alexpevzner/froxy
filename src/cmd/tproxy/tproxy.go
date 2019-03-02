@@ -16,7 +16,7 @@ import (
 // tproxy instance
 //
 type Tproxy struct {
-	cfg     *CfgClient   // Client configuration
+	cfg     *CfgTproxy   // Tproxy configuration
 	httpSrv *http.Server // Local HTTP server instance
 	router  *Router      // Request router
 }
@@ -117,7 +117,7 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 }
 
 //
-// Run a client proxy
+// Run a proxy
 //
 func (proxy *Tproxy) Run() error {
 	return proxy.httpSrv.ListenAndServe()
@@ -129,10 +129,10 @@ func (proxy *Tproxy) Run() error {
 func NewTproxy(cfgPath string) (*Tproxy, error) {
 	// Load configiration file
 	if cfgPath == "" {
-		cfgPath = DEFAULT_CLIENT_CFG
+		cfgPath = DEFAULT_TPROXY_CFG
 	}
 
-	cfg, err := LoadCfgClient(cfgPath)
+	cfg, err := LoadCfg(cfgPath)
 	if err != nil {
 		return nil, err
 	}
