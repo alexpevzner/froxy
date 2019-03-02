@@ -31,19 +31,6 @@ func (proxy *tproxyClient) handleRegularHttp(
 	transport Transport) {
 
 	httpRemoveHopByHopHeaders(r.Header)
-	/*
-		if forward {
-			r.URL, _ = url.Parse(proxy.cfg.Server.String() + "/exec?" + r.URL.String())
-			r.Header.Set("X-Tproxy-Host", r.Host)
-			r.Host = proxy.cfg.Server.Host
-
-			h := r.Header.Get("Proxy-Authorization")
-			if h != "" {
-				r.Header.Set("X-Tproxy-Authorization", h)
-				r.Header.Del("Proxy-Authorization")
-			}
-		}
-	*/
 
 	dump, _ := httputil.DumpRequest(r, false)
 	log.Debug("===== request =====\n%s", dump)
