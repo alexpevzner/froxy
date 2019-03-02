@@ -8,6 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
+	"tproxy/log"
 )
 
 //----- Program options -----
@@ -34,6 +35,13 @@ func main() {
 		os.Exit(2)
 	}
 
-	// Run client
-	runClient(*opt_cfg)
+	// Run tproxy
+	proxy, err := NewTproxy(*opt_cfg)
+	if err == nil {
+		err = proxy.Run()
+	}
+
+	if err != nil {
+		log.Exit("%s", err)
+	}
 }

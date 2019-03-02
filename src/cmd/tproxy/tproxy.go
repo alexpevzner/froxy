@@ -1,5 +1,5 @@
 //
-// Client-side proxy
+// Tproxy instance
 //
 
 package main
@@ -13,9 +13,9 @@ import (
 )
 
 //
-// tproxy client
+// tproxy instance
 //
-type tproxyClient struct {
+type Tproxy struct {
 	cfg     *CfgClient   // Client configuration
 	httpSrv *http.Server // Local HTTP server instance
 	router  *Router      // Request router
@@ -25,7 +25,7 @@ type tproxyClient struct {
 //
 // Regular HTTP request handler
 //
-func (proxy *tproxyClient) handleRegularHttp(
+func (proxy *Tproxy) handleRegularHttp(
 	w http.ResponseWriter,
 	r *http.Request,
 	transport Transport) {
@@ -49,7 +49,7 @@ func (proxy *tproxyClient) handleRegularHttp(
 //
 // Return HTTP response back to the client
 //
-func (proxy *tproxyClient) returnHttpResponse(w http.ResponseWriter, resp *http.Response) {
+func (proxy *Tproxy) returnHttpResponse(w http.ResponseWriter, resp *http.Response) {
 	dump, _ := httputil.DumpResponse(resp, false)
 	log.Debug("===== response =====\n%s", dump)
 
@@ -64,7 +64,7 @@ func (proxy *tproxyClient) returnHttpResponse(w http.ResponseWriter, resp *http.
 //
 // HTTP CONNECT handler
 //
-func (proxy *tproxyClient) handleConnect(
+func (proxy *Tproxy) handleConnect(
 	w http.ResponseWriter,
 	r *http.Request,
 	transport Transport) {
@@ -94,7 +94,7 @@ func (proxy *tproxyClient) handleConnect(
 // handle HTTP request. Provides multiplexing between regular request
 // and CONNECT request handlers
 //
-func (proxy *tproxyClient) httpHandler(w http.ResponseWriter, r *http.Request) {
+func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	log.Debug("%s %s %s", r.Method, r.URL, r.Proto)
 
 	forward := proxy.router.Route(r.URL)
@@ -119,14 +119,14 @@ func (proxy *tproxyClient) httpHandler(w http.ResponseWriter, r *http.Request) {
 //
 // Run a client proxy
 //
-func (proxy *tproxyClient) Run() error {
+func (proxy *Tproxy) Run() error {
 	return proxy.httpSrv.ListenAndServe()
 }
 
 //
-// Create a client
+// Create a Tproxy instance
 //
-func newTproxyClient(cfgPath string) (*tproxyClient, error) {
+func NewTproxy(cfgPath string) (*Tproxy, error) {
 	// Load configiration file
 	if cfgPath == "" {
 		cfgPath = DEFAULT_CLIENT_CFG
@@ -137,8 +137,8 @@ func newTproxyClient(cfgPath string) (*tproxyClient, error) {
 		return nil, err
 	}
 
-	// Create tproxyClient structure
-	proxy := &tproxyClient{
+	// Create Tproxy structure
+	proxy := &Tproxy{
 		cfg:    cfg,
 		router: NewRouter(),
 	}
@@ -151,18 +151,4 @@ func newTproxyClient(cfgPath string) (*tproxyClient, error) {
 	proxy.router.SetSites(cfg.Sites)
 
 	return proxy, nil
-}
-
-//
-// Run tproxy in a client mode
-//
-func runClient(cfgPath string) {
-	proxy, err := newTproxyClient(cfgPath)
-	if err == nil {
-		err = proxy.Run()
-	}
-
-	if err != nil {
-		log.Exit("%s", err)
-	}
 }
