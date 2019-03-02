@@ -9,7 +9,7 @@ import (
 const (
 	CONNECT_TIMEOUT = 10 * time.Second
 
-	DEFAULT_CLIENT_CFG = "client.cfg"
+	DEFAULT_CLIENT_CFG = "tproxy.cfg"
 
 	SSH_MAX_CONN_PER_CLIENT = 10
 )
