@@ -12,6 +12,8 @@ const (
 	DEFAULT_TPROXY_CFG = "tproxy.cfg"
 
 	SSH_MAX_CONN_PER_CLIENT = 10
+
+	TPROXY_HOST = "tproxy.tproxy"
 )
 
 //

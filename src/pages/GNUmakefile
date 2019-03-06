@@ -2,7 +2,7 @@ include ../../Rules.mak
 
 all_local:
 	hugo
-	tar cfz tproxy.pages.tar.gz -C public .
+	go-bindata -o pages.gen.go -pkg pages -prefix public `find public -type d`
 	rm -rf public
 
 clean_local:

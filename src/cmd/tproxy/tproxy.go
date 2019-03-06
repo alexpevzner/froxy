@@ -9,6 +9,7 @@ import (
 	"io"
 	"net/http"
 	"net/http/httputil"
+	"pages"
 	"tproxy/log"
 )
 
@@ -109,9 +110,16 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Handle request
-	if r.Method == http.MethodConnect {
+	switch {
+	case r.Host == TPROXY_HOST || r.Host == "tproxy":
+		log.Debug("===== local =====")
+		log.Debug("path=%s", r.URL.Path)
+
+		pages.FileServer.ServeHTTP(w, r)
+
+	case r.Method == http.MethodConnect:
 		proxy.handleConnect(w, r, transport)
-	} else {
+	default:
 		proxy.handleRegularHttp(w, r, transport)
 	}
 }
