@@ -1,0 +1,14 @@
+<nav class="u-background">
+  <div class="u-wrapper">
+    <ul class="Banner">
+      <li class="Banner-item Banner-item--title">
+        <a class="Banner-link u-clickable" href="{{ "" | relURL }}">{{ site.Title }}</a>
+      </li>
+      {{ range site.Menus.nav }}
+      <li class="Banner-item">
+        <a class="Banner-link u-clickable" href="{{ .URL | relURL }}">{{ .Name }}</a>
+      </li>
+      {{ end }}
+    </ul>
+  </div>
+</nav>

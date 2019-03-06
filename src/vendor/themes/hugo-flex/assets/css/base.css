@@ -1,0 +1,123 @@
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen-Sans, Ubuntu, Cantarell, "Helvetica Neue", sans-serif;
+  line-height: 1.6;
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+}
+
+main {
+  flex-grow: 1;
+}
+
+img {
+  max-width: 100%;
+  border-radius: 0.2rem;
+}
+
+pre {
+  overflow-x: auto;
+  border: 0.1rem solid lightgray;
+  padding: 1rem;
+}
+
+code {
+  font-family: SFMono-Regular, Consolas, "Liberation Mono", Menlo, Courier, monospace;
+}
+
+.Banner {
+  list-style: none;
+  display: flex;
+  flex-flow: row-reverse wrap-reverse;
+  justify-content: space-between;
+  margin: 0;
+  padding: 0;
+}
+
+{{ $len := len site.Menus.nav }}
+{{ range seq $len }}
+
+.Banner-item:nth-child({{ . }}) {
+  order: {{ . | sub $len | add 1 }};
+}
+
+{{ end }}
+
+.Banner-item--title {
+  flex-grow: 1;
+}
+
+.Banner-link {
+  font-size: 1.25rem;
+  color: white;
+  padding: 0.5rem 1rem;
+}
+
+.Heading {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.Heading-title {
+  margin: 1.5rem 0.5rem 0 0;
+}
+
+.Heading-link {
+  color: inherit;
+}
+
+.Tags {
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  margin: 1.5rem 0;
+  padding: 0;
+}
+
+.Tags-item {
+  border-radius: 0.2rem;
+  margin: 0.2rem;
+  padding: 0 0.3rem;
+}
+
+.Tags-link {
+  color: white;
+}
+
+.Pagination {
+  font-size: 1.25rem;
+  color: inherit;
+}
+
+.Pagination--right {
+  float: right;
+}
+
+.Footer {
+  text-align: center;
+  margin: 1rem 0;
+}
+
+.u-wrapper {
+  max-width: 42rem;
+  margin: auto;
+}
+
+.u-padding {
+  padding: 0 1rem;
+}
+
+.u-background {
+  background: {{ site.Params.color }};
+}
+
+.u-clickable {
+  font-weight: bold;
+  text-decoration: none;
+  display: inline-block;
+}
