@@ -1,0 +1,15 @@
+baseURL = "http://tproxy/"
+languageCode = "en-us"
+title = "TProxy"
+theme = "hugo-flex"
+themesDir = "../vendor/themes"
+
+[[menu.nav]]
+  name = "Configuration"
+  url = "conf/"
+  weight = 1
+
+[[menu.nav]]
+  name = "Sites"
+  url = "sites/"
+  weight = 2
