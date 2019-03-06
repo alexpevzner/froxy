@@ -1,6 +1,8 @@
 +++
 title = "TProxy Configuration"
 +++
+<script src="/api.js"defer> </script>
+<script src="/conf.js"defer> </script>
 
 <table >
 	<tbody>

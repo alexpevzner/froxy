@@ -1,6 +1,8 @@
 +++
 title = "TProxy Sites"
 +++
+<script src="/api.js"defer> </script>
+<script src="/conf.js"defer> </script>
 
 Here you can edit list of sites which will be accessed via server.
 In most cases you will want to check the "With subdomains" button
