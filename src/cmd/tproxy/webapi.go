@@ -30,8 +30,8 @@ func NewWebAPI(env *Env) *WebAPI {
 		mux: http.NewServeMux(),
 	}
 
-	webapi.mux.HandleFunc("/server", webapi.handleServer)
-	webapi.mux.HandleFunc("/sites", webapi.handleSites)
+	webapi.mux.HandleFunc("/api/server", webapi.handleServer)
+	webapi.mux.HandleFunc("/api/sites", webapi.handleSites)
 
 	return webapi
 }
@@ -109,11 +109,6 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 // Handle HTTP request
 //
 func (webapi *WebAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	switch r.URL.Path {
-	case "/conf":
-	case "/sites":
-	}
-
 	webapi.mux.ServeHTTP(w, r)
 }
 

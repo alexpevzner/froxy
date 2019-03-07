@@ -7,9 +7,11 @@ package main
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"pages"
+	"strings"
 )
 
 //
@@ -110,14 +112,31 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 		transport = directTransport
 	}
 
+	// Split host and port
+	host := r.Host
+
+	if strings.IndexByte(host, ':') != -1 {
+		h, _, err := net.SplitHostPort(host)
+		if err == nil {
+			host = h
+		}
+	}
+
+	// Check for request to TProxy itself
+	switch host {
+	case HOST_TPROXY_PAGES, "localhost":
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			proxy.env.Debug("local->webapi")
+			proxy.webapi.ServeHTTP(w, r)
+		} else {
+			proxy.env.Debug("local->site")
+			pages.FileServer.ServeHTTP(w, r)
+		}
+		return
+	}
+
 	// Handle request
 	switch {
-	case r.Host == HOST_TPROXY_PAGES:
-		pages.FileServer.ServeHTTP(w, r)
-
-	case r.Host == HOST_TPROXY_WEBAPI:
-		proxy.webapi.ServeHTTP(w, r)
-
 	case r.Method == http.MethodConnect:
 		proxy.handleConnect(w, r, transport)
 	default:
