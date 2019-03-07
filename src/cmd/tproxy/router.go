@@ -9,13 +9,13 @@ import (
 	"path"
 	"strings"
 	"sync"
-	"tproxy/log"
 )
 
 //
 // Request router
 //
 type Router struct {
+	env   *Env                // Common environment
 	sites map[string]struct{} // Set of sites forwarded via server (list of glob patterns)
 	lock  sync.Mutex          // Access lock
 }
@@ -23,8 +23,9 @@ type Router struct {
 //
 // Create new router
 //
-func NewRouter() *Router {
+func NewRouter(env *Env) *Router {
 	return &Router{
+		env:   env,
 		sites: make(map[string]struct{}),
 	}
 }
@@ -40,14 +41,14 @@ func (r *Router) Route(url *url.URL) (forward bool) {
 	for pattern, _ := range r.sites {
 		var ok bool
 
-		log.Debug("%#v %s %s", url, url.Host, url.Hostname())
+		r.env.Debug("%#v %s %s", url, url.Host, url.Hostname())
 		target := url.Hostname()
 		if strings.IndexByte(pattern, '/') != -1 {
 			target += url.Path
 		}
 		ok, _ = path.Match(pattern, target)
 
-		log.Debug("ROUTE %s %s %v", pattern, target, ok)
+		r.env.Debug("ROUTE %s %s %v", pattern, target, ok)
 
 		if ok {
 			return true

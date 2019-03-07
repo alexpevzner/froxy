@@ -10,13 +10,13 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"pages"
-	"tproxy/log"
 )
 
 //
 // tproxy instance
 //
 type Tproxy struct {
+	env     *Env         // Common environment
 	cfg     *CfgTproxy   // Tproxy configuration
 	httpSrv *http.Server // Local HTTP server instance
 	router  *Router      // Request router
@@ -35,12 +35,12 @@ func (proxy *Tproxy) handleRegularHttp(
 	httpRemoveHopByHopHeaders(r.Header)
 
 	dump, _ := httputil.DumpRequest(r, false)
-	log.Debug("===== request =====\n%s", dump)
+	proxy.env.Debug("===== request =====\n%s", dump)
 
 	resp, err := transport.RoundTrip(r)
 
 	if err != nil {
-		log.Debug("  %s", err)
+		proxy.env.Debug("  %s", err)
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
 		return
 	}
@@ -53,7 +53,7 @@ func (proxy *Tproxy) handleRegularHttp(
 //
 func (proxy *Tproxy) returnHttpResponse(w http.ResponseWriter, resp *http.Response) {
 	dump, _ := httputil.DumpResponse(resp, false)
-	log.Debug("===== response =====\n%s", dump)
+	proxy.env.Debug("===== response =====\n%s", dump)
 
 	httpCopyHeaders(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
@@ -97,11 +97,11 @@ func (proxy *Tproxy) handleConnect(
 // and CONNECT request handlers
 //
 func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
-	log.Debug("%s %s %s", r.Method, r.URL, r.Proto)
+	proxy.env.Debug("%s %s %s", r.Method, r.URL, r.Proto)
 
 	forward := proxy.router.Route(r.URL)
-	log.Debug("forward=%v", forward)
-	log.Debug("host=%v", r.Host)
+	proxy.env.Debug("forward=%v", forward)
+	proxy.env.Debug("host=%v", r.Host)
 
 	var transport Transport
 	if forward {
@@ -147,9 +147,12 @@ func NewTproxy(cfgPath string) (*Tproxy, error) {
 	}
 
 	// Create Tproxy structure
+	env := NewEnv()
 	proxy := &Tproxy{
+		env:    env,
 		cfg:    cfg,
-		router: NewRouter(),
+		router: NewRouter(env),
+		webapi: NewWebAPI(env),
 	}
 
 	proxy.httpSrv = &http.Server{

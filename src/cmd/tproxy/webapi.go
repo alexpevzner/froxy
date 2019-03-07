@@ -12,6 +12,7 @@ import (
 // JS API handler
 //
 type WebAPI struct {
+	env *Env
 }
 
 var _ = http.Handler(&WebAPI{})
@@ -19,8 +20,10 @@ var _ = http.Handler(&WebAPI{})
 //
 // Create new JS API handler instance
 //
-func NewWebAPI() *WebAPI {
-	return &WebAPI{}
+func NewWebAPI(env *Env) *WebAPI {
+	return &WebAPI{
+		env: env,
+	}
 }
 
 //
