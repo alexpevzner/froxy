@@ -7,6 +7,7 @@ package main
 import (
 	"encoding/json"
 	"fmt"
+	"io/ioutil"
 	"net/http"
 )
 
@@ -43,6 +44,26 @@ func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		conf := webapi.env.GetServerParams()
 		webapi.replyJSON(w, conf)
+
+	case "PUT":
+		body, err := ioutil.ReadAll(r.Body)
+		var data StateServer
+
+		if err != nil {
+			goto FAIL
+		}
+
+		err = json.Unmarshal(body, &data)
+		if err != nil {
+			goto FAIL
+		}
+
+		webapi.env.SetServerParams(&data)
+		return
+
+	FAIL:
+		webapi.httpErrorf(w, http.StatusInternalServerError, "%s", err)
+
 	default:
 		webapi.httpError(w, http.StatusMethodNotAllowed)
 	}
@@ -56,6 +77,29 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 	case "GET":
 		conf := webapi.env.GetSites()
 		webapi.replyJSON(w, conf)
+
+	case "PUT":
+		body, err := ioutil.ReadAll(r.Body)
+		var data StateSite
+
+		if err != nil {
+			goto FAIL
+		}
+
+		err = json.Unmarshal(body, &data)
+		if err != nil {
+			goto FAIL
+		}
+
+		webapi.env.SetSite(r.URL.RawQuery, data)
+		return
+
+	FAIL:
+		webapi.httpErrorf(w, http.StatusInternalServerError, "%s", err)
+
+	case "DEL":
+		webapi.env.DelSite(r.URL.RawQuery)
+
 	default:
 		webapi.httpError(w, http.StatusMethodNotAllowed)
 	}
@@ -77,7 +121,19 @@ func (webapi *WebAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Return HTTP error
 //
 func (webapi *WebAPI) httpError(w http.ResponseWriter, status int) {
-	http.Error(w, fmt.Sprintf("%d %s", status, http.StatusText(status)), status)
+	webapi.httpErrorf(w, status, fmt.Sprintf("%s", http.StatusText(status)))
+}
+
+//
+// Return HTTP error with caller-provided textual description
+//
+func (webapi *WebAPI) httpErrorf(w http.ResponseWriter, status int,
+	format string, args ...interface{}) {
+
+	msg := fmt.Sprintf("%d ", status)
+	msg += fmt.Sprintf(format, args...)
+
+	http.Error(w, msg, status)
 }
 
 //
