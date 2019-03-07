@@ -84,6 +84,9 @@ func (env *Env) SetServerParams(s *StateServer) {
 func (env *Env) GetSites() (sites []StateSite) {
 	env.stateLock.RLock()
 	sites = env.state.Sites
+	if sites == nil {
+		sites = make([]StateSite, 0)
+	}
 	env.stateLock.RUnlock()
 	return
 }
