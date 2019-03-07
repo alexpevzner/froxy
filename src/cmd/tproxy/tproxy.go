@@ -20,6 +20,7 @@ type Tproxy struct {
 	cfg     *CfgTproxy   // Tproxy configuration
 	httpSrv *http.Server // Local HTTP server instance
 	router  *Router      // Request router
+	webapi  *WebAPI      // JS API handler
 }
 
 // ----- Proxying regular HTTP requests (GET/PUT/HEAD etc) -----
@@ -111,11 +112,11 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Handle request
 	switch {
-	case r.Host == TPROXY_HOST || r.Host == "tproxy":
-		log.Debug("===== local =====")
-		log.Debug("path=%s", r.URL.Path)
-
+	case r.Host == HOST_TPROXY_PAGES:
 		pages.FileServer.ServeHTTP(w, r)
+
+	case r.Host == HOST_TPROXY_WEBAPI:
+		proxy.webapi.ServeHTTP(w, r)
 
 	case r.Method == http.MethodConnect:
 		proxy.handleConnect(w, r, transport)

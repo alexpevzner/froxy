@@ -13,7 +13,8 @@ const (
 
 	SSH_MAX_CONN_PER_CLIENT = 10
 
-	TPROXY_HOST = "tproxy.tproxy"
+	HOST_TPROXY_PAGES  = "tproxy"
+	HOST_TPROXY_WEBAPI = "api." + HOST_TPROXY_PAGES
 )
 
 //
