@@ -14,13 +14,25 @@ import (
 // The persistent state
 //
 type State struct {
-	Server   string     `json:"server,omitempty"`   // Server address
-	Login    string     `json:"login,omitempty"`    // Server login
-	Password string     `json:"password,omitempty"` // Server password
-	Sites    []struct { // List of forwarded sites
-		Host string `json:"host,omitempty"` // Host name
-		Rec  bool   `json:"rec,omitempty"`  // Recursive (with subdomains)
-	} `json:"login,omitempty"`
+	Server *StateServer `json:"server,omitempty"` // Server parameters
+	Sites  []StateSite  `json:"sites,omitempty"`  // List of forwarded sites
+}
+
+//
+// Server parameters
+//
+type StateServer struct {
+	Addr     string `json:"addr,omitempty"`     // Server address
+	Login    string `json:"login,omitempty"`    // Server login
+	Password string `json:"password,omitempty"` // Server password
+}
+
+//
+// Site parameters
+//
+type StateSite struct {
+	Host string `json:"host,omitempty"` // Host name
+	Rec  bool   `json:"rec,omitempty"`  // Recursive (with subdomains)
 }
 
 //
