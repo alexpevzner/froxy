@@ -6,9 +6,11 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
+	"net/url"
 )
 
 //
@@ -73,6 +75,25 @@ func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 // Handle /sites requests
 //
 func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
+	var host string
+
+	// Decode host, if required (for PUT and DEL requests)
+	if r.Method == "PUT" || r.Method == "DEL" {
+		var err error
+		host, err = url.QueryUnescape(r.URL.RawQuery)
+
+		if err == nil && r.Method == "DEL" && host == "" {
+			err = errors.New("invalid query: host parameter missed")
+		}
+
+		if err != nil {
+			webapi.httpErrorf(w, http.StatusInternalServerError, "%s", err)
+			return
+		}
+
+	}
+
+	// Handle request
 	switch r.Method {
 	case "GET":
 		conf := webapi.env.GetSites()
@@ -135,7 +156,10 @@ func (webapi *WebAPI) httpErrorf(w http.ResponseWriter, status int,
 // Reply with JSON data
 //
 func (webapi *WebAPI) replyJSON(w http.ResponseWriter, data interface{}) {
-	body, _ := json.Marshal(data)
+	body, _ := json.Marshal(struct {
+		Data interface{} `json:"data"`
+	}{data})
+
 	w.Header().Set("Content-Type", "application/json")
 
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")

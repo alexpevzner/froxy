@@ -3,29 +3,45 @@
 //
 
 //
-// All public symbols belong to the tprpxy namespacea
-// A nested tprpxy._ namespace is for internally used symbols
+// All public symbols belong to the tproxy namespacea
+// A nested tproxy._ namespace is for internally used symbols
 //
-var tprpxy = {_: {}};
+var tproxy = {_: {}};
 
 // ----- Internal functions. Don't use directly -----
 //
 // Write a debug message to JS console
 //
-tprpxy._.debug = console.log;
+tproxy._.debug = console.log;
 
 // ----- HTTP requests handling -----
 //
 // Create asynchronous HTTP request
 //
-tprpxy._.http_request = function(method, query, data) {
+// Request properties, that can be set by caller:
+//
+//   function onSuccess  - called on successful completion with
+//                         received data as parameter. Received
+//                         JSON is decoded into the JavaScript
+//                         object
+//
+//   function onError    - called on erroneous completion with
+//                         error object as parameter. Error object
+//                         is a JS object similar to following:
+//                            {
+//                               text:   "Internal error",
+//                               reason: "HTTP request failed",
+//                               object: "http://localhost:8888/api/sites"
+//                            }
+//
+tproxy._.http_request = function(method, query, data) {
     // Adjust query
-    query = location.origin + "/api" + query;
+    query = location.origin + query;
 
     // Log the event
-    tprpxy._.debug(method, query);
+    tproxy._.debug(method, query);
     if (data) {
-        tprpxy._.debug(data);
+        tproxy._.debug(data);
     }
 
     // Create a request
@@ -51,7 +67,7 @@ tprpxy._.http_request = function(method, query, data) {
                         body = JSON.parse(rq._xrq.responseText);
                     }
                 } catch (ex) {
-                    err = tprpxy._.http_error("JSON error: " + ex, query);
+                    err = tproxy._.http_interror("JSON error: " + ex, query);
                 }
 
                 if (!err && body) {
@@ -60,24 +76,26 @@ tprpxy._.http_request = function(method, query, data) {
                     } else if (body.err && body.err.text) {
                         err = body.err;
                     } else {
-                        err = tprpxy._.http_error("Invalid server response received", query);
+                        err = tproxy._.http_interror("Invalid responce from TProxy", query);
                     }
                 }
             } else {
                 if (rq._xrq.responseText) {
-                    err = tprpxy._.http_error(rq._xrq.responseText, query);
+                    err = tproxy._.http_interror(rq._xrq.responseText, query);
                 } else if (rq._xrq.statusText) {
-                    err = tprpxy._.http_error(rq._xrq.statusText, query);
+                    err = tproxy._.http_interror(rq._xrq.statusText, query);
                 } else {
-                    err = tprpxy._.http_error("HTTP request failed", query);
+                    err = tproxy._.http_interror("HTTP request failed", query);
                 }
             }
 
             if (err) {
+                tproxy._.debug(method, query, "err:", err);
                 if (rq.onError) {
                     rq.onError(err);
                 }
             } else {
+                tproxy._.debug(method, query, "data:", data);
                 if (rq.onSuccess) {
                     rq.onSuccess(data);
                 }
@@ -100,12 +118,68 @@ tprpxy._.http_request = function(method, query, data) {
 //
 // Create HTTP error object
 //
-tprpxy._.http_error = function(reason, object) {
+tproxy._.http_error = function(text, reason, object) {
     return {
-        text:   "Internal error",
+        text:   text,
         reason: reason,
         object: object
     };
+};
+
+//
+// Create HTTP error object with "Internal error" test
+//
+tproxy._.http_interror = function(reason, object) {
+    return tproxy._.http_error("Internal error", reason, object);
+};
+
+// ----- Public API -----
+//
+// Get server parameters - returns HTTP request
+//
+tproxy.GetServerParams = function() {
+    return tproxy._.http_request("GET", "/api/server");
+};
+
+//
+// Set server parameters - returns HTTP request
+//
+tproxy.SetServerParams = function(server, login, password) {
+    var d = {
+        server: server, login: login, password: password
+    };
+    return tproxy._.http_request("PUT", "/api/server", d);
+};
+
+//
+// Get list of sites - returns HTTP request
+//
+tproxy.GetSites  = function() {
+    return tproxy._.http_request("GET", "/api/sites");
+};
+
+//
+// Set a site parameters - returns HTTP request
+//
+tproxy.SetSite  = function(oldhost, newhost, recursive) {
+    var q = "/api/sites";
+    if (oldhost) {
+        q += "?" + encodeURIComponent(oldhost);
+    }
+
+    var d = {
+        host: newhost, rec: recursive
+    };
+
+    return tproxy._.http_request("PUT", q, d);
+};
+
+//
+// Delete a site - returns HTTP request
+//
+tproxy.DelSite  = function(oldhost) {
+    var q = "/api/sites?" + encodeURIComponent(oldhost);
+    return tproxy._.http_request("PUT", q);
 };
 
 // vim:ts=8:sw=2:et
