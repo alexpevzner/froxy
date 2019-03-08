@@ -20,12 +20,12 @@ tproxy._.debug = console.log;
 //
 // Request properties, that can be set by caller:
 //
-//   function onSuccess  - called on successful completion with
+//   function OnSuccess  - called on successful completion with
 //                         received data as parameter. Received
 //                         JSON is decoded into the JavaScript
 //                         object
 //
-//   function onError    - called on erroneous completion with
+//   function OnError    - called on erroneous completion with
 //                         error object as parameter. Error object
 //                         is a JS object similar to following:
 //                            {
@@ -47,8 +47,8 @@ tproxy._.http_request = function(method, query, data) {
     // Create a request
     var rq = {
         _xrq:      new XMLHttpRequest(),
-        onSuccess: function() {},
-        onError:   function() {}
+        OnSuccess: function() {},
+        OnError:   function() {}
     };
 
 
@@ -91,13 +91,13 @@ tproxy._.http_request = function(method, query, data) {
 
             if (err) {
                 tproxy._.debug(method, query, "err:", err);
-                if (rq.onError) {
-                    rq.onError(err);
+                if (rq.OnError) {
+                    rq.OnError(err);
                 }
             } else {
                 tproxy._.debug(method, query, "data:", data);
-                if (rq.onSuccess) {
-                    rq.onSuccess(data);
+                if (rq.OnSuccess) {
+                    rq.OnSuccess(data);
                 }
             }
 
@@ -144,9 +144,9 @@ tproxy.GetServerParams = function() {
 //
 // Set server parameters - returns HTTP request
 //
-tproxy.SetServerParams = function(server, login, password) {
+tproxy.SetServerParams = function(addr, login, password) {
     var d = {
-        server: server, login: login, password: password
+        addr: addr, login: login, password: password
     };
     return tproxy._.http_request("PUT", "/api/server", d);
 };
@@ -180,6 +180,31 @@ tproxy.SetSite  = function(oldhost, newhost, recursive) {
 tproxy.DelSite  = function(oldhost) {
     var q = "/api/sites?" + encodeURIComponent(oldhost);
     return tproxy._.http_request("PUT", q);
+};
+
+// ----- UI helper functions -----
+//
+// Get value of particular control
+//
+tproxy.UiGetInput = function(id) {
+    var obj = document.getElementById(id);
+    if (obj) {
+        return obj.value;
+    }
+    return undefined;
+};
+
+//
+// Get value of particular control
+//
+tproxy.UiSetInput = function(id, value) {
+    var obj = document.getElementById(id);
+    if (!value) {
+        value = "";
+    }
+    if (obj) {
+        obj.value = value;
+    }
 };
 
 // vim:ts=8:sw=2:et

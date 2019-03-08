@@ -8,20 +8,19 @@ title = "TProxy Configuration"
 	<tbody>
 	<tr>
 		<td>Server (host or host:port):</td>
-		<td><input type="text" style="width: 95%;"/></td>
+		<td><input id="addr" type="text" style="width: 95%;"/></td>
 	</tr>
 	<tr>
 		<td>Login:</td>
-		<td><input type="text" style="width: 95%;" /></td>
+		<td><input id="login" type="text" style="width: 95%;" /></td>
 	</tr>
 	<tr>
 		<td>Password:</td>
-		<td><input type="text" style="width: 95%;" /></td>
-		<td>&nbsp;<input type="checkbox" /> &nbsp;Show password
+		<td><input id="password" type="text" style="width: 95%;" /></td>
 		</td>
 	</tr>
 	<tr>
-		<td><input type="button" value="Ok"/></td>
+		<td><input type="button" value="Ok" onclick="SubmitServerParams()"/></td>
 	</tr>
 	</tbody>
 </table>
