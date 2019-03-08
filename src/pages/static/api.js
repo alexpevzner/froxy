@@ -188,8 +188,14 @@ tproxy.DelSite  = function(oldhost) {
 //
 tproxy.UiGetInput = function(id) {
     var obj = document.getElementById(id);
-    if (obj) {
-        return obj.value;
+    if (obj && obj.tagName == "INPUT") {
+        switch (obj.type) {
+        case "text":
+            return obj.value;
+
+        case "checkbox":
+            return !!obj.checked;
+        }
     }
     return undefined;
 };
@@ -199,12 +205,17 @@ tproxy.UiGetInput = function(id) {
 //
 tproxy.UiSetInput = function(id, value) {
     var obj = document.getElementById(id);
-    if (!value) {
-        value = "";
-    }
-    if (obj) {
-        obj.value = value;
+    if (obj && obj.tagName == "INPUT") {
+        switch (obj.type) {
+        case "text":
+            obj.value = value ? value : "";
+            break;
+
+        case "checkbox":
+            obj.checked = !!value;
+            break;
+        }
     }
 };
 
-// vim:ts=8:sw=2:et
+// vim:ts=8:sw=4:et
