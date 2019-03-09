@@ -2,7 +2,6 @@ package main
 
 import (
 	"github.com/go-ini/ini"
-	"strings"
 	"time"
 )
 
@@ -20,11 +19,10 @@ const (
 // Tproxy configuration
 //
 type CfgTproxy struct {
-	Port     int      // TCP port for local HTTP proxy
-	Server   string   // Server address
-	Login    string   // User login
-	Password string   // User password
-	Sites    []string // List of tunneled sites
+	Port     int    // TCP port for local HTTP proxy
+	Server   string // Server address
+	Login    string // User login
+	Password string // User password
 }
 
 //
@@ -32,10 +30,7 @@ type CfgTproxy struct {
 //
 func LoadCfg(path string) (*CfgTproxy, error) {
 	// Load INI file
-	ini, err := ini.LoadSources(
-		ini.LoadOptions{
-			UnparseableSections: []string{"sites"},
-		},
+	ini, err := ini.Load(
 		path,
 	)
 
@@ -87,14 +82,6 @@ func LoadCfg(path string) (*CfgTproxy, error) {
 	}
 
 	cfg.Password = k.String()
-
-	// Get sites
-	s, err = ini.GetSection("sites")
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.Sites = strings.Fields(s.Body())
 
 	return cfg, err
 }

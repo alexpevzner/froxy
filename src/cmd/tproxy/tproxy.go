@@ -101,7 +101,18 @@ func (proxy *Tproxy) handleConnect(
 func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	proxy.env.Debug("%s %s %s", r.Method, r.URL, r.Proto)
 
-	forward := proxy.router.Route(r.URL)
+	// Split host and port
+	host := strings.ToLower(r.Host)
+
+	if strings.IndexByte(host, ':') != -1 {
+		h, _, err := net.SplitHostPort(host)
+		if err == nil {
+			host = h
+		}
+	}
+
+	// Check routing
+	forward := proxy.router.Route(host)
 	proxy.env.Debug("forward=%v", forward)
 	proxy.env.Debug("host=%v", r.Host)
 
@@ -110,16 +121,6 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 		transport = sshTransport
 	} else {
 		transport = directTransport
-	}
-
-	// Split host and port
-	host := r.Host
-
-	if strings.IndexByte(host, ':') != -1 {
-		h, _, err := net.SplitHostPort(host)
-		if err == nil {
-			host = h
-		}
 	}
 
 	// Check for request to TProxy itself
@@ -178,8 +179,6 @@ func NewTproxy(cfgPath string) (*Tproxy, error) {
 		Addr:    fmt.Sprintf("127.0.0.1:%d", cfg.Port),
 		Handler: http.HandlerFunc(proxy.httpHandler),
 	}
-
-	proxy.router.SetSites(cfg.Sites)
 
 	return proxy, nil
 }

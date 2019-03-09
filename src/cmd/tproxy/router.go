@@ -5,19 +5,14 @@
 package main
 
 import (
-	"net/url"
-	"path"
 	"strings"
-	"sync"
 )
 
 //
 // Request router
 //
 type Router struct {
-	env   *Env                // Common environment
-	sites map[string]struct{} // Set of sites forwarded via server (list of glob patterns)
-	lock  sync.Mutex          // Access lock
+	env *Env // Common environment
 }
 
 //
@@ -25,8 +20,7 @@ type Router struct {
 //
 func NewRouter(env *Env) *Router {
 	return &Router{
-		env:   env,
-		sites: make(map[string]struct{}),
+		env: env,
 	}
 }
 
@@ -34,56 +28,23 @@ func NewRouter(env *Env) *Router {
 // Route the URL. Returns true if site must be routed via server,
 // false if site must be accessed directly
 //
-func (r *Router) Route(url *url.URL) (forward bool) {
-	r.lock.Lock()
-	defer r.lock.Unlock()
+func (r *Router) Route(host string) (forward bool) {
+	sites := r.env.GetSites()
+	for _, site := range sites {
+		r.env.Debug("%s vs %s", host, site.Host)
 
-	for pattern, _ := range r.sites {
-		var ok bool
-
-		r.env.Debug("%#v %s %s", url, url.Host, url.Hostname())
-		target := url.Hostname()
-		if strings.IndexByte(pattern, '/') != -1 {
-			target += url.Path
+		if site.Host == host {
+			return true
 		}
-		ok, _ = path.Match(pattern, target)
 
-		r.env.Debug("ROUTE %s %s %v", pattern, target, ok)
+		r.env.Debug("has suffix: %v", strings.HasSuffix(host, site.Host))
 
-		if ok {
+		if site.Rec &&
+			strings.HasSuffix(host, site.Host) &&
+			host[len(host)-len(site.Host)-1] == '.' {
 			return true
 		}
 	}
 
 	return false
-}
-
-//
-// Add site to be routed via server
-//
-func (r *Router) AddSite(site string) {
-	r.lock.Lock()
-	r.sites[site] = struct{}{}
-	r.lock.Unlock()
-}
-
-//
-// Del site
-//
-func (r *Router) DelSite(site string) {
-	r.lock.Lock()
-	delete(r.sites, site)
-	r.lock.Unlock()
-}
-
-//
-// Set list of sites
-//
-func (r *Router) SetSites(sites []string) {
-	r.lock.Lock()
-	r.sites = make(map[string]struct{})
-	for _, s := range sites {
-		r.sites[s] = struct{}{}
-	}
-	r.lock.Unlock()
 }
