@@ -55,6 +55,9 @@ function TableButtonClicked (button, rownum) {
 function UpdateTable (sites) {
     var sz = sites.length;
 
+    // Sort sites
+    sites.sort(function(a, b) { return a.host.localeCompare(b.host); });
+
     // Resize table
     if (table.length > sz) {
         while(table.length > sz) {
