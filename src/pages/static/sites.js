@@ -23,9 +23,19 @@ function AddSite () {
 }
 
 //
-// Resize table
+// Called when table button is clicked
 //
-function ResizeTable (sz) {
+function TableButtonClicked (button, rownum) {
+    console.log("click", button, rownum);
+}
+
+//
+// Update table of sites
+//
+function UpdateTable (sites) {
+    var sz = sites.length;
+
+    // Resize table
     if (table.length > sz) {
         while(table.length > sz) {
             table.pop().remove();
@@ -35,40 +45,51 @@ function ResizeTable (sz) {
 
         while(table.length < sz) {
             var row = document.getElementById("template").cloneNode(true);
+
             row.hidden = false;
 
-            inputs = row.getElementsByTagName("input");
+            var inputs = row.getElementsByTagName("input");
             for (var i = 0; i < inputs.length; i ++) {
                 var elm = inputs[i];
                 var nm = elm.getAttribute("name");
+
                 elm.id = table.length + "." + nm;
+
+                if (elm.type == "button") {
+                    elm.onclick = function(n, i) {
+                        return function() {
+                            TableButtonClicked(n, i);
+                        };
+                    }(nm, table.length);
+                }
             }
 
             tbody.appendChild(row);
             table.push(row);
         }
     }
+
+    // Update rows
+    for (var n = 0; n < table.length; n ++) {
+        tproxy.UiSetInput(n + ".host", sites[n].host);
+        tproxy.UiSetInput(n + ".rec", sites[n].rec);
+        table[n].setAttribute("host", sites[n].host);
+    }
 }
 
 //
-// Update table
+// Reload table of sites
 //
-function UpdateTable (sites) {
-    rq = tproxy.GetSites();
-
-    rq.OnSuccess = function (sites) {
-        ResizeTable(sites.length);
-        for (var row = 0; row < table.length; row ++) {
-            tproxy.UiSetInput(row + ".host", sites[row].host);
-        }
-    };
+function ReloadTable () {
+    var rq = tproxy.GetSites();
+    rq.OnSuccess = UpdateTable;
 }
 
 //
 // Page initialization
 //
 function init () {
-    UpdateTable();
+    ReloadTable();
 }
 
 init();
