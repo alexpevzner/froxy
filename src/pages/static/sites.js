@@ -16,7 +16,9 @@ function AddSite () {
     var rec = tproxy.UiGetInput("add.rec");
 
     if (host) {
-        tproxy.SetSite(host, host, rec);
+        var rq = tproxy.SetSite(host, host, rec);
+
+        rq.OnSuccess = ReloadTable;
         tproxy.UiSetInput("add.host", "");
         tproxy.UiSetInput("add.rec", true);
     }
@@ -27,6 +29,24 @@ function AddSite () {
 //
 function TableButtonClicked (button, rownum) {
     console.log("click", button, rownum);
+    var row = table[rownum];
+    var oldhost = row.getAttribute("host");
+    var rq;
+
+    switch (button) {
+    case "update":
+        var host = tproxy.UiGetInput(rownum + "." + "host");
+        var rec = tproxy.UiGetInput(rownum + "." + "rec");
+
+        rq = tproxy.SetSite(oldhost, host, rec);
+        break;
+
+    case "del":
+        rq = tproxy.DelSite(oldhost);
+        break;
+    }
+
+    rq.OnSuccess = ReloadTable;
 }
 
 //

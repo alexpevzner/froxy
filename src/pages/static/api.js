@@ -179,7 +179,7 @@ tproxy.SetSite  = function(oldhost, newhost, recursive) {
 //
 tproxy.DelSite  = function(oldhost) {
     var q = "/api/sites?" + encodeURIComponent(oldhost);
-    return tproxy._.http_request("PUT", q);
+    return tproxy._.http_request("DEL", q);
 };
 
 // ----- UI helper functions -----
