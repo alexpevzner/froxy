@@ -4,6 +4,9 @@ title = "TProxy"
 theme = "hugo-flex"
 themesDir = "../vendor/themes"
 
+[params]
+footer = "Copyright (c) by Alexander Pevzner, 2019"
+
 [[menu.nav]]
   name = "Configuration"
   url = "conf/"
