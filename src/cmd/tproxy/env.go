@@ -31,15 +31,24 @@ type Env struct {
 	// Persistent state
 	stateLock sync.RWMutex // State access lock
 	state     *State       // TProxy persistent state
+
+	// Connection state
+	connStateLock          sync.Mutex    // Access lock
+	connState              ConnState     // Current state
+	connStateInfo          string        // Info string
+	connStateChan          chan struct{} // Wait chanell
+	connStateChanSignalled bool
 }
 
+// ----- Constructor -----
 //
 // Create new environment
 //
 func NewEnv() *Env {
 	env := &Env{
-		Logger: &log.DefaultLogger,
-		state:  &State{},
+		Logger:        &log.DefaultLogger,
+		state:         &State{},
+		connStateChan: make(chan struct{}),
 	}
 
 	env.populateOsPaths()
@@ -54,6 +63,7 @@ func NewEnv() *Env {
 	return env
 }
 
+// ----- Persistent configuration -----
 //
 // Get server parameters
 //
@@ -150,4 +160,85 @@ func (env *Env) DelSite(host string) {
 	env.state.Sites = env.state.Sites[:len(env.state.Sites)-1]
 
 	env.state.Save(env.pathUserStateFile)
+}
+
+// ----- Connection state -----
+//
+// Connection states
+//
+type ConnState int
+
+const (
+	ConnNotConfigured = ConnState(iota)
+	ConnTrying
+	ConnFailed
+	ConnEstablished
+)
+
+//
+// ConnState -> string
+//
+func (s ConnState) String() string {
+	switch s {
+	case ConnNotConfigured:
+		return "noconfig"
+	case ConnTrying:
+		return "trying"
+	case ConnFailed:
+		return "failed"
+	case ConnEstablished:
+		return "established"
+	}
+
+	panic("internal error")
+}
+
+//
+// Get connection state
+//
+func (env *Env) GetConnState() (state ConnState, info string) {
+	env.connStateLock.Lock()
+	state = env.connState
+	info = env.connStateInfo
+	env.connStateLock.Unlock()
+
+	return
+}
+
+//
+// Set connection state
+//
+func (env *Env) SetConnState(state ConnState, info string) {
+	env.connStateLock.Lock()
+
+	if env.connState != state {
+		env.connState = state
+		env.connStateInfo = info
+
+		if !env.connStateChanSignalled {
+			env.connStateChanSignalled = true
+			close(env.connStateChan)
+		}
+	}
+
+	env.connStateLock.Unlock()
+}
+
+//
+// Get wait channel for connection state change
+//
+// The channel becomes "readable" when state changes
+//
+func (env *Env) ConnStateChan() (c <-chan struct{}) {
+	env.connStateLock.Lock()
+
+	c = env.connStateChan
+	if env.connStateChanSignalled {
+		env.connStateChanSignalled = false
+		env.connStateChan = make(chan struct{})
+	}
+
+	env.connStateLock.Unlock()
+
+	return c
 }

@@ -34,12 +34,13 @@ func NewWebAPI(env *Env) *WebAPI {
 
 	webapi.mux.HandleFunc("/api/server", webapi.handleServer)
 	webapi.mux.HandleFunc("/api/sites", webapi.handleSites)
+	webapi.mux.HandleFunc("/api/state", webapi.handleState)
 
 	return webapi
 }
 
 //
-// Handle /server requests
+// Handle /api/server requests
 //
 func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
@@ -72,7 +73,7 @@ func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 }
 
 //
-// Handle /sites requests
+// Handle /api/sites requests
 //
 func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 	var host string
@@ -124,6 +125,34 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 	default:
 		webapi.httpError(w, http.StatusMethodNotAllowed)
 	}
+}
+
+//
+// Handle /api/sites requests
+//
+func (webapi *WebAPI) handleState(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		webapi.httpError(w, http.StatusMethodNotAllowed)
+	}
+
+AGAIN:
+	state, info := webapi.env.GetConnState()
+	stateName := state.String()
+	if stateName == r.URL.RawQuery {
+		select {
+		case <-webapi.env.ConnStateChan():
+			goto AGAIN
+		case <-r.Context().Done():
+			return
+		}
+	}
+
+	data := struct {
+		State string `json:"state"`
+		Info  string `json:"info"`
+	}{stateName, info}
+
+	webapi.replyJSON(w, &data)
 }
 
 //
