@@ -7,7 +7,6 @@ package main
 import (
 	"fmt"
 	"io"
-	"net"
 	"net/http"
 	"net/http/httputil"
 	"pages"
@@ -21,7 +20,6 @@ import (
 //
 type Tproxy struct {
 	env             *Env             // Common environment
-	cfg             *CfgTproxy       // Tproxy configuration
 	router          *Router          // Request router
 	webapi          *WebAPI          // JS API handler
 	httpSrv         *http.Server     // Local HTTP server instance
@@ -106,14 +104,7 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	proxy.env.Debug("%s %s %s", r.Method, r.URL, r.Proto)
 
 	// Split host and port
-	host := strings.ToLower(r.Host)
-
-	if strings.IndexByte(host, ':') != -1 {
-		h, _, err := net.SplitHostPort(host)
-		if err == nil {
-			host = h
-		}
-	}
+	host, _ := NetSplitHostPort(strings.ToLower(r.Host), "")
 
 	// Check routing
 	forward := proxy.router.Route(host)
@@ -129,7 +120,7 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Check for request to TProxy itself
 	switch host {
-	case HOST_TPROXY_PAGES, "localhost":
+	case HTTP_SERVER_HOST, "localhost":
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			proxy.env.Debug("local->webapi")
 			proxy.webapi.ServeHTTP(w, r)
@@ -159,22 +150,11 @@ func (proxy *Tproxy) Run() error {
 //
 // Create a Tproxy instance
 //
-func NewTproxy(cfgPath string) (*Tproxy, error) {
-	// Load configiration file
-	if cfgPath == "" {
-		cfgPath = DEFAULT_TPROXY_CFG
-	}
-
-	cfg, err := LoadCfg(cfgPath)
-	if err != nil {
-		return nil, err
-	}
-
+func NewTproxy(port int) (*Tproxy, error) {
 	// Create Tproxy structure
 	env := NewEnv()
 	proxy := &Tproxy{
 		env:    env,
-		cfg:    cfg,
 		router: NewRouter(env),
 		webapi: NewWebAPI(env),
 	}
@@ -182,7 +162,6 @@ func NewTproxy(cfgPath string) (*Tproxy, error) {
 	// Create transports
 	proxy.sshTransport = NewSSHTransport(
 		env,
-		cfg.Server,
 		&ssh.ClientConfig{
 			User: "proxy",
 			Auth: []ssh.AuthMethod{
@@ -196,7 +175,7 @@ func NewTproxy(cfgPath string) (*Tproxy, error) {
 
 	// Create HTTP server
 	proxy.httpSrv = &http.Server{
-		Addr:    fmt.Sprintf("127.0.0.1:%d", cfg.Port),
+		Addr:    fmt.Sprintf("127.0.0.1:%d", port),
 		Handler: http.HandlerFunc(proxy.httpHandler),
 	}
 

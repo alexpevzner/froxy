@@ -13,7 +13,7 @@ import (
 
 //----- Program options -----
 var (
-	opt_cfg = flag.String("f", "", "Path to configuration file")
+	opt_port = flag.Int("p", HTTP_SERVER_PORT, "Server port")
 )
 
 //
@@ -36,7 +36,7 @@ func main() {
 	}
 
 	// Run tproxy
-	proxy, err := NewTproxy(*opt_cfg)
+	proxy, err := NewTproxy(*opt_port)
 	if err == nil {
 		err = proxy.Run()
 	}

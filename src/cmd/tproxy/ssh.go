@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"net"
 	"net/http"
 	"sync"
@@ -19,8 +20,6 @@ import (
 type SSHTransport struct {
 	http.Transport                         // SSH-backed http.Transport
 	env            *Env                    // Back link to environment
-	server         string                  // Server address
-	cfg            *ssh.ClientConfig       // SSH client configuration
 	clients        map[*sshClient]struct{} // Pool of active clients
 	mutex          sync.Mutex              // Access lock
 }
@@ -47,7 +46,7 @@ type sshConn struct {
 //
 // Create new SSH transport
 //
-func NewSSHTransport(env *Env, server string, cfg *ssh.ClientConfig) *SSHTransport {
+func NewSSHTransport(env *Env, cfg *ssh.ClientConfig) *SSHTransport {
 	t := &SSHTransport{
 		Transport: http.Transport{
 			Proxy:                 http.ProxyFromEnvironment,
@@ -57,8 +56,6 @@ func NewSSHTransport(env *Env, server string, cfg *ssh.ClientConfig) *SSHTranspo
 			ExpectContinueTimeout: 1 * time.Second,
 		},
 		env:     env,
-		server:  server,
-		cfg:     cfg,
 		clients: make(map[*sshClient]struct{}),
 	}
 
@@ -108,8 +105,28 @@ func (t *SSHTransport) getClient() (*sshClient, error) {
 	}
 
 	// Create a new one
-	sshclient, err := ssh.Dial("tcp", t.server, t.cfg)
+	params := t.env.GetServerParams()
+	t.env.Debug("params=%#v)", params)
+
+	if params.Addr == "" {
+		t.env.SetConnState(ConnNotConfigured, "")
+		return nil, errors.New("Server not configured")
+	}
+
+	cfg := &ssh.ClientConfig{
+		User: params.Login,
+		Auth: []ssh.AuthMethod{
+			ssh.Password(params.Password),
+		},
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+
+	sshclient, err := ssh.Dial("tcp", NetDefaultPort(params.Addr, "22"), cfg)
 	if err != nil {
+		if len(t.clients) == 0 {
+			t.env.SetConnState(ConnTrying, err.Error())
+		}
+
 		return nil, err
 	}
 

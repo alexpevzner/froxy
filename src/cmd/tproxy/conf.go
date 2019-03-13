@@ -1,87 +1,24 @@
+//
+// Default configuration
+//
+
 package main
 
-import (
-	"github.com/go-ini/ini"
-	"time"
-)
-
 const (
-	CONNECT_TIMEOUT = 10 * time.Second
+	// ----- Built-in HTTP server configuration -----
+	//
+	// TCP port to run server on
+	//
+	HTTP_SERVER_PORT = 8888
 
-	DEFAULT_TPROXY_CFG = "tproxy.cfg"
+	//
+	// HTTP Host server responds on
+	//
+	HTTP_SERVER_HOST = "tproxy"
 
+	// ----- SSH configuration -----
+	//
+	// Max connections per client session
+	//
 	SSH_MAX_CONN_PER_CLIENT = 10
-
-	HOST_TPROXY_PAGES = "tproxy"
 )
-
-//
-// Tproxy configuration
-//
-type CfgTproxy struct {
-	Port     int    // TCP port for local HTTP proxy
-	Server   string // Server address
-	Login    string // User login
-	Password string // User password
-}
-
-//
-// Load configuration
-//
-func LoadCfg(path string) (*CfgTproxy, error) {
-	// Load INI file
-	ini, err := ini.Load(
-		path,
-	)
-
-	if err != nil {
-		return nil, err
-	}
-
-	cfg := &CfgTproxy{}
-
-	// Get http configuration
-	s, err := ini.GetSection("http")
-	if err != nil {
-		return nil, err
-	}
-
-	k, err := s.GetKey("port")
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.Port, err = k.Int()
-	if err != nil {
-		return nil, err
-	}
-
-	// Get SSH server configuration
-	s, err = ini.GetSection("ssh")
-	if err != nil {
-		return nil, err
-	}
-
-	k, err = s.GetKey("server")
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.Server = k.String()
-
-	k, err = s.GetKey("login")
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.Login = k.String()
-
-	k, err = s.GetKey("password")
-	if err != nil {
-		return nil, err
-	}
-
-	cfg.Password = k.String()
-
-	return cfg, err
-}
