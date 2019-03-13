@@ -218,4 +218,69 @@ tproxy.UiSetInput = function(id, value) {
     }
 };
 
+//
+// Set status string
+//
+tproxy.UiSetStatus = function(color, text) {
+    var status = document.getElementById("status");
+    if (!status) {
+        return;
+    }
+
+    status.style = "color:" + color;
+    status.innerHTML = text;
+};
+
+// ----- Background activities -----
+//
+// Start status monitiring
+//
+tproxy.BgStartStatus = function(laststate) {
+    var q = "/api/state";
+    if (laststate) {
+        q += "?" + laststate;
+    }
+
+    var rq = tproxy._.http_request("GET", q);
+    rq.OnSuccess = function (state) {
+        var color = "black";
+        switch (state.state) {
+        case "noconfig":    color = "olive"; break;
+        case "trying":      color = "green"; break;
+        case "established": color = "steelblue"; break;
+        }
+
+        tproxy.UiSetStatus(color, state.info);
+        tproxy.BgStartStatus(state.state);
+    };
+
+    rq.OnError = function () {
+        tproxy.UiSetStatus("red", "TProxy not responding");
+        tproxy.BgReloadWhenReady();
+    };
+};
+
+//
+// Monitor TProxy state and reload current page when it becomes ready
+//
+tproxy.BgReloadWhenReady = function() {
+    var rq = tproxy._.http_request("GET", "/api/state");
+    rq.OnSuccess = function () {
+        location.reload();
+    };
+    rq.OnError = function () {
+        setTimeout(tproxy.BgReloadWhenReady, 1000);
+    };
+};
+
+// ----- Initialization -----
+//
+// Initialize stuff
+//
+tproxy._.init = function() {
+    tproxy.BgStartStatus();
+};
+
+tproxy._.init();
+
 // vim:ts=8:sw=4:et

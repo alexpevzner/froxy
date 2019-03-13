@@ -171,23 +171,20 @@ type ConnState int
 const (
 	ConnNotConfigured = ConnState(iota)
 	ConnTrying
-	ConnFailed
 	ConnEstablished
 )
 
 //
-// ConnState -> string
+// ConnState -> ("name", "default info string")
 //
-func (s ConnState) String() string {
+func (s ConnState) Strings() (string, string) {
 	switch s {
 	case ConnNotConfigured:
-		return "noconfig"
+		return "noconfig", "Server not configured"
 	case ConnTrying:
-		return "trying"
-	case ConnFailed:
-		return "failed"
+		return "trying", ""
 	case ConnEstablished:
-		return "established"
+		return "established", "Connected to the server"
 	}
 
 	panic("internal error")

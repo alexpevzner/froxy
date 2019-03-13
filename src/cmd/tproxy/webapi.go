@@ -137,7 +137,11 @@ func (webapi *WebAPI) handleState(w http.ResponseWriter, r *http.Request) {
 
 AGAIN:
 	state, info := webapi.env.GetConnState()
-	stateName := state.String()
+	stateName, stateInfo := state.Strings()
+	if info == "" {
+		info = stateInfo
+	}
+
 	if stateName == r.URL.RawQuery {
 		select {
 		case <-webapi.env.ConnStateChan():
