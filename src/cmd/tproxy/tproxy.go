@@ -12,17 +12,21 @@ import (
 	"net/http/httputil"
 	"pages"
 	"strings"
+
+	"golang.org/x/crypto/ssh"
 )
 
 //
 // tproxy instance
 //
 type Tproxy struct {
-	env     *Env         // Common environment
-	cfg     *CfgTproxy   // Tproxy configuration
-	httpSrv *http.Server // Local HTTP server instance
-	router  *Router      // Request router
-	webapi  *WebAPI      // JS API handler
+	env             *Env             // Common environment
+	cfg             *CfgTproxy       // Tproxy configuration
+	router          *Router          // Request router
+	webapi          *WebAPI          // JS API handler
+	httpSrv         *http.Server     // Local HTTP server instance
+	sshTransport    *SSHTransport    // SSH transport
+	directTransport *DirectTransport // Direct transport
 }
 
 // ----- Proxying regular HTTP requests (GET/PUT/HEAD etc) -----
@@ -118,9 +122,9 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 
 	var transport Transport
 	if forward {
-		transport = sshTransport
+		transport = proxy.sshTransport
 	} else {
-		transport = directTransport
+		transport = proxy.directTransport
 	}
 
 	// Check for request to TProxy itself
@@ -175,10 +179,28 @@ func NewTproxy(cfgPath string) (*Tproxy, error) {
 		webapi: NewWebAPI(env),
 	}
 
+	// Create transports
+	proxy.sshTransport = NewSSHTransport(
+		env,
+		cfg.Server,
+		&ssh.ClientConfig{
+			User: "proxy",
+			Auth: []ssh.AuthMethod{
+				ssh.Password("proxy12345"),
+			},
+			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+		},
+	)
+
+	proxy.directTransport = NewDirectTransport(env)
+
+	// Create HTTP server
 	proxy.httpSrv = &http.Server{
 		Addr:    fmt.Sprintf("127.0.0.1:%d", cfg.Port),
 		Handler: http.HandlerFunc(proxy.httpHandler),
 	}
+
+	env.Debug("Starting HTTP server at http://%s", proxy.httpSrv.Addr)
 
 	return proxy, nil
 }

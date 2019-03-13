@@ -18,6 +18,7 @@ import (
 //
 type SSHTransport struct {
 	http.Transport                         // SSH-backed http.Transport
+	env            *Env                    // Back link to environment
 	server         string                  // Server address
 	cfg            *ssh.ClientConfig       // SSH client configuration
 	clients        map[*sshClient]struct{} // Pool of active clients
@@ -46,7 +47,7 @@ type sshConn struct {
 //
 // Create new SSH transport
 //
-func NewSSHTransport(server string, cfg *ssh.ClientConfig) *SSHTransport {
+func NewSSHTransport(env *Env, server string, cfg *ssh.ClientConfig) *SSHTransport {
 	t := &SSHTransport{
 		Transport: http.Transport{
 			Proxy:                 http.ProxyFromEnvironment,
@@ -55,6 +56,7 @@ func NewSSHTransport(server string, cfg *ssh.ClientConfig) *SSHTransport {
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 		},
+		env:     env,
 		server:  server,
 		cfg:     cfg,
 		clients: make(map[*sshClient]struct{}),
@@ -83,37 +85,58 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	return conn, nil
 }
 
+//
+// Get a client session for establishing new connection
+//
 func (t *SSHTransport) getClient() (*sshClient, error) {
 	t.mutex.Lock()
 	defer t.mutex.Unlock()
 
+	// Look to existent clients
+	clnt := (*sshClient)(nil)
 	for c, _ := range t.clients {
 		if c.refcnt < SSH_MAX_CONN_PER_CLIENT {
-			c.refcnt++
-			return c, nil
+			if clnt == nil || clnt.refcnt > c.refcnt {
+				clnt = c
+			}
 		}
 	}
 
+	if clnt != nil {
+		clnt.refcnt++
+		return clnt, nil
+	}
+
+	// Create a new one
 	sshclient, err := ssh.Dial("tcp", t.server, t.cfg)
 	if err != nil {
 		return nil, err
 	}
 
-	c := &sshClient{
+	t.env.SetConnState(ConnEstablished, "")
+
+	clnt = &sshClient{
 		Client:    sshclient,
 		transport: t,
 		refcnt:    1,
 	}
 
-	t.clients[c] = struct{}{}
+	t.clients[clnt] = struct{}{}
 	go func() {
-		sshclient.Wait()
+		err := sshclient.Wait()
+
 		t.mutex.Lock()
-		delete(t.clients, c)
+		delete(t.clients, clnt)
+
+		t.env.SetConnState(ConnEstablished, "")
+		if len(t.clients) == 0 {
+			t.env.SetConnState(ConnTrying, err.Error())
+		}
+
 		t.mutex.Unlock()
 	}()
 
-	return c, nil
+	return clnt, nil
 }
 
 // ----- sshClient methods -----

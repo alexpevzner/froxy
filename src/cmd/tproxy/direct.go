@@ -16,12 +16,13 @@ import (
 //
 type DirectTransport struct {
 	http.Transport
+	env *Env // Back link to environment
 }
 
 //
 // Create new DirectTransport
 //
-func NewDirectTransport() *DirectTransport {
+func NewDirectTransport(env *Env) *DirectTransport {
 	return &DirectTransport{
 		Transport: http.Transport{
 			Proxy: http.ProxyFromEnvironment,
