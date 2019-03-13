@@ -102,7 +102,7 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 
 	case "PUT":
 		body, err := ioutil.ReadAll(r.Body)
-		var data StateSite
+		var data SiteParams
 
 		if err != nil {
 			goto FAIL

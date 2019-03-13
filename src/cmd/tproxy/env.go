@@ -91,11 +91,11 @@ func (env *Env) SetServerParams(s *ServerParams) {
 //
 // Get sites
 //
-func (env *Env) GetSites() (sites []StateSite) {
+func (env *Env) GetSites() (sites []SiteParams) {
 	env.stateLock.RLock()
 	sites = env.state.Sites
 	if sites == nil {
-		sites = make([]StateSite, 0)
+		sites = make([]SiteParams, 0)
 	}
 	env.stateLock.RUnlock()
 	return
@@ -108,7 +108,7 @@ func (env *Env) GetSites() (sites []StateSite) {
 // but if site.Host != host, the existent site will be
 // renamed
 //
-func (env *Env) SetSite(host string, site StateSite) {
+func (env *Env) SetSite(host string, site SiteParams) {
 	host = strings.ToLower(host)
 	site.Host = strings.ToLower(site.Host)
 

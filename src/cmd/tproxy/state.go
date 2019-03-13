@@ -15,7 +15,7 @@ import (
 //
 type State struct {
 	Server *ServerParams `json:"server,omitempty"` // Server parameters
-	Sites  []StateSite   `json:"sites,omitempty"`  // List of forwarded sites
+	Sites  []SiteParams  `json:"sites,omitempty"`  // List of forwarded sites
 }
 
 //
@@ -30,7 +30,7 @@ type ServerParams struct {
 //
 // Site parameters
 //
-type StateSite struct {
+type SiteParams struct {
 	Host string `json:"host,omitempty"` // Host name
 	Rec  bool   `json:"rec,omitempty"`  // Recursive (with subdomains)
 }
