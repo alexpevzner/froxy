@@ -67,11 +67,11 @@ func NewEnv() *Env {
 //
 // Get server parameters
 //
-func (env *Env) GetServerParams() *StateServer {
+func (env *Env) GetServerParams() *ServerParams {
 	env.stateLock.RLock()
 	s := env.state.Server
 	if s == nil {
-		s = &StateServer{}
+		s = &ServerParams{}
 	}
 	env.stateLock.RUnlock()
 
@@ -81,7 +81,7 @@ func (env *Env) GetServerParams() *StateServer {
 //
 // Set server parameters
 //
-func (env *Env) SetServerParams(s *StateServer) {
+func (env *Env) SetServerParams(s *ServerParams) {
 	env.stateLock.Lock()
 	env.state.Server = s
 	env.state.Save(env.pathUserStateFile)

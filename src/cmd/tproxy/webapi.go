@@ -50,7 +50,7 @@ func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 
 	case "PUT":
 		body, err := ioutil.ReadAll(r.Body)
-		var data StateServer
+		var data ServerParams
 
 		if err != nil {
 			goto FAIL

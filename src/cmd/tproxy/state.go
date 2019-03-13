@@ -14,14 +14,14 @@ import (
 // The persistent state
 //
 type State struct {
-	Server *StateServer `json:"server,omitempty"` // Server parameters
-	Sites  []StateSite  `json:"sites,omitempty"`  // List of forwarded sites
+	Server *ServerParams `json:"server,omitempty"` // Server parameters
+	Sites  []StateSite   `json:"sites,omitempty"`  // List of forwarded sites
 }
 
 //
 // Server parameters
 //
-type StateServer struct {
+type ServerParams struct {
 	Addr     string `json:"addr,omitempty"`     // Server address
 	Login    string `json:"login,omitempty"`    // Server login
 	Password string `json:"password,omitempty"` // Server password
