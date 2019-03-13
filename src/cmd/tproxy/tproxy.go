@@ -19,12 +19,13 @@ import (
 // tproxy instance
 //
 type Tproxy struct {
-	env             *Env             // Common environment
-	router          *Router          // Request router
-	webapi          *WebAPI          // JS API handler
-	httpSrv         *http.Server     // Local HTTP server instance
-	sshTransport    *SSHTransport    // SSH transport
-	directTransport *DirectTransport // Direct transport
+	env             *Env                // Common environment
+	router          *Router             // Request router
+	webapi          *WebAPI             // JS API handler
+	localhosts      map[string]struct{} // Hosts considered local
+	httpSrv         *http.Server        // Local HTTP server instance
+	sshTransport    *SSHTransport       // SSH transport
+	directTransport *DirectTransport    // Direct transport
 }
 
 // ----- Proxying regular HTTP requests (GET/PUT/HEAD etc) -----
@@ -103,10 +104,30 @@ func (proxy *Tproxy) handleConnect(
 func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	proxy.env.Debug("%s %s %s", r.Method, r.URL, r.Proto)
 
-	// Split host and port
-	host, _ := NetSplitHostPort(strings.ToLower(r.Host), "")
+	// Normalize hostname
+	host := strings.ToLower(r.Host)
+
+	// Check for request to TProxy itself
+	_, local := proxy.localhosts[r.Host]
+	if local {
+		if strings.HasPrefix(r.URL.Path, "/api/") {
+			proxy.env.Debug("local->webapi")
+			proxy.webapi.ServeHTTP(w, r)
+		} else {
+			proxy.env.Debug("local->site")
+			pages.FileServer.ServeHTTP(w, r)
+		}
+		return
+	}
 
 	// Check routing
+	host, _ = NetSplitHostPort(strings.ToLower(r.Host), "")
+	if host == HTTP_SERVER_HOST {
+		// HTTP_SERVER_HOST attempted with invalid port
+		http.Error(w, "Invalid port", http.StatusServiceUnavailable)
+		return
+	}
+
 	forward := proxy.router.Route(host)
 	proxy.env.Debug("forward=%v", forward)
 	proxy.env.Debug("host=%v", r.Host)
@@ -116,19 +137,6 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 		transport = proxy.sshTransport
 	} else {
 		transport = proxy.directTransport
-	}
-
-	// Check for request to TProxy itself
-	switch host {
-	case HTTP_SERVER_HOST, "localhost":
-		if strings.HasPrefix(r.URL.Path, "/api/") {
-			proxy.env.Debug("local->webapi")
-			proxy.webapi.ServeHTTP(w, r)
-		} else {
-			proxy.env.Debug("local->site")
-			pages.FileServer.ServeHTTP(w, r)
-		}
-		return
 	}
 
 	// Handle request
@@ -154,10 +162,26 @@ func NewTproxy(port int) (*Tproxy, error) {
 	// Create Tproxy structure
 	env := NewEnv()
 	proxy := &Tproxy{
-		env:    env,
-		router: NewRouter(env),
-		webapi: NewWebAPI(env),
+		env:        env,
+		router:     NewRouter(env),
+		webapi:     NewWebAPI(env),
+		localhosts: make(map[string]struct{}),
 	}
+
+	// Populate table of local host names
+	for _, h := range []string{
+		"localhost",
+		"127.0.0.1",
+		"127.1",
+		"[::1]",
+		HTTP_SERVER_HOST,
+	} {
+		hp := fmt.Sprintf("%s:%d", h, port)
+		env.Debug("local: %s", hp)
+		proxy.localhosts[hp] = struct{}{}
+	}
+
+	proxy.localhosts[HTTP_SERVER_HOST] = struct{}{}
 
 	// Create transports
 	proxy.sshTransport = NewSSHTransport(
