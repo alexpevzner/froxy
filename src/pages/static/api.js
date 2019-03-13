@@ -161,24 +161,20 @@ tproxy.GetSites  = function() {
 //
 // Set a site parameters - returns HTTP request
 //
-tproxy.SetSite  = function(oldhost, newhost, recursive) {
+tproxy.SetSite  = function(host, params) {
     var q = "/api/sites";
-    if (oldhost) {
-        q += "?" + encodeURIComponent(oldhost);
+    if (host) {
+        q += "?" + encodeURIComponent(host);
     }
 
-    var d = {
-        host: newhost, rec: recursive
-    };
-
-    return tproxy._.http_request("PUT", q, d);
+    return tproxy._.http_request("PUT", q, params);
 };
 
 //
 // Delete a site - returns HTTP request
 //
-tproxy.DelSite  = function(oldhost) {
-    var q = "/api/sites?" + encodeURIComponent(oldhost);
+tproxy.DelSite  = function(host) {
+    var q = "/api/sites?" + encodeURIComponent(host);
     return tproxy._.http_request("DEL", q);
 };
 

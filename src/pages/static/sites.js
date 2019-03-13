@@ -12,15 +12,19 @@ var table = [];
 // Add a site
 //
 function AddSite () {
-    var host = tproxy.UiGetInput("add.host");
-    var rec = tproxy.UiGetInput("add.rec");
+    var params = {
+        host: tproxy.UiGetInput("add.host"),
+        rec: tproxy.UiGetInput("add.rec"),
+        block: tproxy.UiGetInput("add.block")
+    };
 
     if (host) {
-        var rq = tproxy.SetSite(host, host, rec);
+        var rq = tproxy.SetSite(params.host, params);
 
         rq.OnSuccess = ReloadTable;
         tproxy.UiSetInput("add.host", "");
         tproxy.UiSetInput("add.rec", true);
+        tproxy.UiSetInput("add.block", false);
     }
 }
 
@@ -35,10 +39,13 @@ function TableButtonClicked (button, rownum) {
 
     switch (button) {
     case "update":
-        var host = tproxy.UiGetInput(rownum + "." + "host");
-        var rec = tproxy.UiGetInput(rownum + "." + "rec");
+        var params = {
+            host: tproxy.UiGetInput(rownum + "." + "host"),
+            rec: tproxy.UiGetInput(rownum + "." + "rec"),
+            block: tproxy.UiGetInput(rownum + "." + "block")
+        };
 
-        rq = tproxy.SetSite(oldhost, host, rec);
+        rq = tproxy.SetSite(oldhost, params);
         break;
 
     case "del":
@@ -96,6 +103,7 @@ function UpdateTable (sites) {
     for (var n = 0; n < table.length; n ++) {
         tproxy.UiSetInput(n + ".host", sites[n].host);
         tproxy.UiSetInput(n + ".rec", sites[n].rec);
+        tproxy.UiSetInput(n + ".block", sites[n].block);
         table[n].setAttribute("host", sites[n].host);
     }
 }

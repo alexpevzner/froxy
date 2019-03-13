@@ -16,6 +16,17 @@ type Router struct {
 }
 
 //
+// Router answer
+//
+type RouterAnswer int
+
+const (
+	RouterBypass = RouterAnswer(iota)
+	RouterForward
+	RouterBlock
+)
+
+//
 // Create new router
 //
 func NewRouter(env *Env) *Router {
@@ -28,23 +39,34 @@ func NewRouter(env *Env) *Router {
 // Route the URL. Returns true if site must be routed via server,
 // false if site must be accessed directly
 //
-func (r *Router) Route(host string) (forward bool) {
+func (r *Router) Route(host string) (answer RouterAnswer) {
 	sites := r.env.GetSites()
+	found := (*SiteParams)(nil)
+
 	for _, site := range sites {
-		r.env.Debug("%s vs %s", host, site.Host)
-
 		if site.Host == host {
-			return true
+			found = &site
+			break
 		}
-
-		r.env.Debug("has suffix: %v", strings.HasSuffix(host, site.Host))
 
 		if site.Rec &&
 			strings.HasSuffix(host, site.Host) &&
 			host[len(host)-len(site.Host)-1] == '.' {
-			return true
+
+			// More specific match wins
+			if found == nil || len(found.Host) < len(site.Host) {
+				found = &site
+			}
 		}
 	}
 
-	return false
+	if found != nil {
+		if found.Block {
+			return RouterBlock
+		} else {
+			return RouterForward
+		}
+	}
+
+	return RouterBypass
 }

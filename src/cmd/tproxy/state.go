@@ -31,8 +31,9 @@ type ServerParams struct {
 // Site parameters
 //
 type SiteParams struct {
-	Host string `json:"host,omitempty"` // Host name
-	Rec  bool   `json:"rec,omitempty"`  // Recursive (with subdomains)
+	Host  string `json:"host,omitempty"`  // Host name
+	Rec   bool   `json:"rec,omitempty"`   // Recursive (with subdomains)
+	Block bool   `json:"block,omitempty"` // Block the site
 }
 
 //

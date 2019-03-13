@@ -128,15 +128,21 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	forward := proxy.router.Route(host)
-	proxy.env.Debug("forward=%v", forward)
+	rt := proxy.router.Route(host)
+	proxy.env.Debug("router answer=%d", rt)
 	proxy.env.Debug("host=%v", r.Host)
 
 	var transport Transport
-	if forward {
-		transport = proxy.sshTransport
-	} else {
+	switch rt {
+	case RouterBypass:
 		transport = proxy.directTransport
+	case RouterForward:
+		transport = proxy.sshTransport
+	case RouterBlock:
+		http.Error(w, "Site blocked", http.StatusForbidden)
+		return
+	default:
+		panic("internal error")
 	}
 
 	// Handle request

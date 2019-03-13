@@ -11,12 +11,14 @@ In most cases you will want to check the "With subdomains" button
 	<tbody id="tbody">
 	<tr>
 		<td><input id="add.host" type="text" style="width: 95%;"/></td>
-		<td>&nbsp;<input id="add.rec" type="checkbox" checked /> &nbsp;With subdomains
+		<td>&nbsp;<input id="add.rec" type="checkbox" checked />With subdomains</td>
+		<td>&nbsp;<input id="add.block" type="checkbox" />Block</td>
 		<td><input type="button" value="Add" onclick="AddSite()" /></td>
 	</tr>
 	<tr id="template" hidden>
 		<td><input name="host" type="text" style="width: 95%;" /></td>
-		<td>&nbsp;<input name="rec" type="checkbox" checked /> &nbsp;With subdomains
+		<td>&nbsp;<input name="rec" type="checkbox" checked /> With subdomains</td>
+		<td>&nbsp;<input name="block" type="checkbox" />Block</td>
 		<td><input name="update" type="button" value="Update"/></td>
 		<td><input name="del" type="button" value="Del"/></td>
 	</tr>
