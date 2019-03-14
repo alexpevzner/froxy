@@ -35,6 +35,7 @@ func NewWebAPI(env *Env) *WebAPI {
 	webapi.mux.HandleFunc("/api/server", webapi.handleServer)
 	webapi.mux.HandleFunc("/api/sites", webapi.handleSites)
 	webapi.mux.HandleFunc("/api/state", webapi.handleState)
+	webapi.mux.HandleFunc("/api/counters", webapi.handleCounters)
 
 	return webapi
 }
@@ -133,6 +134,7 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 func (webapi *WebAPI) handleState(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		webapi.httpError(w, http.StatusMethodNotAllowed)
+		return
 	}
 
 AGAIN:
@@ -157,6 +159,18 @@ AGAIN:
 	}{stateName, info}
 
 	webapi.replyJSON(w, &data)
+}
+
+//
+// Handle /api/counters requests
+//
+func (webapi *WebAPI) handleCounters(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "GET" {
+		webapi.httpError(w, http.StatusMethodNotAllowed)
+		return
+	}
+
+	webapi.replyJSON(w, &webapi.env.Counters)
 }
 
 //

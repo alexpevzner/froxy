@@ -82,19 +82,20 @@ func (proxy *Tproxy) handleConnect(
 		return
 	}
 
-	w.WriteHeader(http.StatusOK)
-
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
 		http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
 		return
 	}
+
+	w.WriteHeader(http.StatusOK)
 	client_conn, _, err := hijacker.Hijack()
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		return
 	}
 
-	ioTransferData(client_conn, dest_conn)
+	ioTransferData(proxy.env, client_conn, dest_conn)
 }
 
 //

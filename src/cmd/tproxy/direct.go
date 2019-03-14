@@ -25,7 +25,7 @@ type DirectTransport struct {
 func NewDirectTransport(env *Env) *DirectTransport {
 	return &DirectTransport{
 		Transport: http.Transport{
-			Proxy: http.ProxyFromEnvironment,
+			Proxy: nil,
 			DialContext: (&net.Dialer{
 				Timeout:   10 * time.Second,
 				KeepAlive: 10 * time.Second,

@@ -38,6 +38,9 @@ type Env struct {
 	connStateInfo          string        // Info string
 	connStateChan          chan struct{} // Wait chanell
 	connStateChanSignalled bool
+
+	// Statistic counters
+	Counters Counters // Collection of statistic counters
 }
 
 // ----- Constructor -----

@@ -9,6 +9,7 @@ import (
 	"net"
 	"net/http"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"golang.org/x/crypto/ssh"
@@ -39,7 +40,7 @@ type sshClient struct {
 // SSH-tunneled connection
 //
 type sshConn struct {
-	ssh.Conn            // Underlying ssh.Conn
+	net.Conn            // Underlying SSH-backed net.Conn
 	client   *sshClient // Client that owns the connection
 }
 
@@ -49,7 +50,7 @@ type sshConn struct {
 func NewSSHTransport(env *Env, cfg *ssh.ClientConfig) *SSHTransport {
 	t := &SSHTransport{
 		Transport: http.Transport{
-			Proxy:                 http.ProxyFromEnvironment,
+			Proxy:                 nil,
 			MaxIdleConns:          100,
 			IdleConnTimeout:       90 * time.Second,
 			TLSHandshakeTimeout:   10 * time.Second,
@@ -79,7 +80,10 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 		return nil, err
 	}
 
-	return conn, nil
+	t.env.Debug("SSS: connection established")
+	atomic.AddInt32(&t.env.Counters.SSHConnections, 1)
+
+	return &sshConn{Conn: conn, client: c}, nil
 }
 
 //
@@ -138,14 +142,17 @@ func (t *SSHTransport) getClient() (*sshClient, error) {
 		refcnt:    1,
 	}
 
+	atomic.AddInt32(&t.env.Counters.SSHSessions, 1)
 	t.clients[clnt] = struct{}{}
+
 	go func() {
 		err := sshclient.Wait()
 
 		t.mutex.Lock()
+
+		atomic.AddInt32(&t.env.Counters.SSHSessions, -1)
 		delete(t.clients, clnt)
 
-		t.env.SetConnState(ConnEstablished, "")
 		if len(t.clients) == 0 {
 			t.env.SetConnState(ConnTrying, err.Error())
 		}
@@ -169,6 +176,9 @@ func (c *sshClient) unref() {
 // Close the connection
 //
 func (conn *sshConn) Close() error {
+	conn.client.transport.env.Debug("SSS: connection closed")
+
+	atomic.AddInt32(&conn.client.transport.env.Counters.SSHConnections, -1)
 	err := conn.Conn.Close()
 	conn.client.unref()
 	return err
