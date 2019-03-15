@@ -1,3 +1,5 @@
+<script src="/api.js"defer> </script>
+
 Here you can edit the TProxy configuration
 
 Use **Configuration** tab for common parameters, such as server address and
