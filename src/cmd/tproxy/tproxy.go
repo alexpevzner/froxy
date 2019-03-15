@@ -130,7 +130,7 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rt := proxy.router.Route(host)
-	proxy.env.Debug("router answer=%d", rt)
+	proxy.env.Debug("router answer=%s", rt)
 	proxy.env.Debug("host=%v", r.Host)
 
 	var transport Transport

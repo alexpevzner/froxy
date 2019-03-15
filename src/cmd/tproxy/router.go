@@ -27,6 +27,22 @@ const (
 )
 
 //
+// RouterAnswer->string (for debugging)
+//
+func (a RouterAnswer) String() string {
+	switch a {
+	case RouterBypass:
+		return "bypass"
+	case RouterForward:
+		return "forward"
+	case RouterBlock:
+		return "block"
+	}
+
+	panic("internal error")
+}
+
+//
 // Create new router
 //
 func NewRouter(env *Env) *Router {

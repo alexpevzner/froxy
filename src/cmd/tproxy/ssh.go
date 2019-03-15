@@ -112,7 +112,7 @@ func (t *SSHTransport) getClient() (*sshClient, error) {
 	params := t.env.GetServerParams()
 	t.env.Debug("params=%#v)", params)
 
-	if params.Addr == "" {
+	if !params.Configured() {
 		t.env.SetConnState(ConnNotConfigured, "")
 		return nil, errors.New("Server not configured")
 	}
