@@ -11,8 +11,6 @@ import (
 	"net/http/httputil"
 	"pages"
 	"strings"
-
-	"golang.org/x/crypto/ssh"
 )
 
 //
@@ -191,16 +189,7 @@ func NewTproxy(port int) (*Tproxy, error) {
 	proxy.localhosts[HTTP_SERVER_HOST] = struct{}{}
 
 	// Create transports
-	proxy.sshTransport = NewSSHTransport(
-		env,
-		&ssh.ClientConfig{
-			User: "proxy",
-			Auth: []ssh.AuthMethod{
-				ssh.Password("proxy12345"),
-			},
-			HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-		},
-	)
+	proxy.sshTransport = NewSSHTransport(env)
 
 	proxy.directTransport = NewDirectTransport(env)
 

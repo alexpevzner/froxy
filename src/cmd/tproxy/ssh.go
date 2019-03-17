@@ -47,7 +47,7 @@ type sshConn struct {
 //
 // Create new SSH transport
 //
-func NewSSHTransport(env *Env, cfg *ssh.ClientConfig) *SSHTransport {
+func NewSSHTransport(env *Env) *SSHTransport {
 	t := &SSHTransport{
 		Transport: http.Transport{
 			Proxy:                 nil,
