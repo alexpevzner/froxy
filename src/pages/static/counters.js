@@ -7,7 +7,7 @@
 //
 function GetCountersCallback (data) {
     // Resubmit a request
-    var rq = tproxy.GetCounters(data.tag);
+    var rq = tproxy.GetCounters(data.tag.toString());
     rq.OnSuccess = GetCountersCallback;
 
     // Update page
