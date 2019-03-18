@@ -7,6 +7,7 @@ package main
 import (
 	"reflect"
 	"sync"
+	"sync/atomic"
 )
 
 //
@@ -25,7 +26,8 @@ const (
 type Ebus struct {
 	lock        sync.Mutex                   // Access lock
 	subscribers map[<-chan Event]*subscriber // Table of subscribers
-	evchan      chan Event                   // Event chain
+	pending     uint32                       // Pending events
+	wake        chan struct{}                // Wake-up delivery goroutine
 }
 
 //
@@ -44,7 +46,7 @@ type subscriber struct {
 func NewEbus() *Ebus {
 	ebus := &Ebus{
 		subscribers: make(map[<-chan Event]*subscriber),
-		evchan:      make(chan Event),
+		wake:        make(chan struct{}),
 	}
 
 	go ebus.goroutine()
@@ -90,7 +92,19 @@ func (ebus *Ebus) Unsub(c <-chan Event) {
 // Raise an event
 //
 func (ebus *Ebus) Raise(e Event) {
-	ebus.evchan <- e
+	bit := uint32(1 << e)
+	old := uint32(0)
+
+	// This is equivalent of atomic bitwise or:
+	//     old, ebus.pending = ebus.pending, ebus.pending|bit
+	for ok := false; !ok; {
+		old = atomic.LoadUint32(&ebus.pending)
+		ok = atomic.CompareAndSwapUint32(&ebus.pending, old, old|bit)
+	}
+
+	if old == 0 {
+		ebus.wake <- struct{}{}
+	}
 }
 
 //
@@ -114,7 +128,7 @@ func (ebus *Ebus) goroutine() {
 		cases = append(cases,
 			reflect.SelectCase{
 				Dir:  reflect.SelectRecv,
-				Chan: reflect.ValueOf(ebus.evchan),
+				Chan: reflect.ValueOf(ebus.wake),
 			})
 
 		backmap = append(backmap, nil)
@@ -134,16 +148,15 @@ func (ebus *Ebus) goroutine() {
 
 		// Wait for something to happen
 		ebus.lock.Unlock()
-		choosen, val, _ := reflect.Select(cases)
+		choosen, _, _ := reflect.Select(cases)
 		ebus.lock.Lock()
 
 		// Dispatch the event
 		if choosen == 0 {
-			event := val.Interface().(Event)
-			bit := uint32(1) << event
+			pending := atomic.SwapUint32(&ebus.pending, 0)
 
 			for _, s := range ebus.subscribers {
-				s.pending |= bit & s.mask
+				s.pending |= pending & s.mask
 			}
 		} else {
 			s := backmap[choosen]
