@@ -192,7 +192,7 @@ tproxy.GetCounters = function (tag) {
     }
 
     return tproxy._.http_request("GET", q);
-}
+};
 
 // ----- UI helper functions -----
 //
