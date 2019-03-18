@@ -10,5 +10,5 @@ purposes
 Name                              | Value
 ----------------------------------|---------------
 SSH Client Sessions               | <div id="ssh_sessions"></div>
-TCP Connections tunneled over SSH | <div id="ssh_conns"></div>
+SSH-tunneled TCP Connections      | <div id="ssh_conns"></div>
 
