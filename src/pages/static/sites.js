@@ -18,7 +18,7 @@ function AddSite () {
         block: tproxy.UiGetInput("add.block")
     };
 
-    if (host) {
+    if (params.host) {
         var rq = tproxy.SetSite(params.host, params);
 
         rq.OnSuccess = ReloadTable;
