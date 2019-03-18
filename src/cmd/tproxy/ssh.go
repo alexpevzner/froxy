@@ -20,16 +20,26 @@ import (
 // The SSH transport for net.http
 //
 type SSHTransport struct {
-	http.Transport                              // SSH-backed http.Transport
-	env                 *Env                    // Back link to environment
-	params              *ServerParams           // Server parameters
-	clients             map[*sshClient]struct{} // Pool of active clients
-	mutex               sync.Mutex              // Access lock
-	disconnectLock      sync.Mutex              // Disconnect machinery lock
-	disconnectReason    error                   // Reason why not connected
-	disconnectWait      sync.WaitGroup          // To wait for disconnect completion
-	disconnectCtx       context.Context         // To break dial-in-progress
-	disconnectCtxCancel context.CancelFunc      // To cancel disconnectCtx
+	http.Transport               // SSH-backed http.Transport
+	env            *Env          // Back link to environment
+	params         *ServerParams // Server parameters
+
+	// Management of active sessions
+	clientsLock sync.Mutex              // Access lock
+	clients     map[*sshClient]struct{} // Pool of active clients
+
+	// Establishing new sessions
+	newClientLock      sync.Mutex // Access lock
+	newClientCond      *sync.Cond // Wait queue
+	newClientWaitCount int        // Count of waiters
+	newClientDialCount int        // Count of active dialers
+
+	// Disconnect/reconnect machinery
+	disconnectLock      sync.Mutex         // Disconnect machinery lock
+	disconnectReason    error              // Reason why not connected
+	disconnectWait      sync.WaitGroup     // To wait for disconnect completion
+	disconnectCtx       context.Context    // To break dial-in-progress
+	disconnectCtxCancel context.CancelFunc // To cancel disconnectCtx
 }
 
 var _ = Transport(&SSHTransport{})
@@ -75,6 +85,7 @@ func NewSSHTransport(env *Env) *SSHTransport {
 		clients: make(map[*sshClient]struct{}),
 	}
 
+	t.newClientCond = sync.NewCond(&t.newClientLock)
 	t.Transport.Dial = t.Dial
 
 	t.Connect(t.env.GetServerParams())
@@ -150,8 +161,6 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	}
 
 	// Obtain SSH client
-	t.mutex.Lock()
-
 	clnt := t.getClient()
 	if clnt == nil {
 		clnt, err = t.newClient(ctx, params)
@@ -160,8 +169,6 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 		t.disconnectWait.Done()
 		return nil, err
 	}
-
-	t.mutex.Unlock()
 
 	// Dial a new connection
 	conn, err := clnt.Dial(net, addr)
@@ -180,9 +187,12 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 // Get a client session for establishing new connection
 // May return nil if appropriate session is not found
 //
-// MUST be called under t.mutex
-//
 func (t *SSHTransport) getClient() *sshClient {
+	// Acquire the lock
+	t.clientsLock.Lock()
+	t.clientsLock.Unlock()
+
+	// Lookup a client pool
 	clnt := (*sshClient)(nil)
 
 	for c, _ := range t.clients {
@@ -200,14 +210,62 @@ func (t *SSHTransport) getClient() *sshClient {
 	return clnt
 }
 
+// ----- Establishing new client sessions -----
+//
+// Wait until opportunity to establish a new session
+//
+// This function effectively limits a rate of establishing
+// new sessions, depending on a present demand in new connections
+// (one session my provide up to SSH_MAX_CONN_PER_CLIENT connections)
+//
+// Usage:
+//     t.newClientWait()
+//     c := t.getClient()
+//     if c == nil {
+//         c = dialNewClient(...)
+//     }
+//     t.newClientDone()
+//
+func (t *SSHTransport) newClientWait() {
+	t.newClientLock.Lock()
+	t.newClientWaitCount++
+
+	for t.newClientDialCount*SSH_MAX_CONN_PER_CLIENT >= t.newClientWaitCount {
+		t.newClientCond.Wait()
+	}
+
+	t.newClientDialCount++
+	t.newClientLock.Unlock()
+}
+
+//
+// Notify new sessions scheduler that session establishment is
+// done (or not longer needed)
+//
+func (t *SSHTransport) newClientDone() {
+	t.newClientLock.Lock()
+	t.newClientDialCount--
+	t.newClientWaitCount--
+	t.newClientCond.Signal()
+	t.newClientLock.Unlock()
+}
+
 //
 // Establish a new client connection
-//
-// MUST be called under t.mutex
 //
 func (t *SSHTransport) newClient(
 	ctx context.Context,
 	params *ServerParams) (*sshClient, error) {
+
+	// Obtain grant to dial new session
+	t.newClientWait()
+	defer t.newClientDone()
+
+	// Do we still need to dial?
+	clnt := t.getClient()
+	if clnt != nil {
+		return clnt, nil
+	}
 
 	// Create SSH configuration
 	t.env.Debug("params=%#v)", params)
@@ -244,20 +302,22 @@ func (t *SSHTransport) newClient(
 	t.env.SetConnState(ConnEstablished, "")
 
 	// Create &sshClient structure
-	clnt := &sshClient{
+	clnt = &sshClient{
 		Client:    ssh.NewClient(c, chans, reqs),
 		transport: t,
 		refcnt:    1,
 	}
 
+	t.clientsLock.Lock()
 	atomic.AddInt32(&t.env.Counters.SSHSessions, 1)
 	t.clients[clnt] = struct{}{}
+	t.clientsLock.Unlock()
 
 	// Wait in background for connection termination
 	go func() {
 		err := clnt.Wait()
 
-		t.mutex.Lock()
+		t.clientsLock.Lock()
 
 		atomic.AddInt32(&t.env.Counters.SSHSessions, -1)
 		delete(t.clients, clnt)
@@ -268,7 +328,7 @@ func (t *SSHTransport) newClient(
 
 		t.disconnectWait.Done()
 
-		t.mutex.Unlock()
+		t.clientsLock.Unlock()
 	}()
 
 	return clnt, nil
