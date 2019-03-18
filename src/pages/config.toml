@@ -16,3 +16,10 @@ footer = "Copyright (c) by Alexander Pevzner, 2019"
   name = "Sites"
   url = "sites/"
   weight = 2
+
+[[menu.nav]]
+  name = "Counters"
+  url = "counters/"
+  weight = 3
+
+

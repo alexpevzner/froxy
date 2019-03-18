@@ -178,6 +178,22 @@ tproxy.DelSite  = function(host) {
     return tproxy._.http_request("DEL", q);
 };
 
+//
+// Get statistics counters
+//
+// tag, if defined, is a last known counters tag. If it is provided,
+// request will block until counters change
+//
+tproxy.GetCounters = function (tag) {
+    var q = "/api/counters";
+
+    if (tag) {
+        q += "?" + tag;
+    }
+
+    return tproxy._.http_request("GET", q);
+}
+
 // ----- UI helper functions -----
 //
 // Get value of particular control
@@ -229,7 +245,7 @@ tproxy.UiSetStatus = function(color, text) {
 
 // ----- Background activities -----
 //
-// Start status monitiring
+// Start status monitoring
 //
 tproxy.BgStartStatus = function(laststate) {
     var q = "/api/state";
