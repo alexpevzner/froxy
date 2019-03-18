@@ -8,6 +8,7 @@ import (
 	"context"
 	"net"
 	"net/http"
+	"sync/atomic"
 	"time"
 )
 
@@ -24,6 +25,7 @@ type DirectTransport struct {
 //
 type directConn struct {
 	net.Conn                   // Underlying net.Conn
+	closed    uint32           // Non-zero when closed
 	transport *DirectTransport // Transport that owns the connection
 }
 
@@ -84,8 +86,15 @@ func (t *DirectTransport) DialContext(ctx context.Context,
 //
 // Close directConn
 //
-func (c *directConn) Close() error {
-	t := c.transport
-	t.env.DecCounter(&t.env.Counters.TCPConnections)
-	return c.Conn.Close()
+func (conn *directConn) Close() error {
+	var err error
+
+	if atomic.SwapUint32(&conn.closed, 1) == 0 {
+		t := conn.transport
+		t.env.DecCounter(&t.env.Counters.TCPConnections)
+		err = conn.Conn.Close()
+	}
+
+	return err
+
 }
