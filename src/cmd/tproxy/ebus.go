@@ -33,6 +33,7 @@ type Ebus struct {
 //
 type subscriber struct {
 	out     reflect.Value // reflect.ValueOf from subscriber's channel send end
+	mask    uint32        // Mask of events the subscriber interested in
 	pending uint32        // Not delivered yet events
 	last    Event         // Last delivered event
 }
@@ -52,11 +53,21 @@ func NewEbus() *Ebus {
 
 //
 // Subscribe to events
+// If no events are specified, subscriber will receive all events
 //
-func (ebus *Ebus) Sub() <-chan Event {
+func (ebus *Ebus) Sub(events ...Event) <-chan Event {
+	mask := ^uint32(1)
+	if len(events) != 0 {
+		mask = 0
+		for _, e := range events {
+			mask |= 1 << e
+		}
+	}
+
 	c := make(chan Event)
 	s := &subscriber{
-		out: reflect.ValueOf(c),
+		out:  reflect.ValueOf(c),
+		mask: mask,
 	}
 
 	ebus.lock.Lock()
@@ -132,7 +143,7 @@ func (ebus *Ebus) goroutine() {
 			bit := uint32(1) << event
 
 			for _, s := range ebus.subscribers {
-				s.pending |= bit
+				s.pending |= bit & s.mask
 			}
 		} else {
 			s := backmap[choosen]

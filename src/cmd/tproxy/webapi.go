@@ -137,7 +137,7 @@ func (webapi *WebAPI) handleState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	events := webapi.env.Sub()
+	events := webapi.env.Sub(EventConnStateChanged)
 	defer webapi.env.Unsub(events)
 
 AGAIN:
@@ -173,7 +173,7 @@ func (webapi *WebAPI) handleCounters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	events := webapi.env.Sub()
+	events := webapi.env.Sub(EventCountersChanged)
 	defer webapi.env.Unsub(events)
 
 AGAIN:
