@@ -190,7 +190,6 @@ func NewTproxy(port int) (*Tproxy, error) {
 
 	// Create transports
 	proxy.sshTransport = NewSSHTransport(env)
-
 	proxy.directTransport = NewDirectTransport(env)
 
 	// Create HTTP server
