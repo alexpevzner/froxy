@@ -178,7 +178,7 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	}
 
 	t.env.Debug("SSS: connection established")
-	atomic.AddInt32(&t.env.Counters.SSHConnections, 1)
+	t.env.IncCounter(&t.env.Counters.SSHConnections)
 
 	return &sshConn{Conn: conn, client: clnt}, nil
 }
@@ -309,7 +309,7 @@ func (t *SSHTransport) newClient(
 	}
 
 	t.clientsLock.Lock()
-	atomic.AddInt32(&t.env.Counters.SSHSessions, 1)
+	t.env.IncCounter(&t.env.Counters.SSHSessions)
 	t.clients[clnt] = struct{}{}
 	t.clientsLock.Unlock()
 
@@ -319,7 +319,7 @@ func (t *SSHTransport) newClient(
 
 		t.clientsLock.Lock()
 
-		atomic.AddInt32(&t.env.Counters.SSHSessions, -1)
+		t.env.DecCounter(&t.env.Counters.SSHSessions)
 		delete(t.clients, clnt)
 
 		if len(t.clients) == 0 {
@@ -350,9 +350,11 @@ func (conn *sshConn) Close() error {
 	var err error
 
 	if atomic.SwapUint32(&conn.closed, 1) == 0 {
-		conn.client.transport.env.Debug("SSS: connection closed")
+		t := conn.client.transport
 
-		atomic.AddInt32(&conn.client.transport.env.Counters.SSHConnections, -1)
+		t.env.Debug("SSS: connection closed")
+
+		t.env.DecCounter(&t.env.Counters.SSHConnections)
 		err = conn.Conn.Close()
 		conn.client.unref()
 	}

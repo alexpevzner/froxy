@@ -137,6 +137,9 @@ func (webapi *WebAPI) handleState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
+	events := webapi.env.Sub()
+	defer webapi.env.Unsub(events)
+
 AGAIN:
 	state, info := webapi.env.GetConnState()
 	stateName, stateInfo := state.Strings()
@@ -146,7 +149,7 @@ AGAIN:
 
 	if stateName == r.URL.RawQuery {
 		select {
-		case <-webapi.env.ConnStateChan():
+		case <-events:
 			goto AGAIN
 		case <-r.Context().Done():
 			return
@@ -168,6 +171,22 @@ func (webapi *WebAPI) handleCounters(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		webapi.httpError(w, http.StatusMethodNotAllowed)
 		return
+	}
+
+	events := webapi.env.Sub()
+	defer webapi.env.Unsub(events)
+
+AGAIN:
+	counters := webapi.env.Counters
+	tag := fmt.Sprintf("%d", counters.Tag)
+
+	if tag == r.URL.RawQuery {
+		select {
+		case <-events:
+			goto AGAIN
+		case <-r.Context().Done():
+			return
+		}
 	}
 
 	webapi.replyJSON(w, &webapi.env.Counters)
