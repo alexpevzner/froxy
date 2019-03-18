@@ -131,13 +131,22 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	proxy.env.Debug("router answer=%s", rt)
 	proxy.env.Debug("host=%v", r.Host)
 
+	// Update counters
+	proxy.env.IncCounter(&proxy.env.Counters.HTTPRqReceived)
+	proxy.env.IncCounter(&proxy.env.Counters.HTTPRqPending)
+	defer proxy.env.DecCounter(&proxy.env.Counters.HTTPRqPending)
+
+	// Choose transport
 	var transport Transport
 	switch rt {
 	case RouterBypass:
+		proxy.env.IncCounter(&proxy.env.Counters.HTTPRqDirect)
 		transport = proxy.directTransport
 	case RouterForward:
+		proxy.env.IncCounter(&proxy.env.Counters.HTTPRqForwarded)
 		transport = proxy.sshTransport
 	case RouterBlock:
+		proxy.env.IncCounter(&proxy.env.Counters.HTTPRqBlocked)
 		http.Error(w, "Site blocked", http.StatusForbidden)
 		return
 	default:
