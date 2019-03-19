@@ -20,7 +20,7 @@ title = "TProxy Configuration"
 		</td>
 	</tr>
 	<tr>
-		<td><input type="button" value="Ok" onclick="SubmitServerParams()"/></td>
+		<td><input type="button" value="Ok" onclick="tproxy.Ui(SubmitServerParams)"/></td>
 	</tr>
 	</tbody>
 </table>

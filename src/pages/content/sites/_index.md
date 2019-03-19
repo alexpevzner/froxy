@@ -13,7 +13,7 @@ In most cases you will want to check the "With subdomains" button
 		<td><input id="add.host" type="text" style="width: 95%;"/></td>
 		<td>&nbsp;<input id="add.rec" type="checkbox" checked />With subdomains</td>
 		<td>&nbsp;<input id="add.block" type="checkbox" />Block</td>
-		<td><input type="button" value="Add" onclick="AddSite()" /></td>
+		<td><input type="button" value="Add" onclick="tproxy.Ui(AddSite)" /></td>
 	</tr>
 	<tr id="template" hidden>
 		<td><input name="host" type="text" style="width: 95%;" /></td>

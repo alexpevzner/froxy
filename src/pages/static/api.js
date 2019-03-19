@@ -14,6 +14,17 @@ var tproxy = {_: {}};
 //
 tproxy._.debug = console.log;
 
+// ----- Internal variables. Don't use directly -----
+//
+// Non-zero, when executing callback from input tag
+//
+tproxy._.uiguard = 0;
+
+//
+// Count of active HTTP requests, associated with input tag callbacs
+//
+tproxy._.ui = 0;
+
 // ----- HTTP requests handling -----
 //
 // Create asynchronous HTTP request
@@ -47,10 +58,14 @@ tproxy._.http_request = function(method, query, data) {
     // Create a request
     var rq = {
         _xrq:      new XMLHttpRequest(),
+        _ui:       tproxy._.uiguard,
         OnSuccess: function() {},
         OnError:   function() {}
     };
 
+    if (rq._ui) {
+        tproxy._.ui ++;
+    }
 
     rq._xrq.open(method, query, true);
 
@@ -101,7 +116,9 @@ tproxy._.http_request = function(method, query, data) {
                 }
             }
 
-
+            if (rq._ui) {
+                tproxy._.ui --;
+            }
         }
     };
 
@@ -195,6 +212,24 @@ tproxy.GetCounters = function (tag) {
 };
 
 // ----- UI helper functions -----
+//
+// Wrapper for functions that called as input events handlers.
+//
+// Usage:
+//     <input type="button" onclick="tproxy.Ui(ButtonCallback)" />
+//
+// Wrapping input events handlers into this wrapper ensures proper
+// synchronization between handling user actions and asynchronous
+// execution of http requests initiated from such a handlers
+//
+tproxy.Ui = function(fn) {
+    if (tproxy._.ui == 0) {
+        tproxy._.uiguard ++;
+        fn();
+        tproxy._.uiguard --;
+    }
+};
+
 //
 // Get value of particular control
 //

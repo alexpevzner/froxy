@@ -87,9 +87,9 @@ function UpdateTable (sites) {
 
                 if (elm.type == "button") {
                     elm.onclick = function(n, i) {
-                        return function() {
+                        return tproxy.Ui.bind(null, function() {
                             TableButtonClicked(n, i);
-                        };
+                        });
                     }(nm, table.length);
                 }
             }
