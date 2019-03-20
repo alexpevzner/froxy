@@ -2,6 +2,8 @@
 // Configuration page script
 //
 
+"use strict";
+
 //
 // Submit server parameters
 //

@@ -2,6 +2,8 @@
 // Site list page script
 //
 
+"use strict";
+
 // ----- Static variables -----
 //
 // Array of table rows, one per site, grows or shrinks dynamically

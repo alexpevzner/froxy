@@ -2,6 +2,8 @@
 // JavaScript API for TProxy configuration pages
 //
 
+"use strict";
+
 //
 // All public symbols belong to the tproxy namespacea
 // A nested tproxy._ namespace is for internally used symbols

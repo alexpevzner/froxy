@@ -2,6 +2,8 @@
 // Statistics counters page script
 //
 
+"use strict";
+
 //
 // tproxy.GetCounters callback
 //
