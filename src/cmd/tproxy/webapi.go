@@ -46,12 +46,12 @@ func NewWebAPI(env *Env) *WebAPI {
 func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		conf := webapi.env.GetServerParams()
+		conf := (*IDNServerParams)(webapi.env.GetServerParams())
 		webapi.replyJSON(w, conf)
 
 	case "PUT":
 		body, err := ioutil.ReadAll(r.Body)
-		var data ServerParams
+		var data IDNServerParams
 
 		if err != nil {
 			goto FAIL
@@ -62,7 +62,7 @@ func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 			goto FAIL
 		}
 
-		webapi.env.SetServerParams(&data)
+		webapi.env.SetServerParams((*ServerParams)(&data))
 		return
 
 	FAIL:
@@ -93,17 +93,20 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
+		webapi.env.Debug("host=%s", host)
+		host = IDNEncode(host)
+		webapi.env.Debug("host decoded=%s", host)
 	}
 
 	// Handle request
 	switch r.Method {
 	case "GET":
-		conf := webapi.env.GetSites()
+		conf := (IDNSiteParamsList)(webapi.env.GetSites())
 		webapi.replyJSON(w, conf)
 
 	case "PUT":
 		body, err := ioutil.ReadAll(r.Body)
-		var data SiteParams
+		var data IDNSiteParams
 
 		if err != nil {
 			goto FAIL
@@ -114,14 +117,14 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 			goto FAIL
 		}
 
-		webapi.env.SetSite(r.URL.RawQuery, data)
+		webapi.env.SetSite(host, SiteParams(data))
 		return
 
 	FAIL:
 		httpErrorf(w, http.StatusInternalServerError, "%s", err)
 
 	case "DEL":
-		webapi.env.DelSite(r.URL.RawQuery)
+		webapi.env.DelSite(host)
 
 	default:
 		httpError(w, http.StatusMethodNotAllowed)
@@ -129,7 +132,7 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 }
 
 //
-// Handle /api/sites requests
+// Handle /api/state requests
 //
 func (webapi *WebAPI) handleState(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
@@ -203,9 +206,13 @@ func (webapi *WebAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 // Reply with JSON data
 //
 func (webapi *WebAPI) replyJSON(w http.ResponseWriter, data interface{}) {
-	body, _ := json.Marshal(struct {
+	body, err := json.Marshal(struct {
 		Data interface{} `json:"data"`
 	}{data})
+
+	if err != nil {
+		panic("internal error: " + err.Error())
+	}
 
 	w.Header().Set("Content-Type", "application/json")
 
