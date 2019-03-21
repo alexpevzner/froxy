@@ -66,10 +66,10 @@ func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 		return
 
 	FAIL:
-		webapi.httpErrorf(w, http.StatusInternalServerError, "%s", err)
+		httpErrorf(w, http.StatusInternalServerError, "%s", err)
 
 	default:
-		webapi.httpError(w, http.StatusMethodNotAllowed)
+		httpError(w, http.StatusMethodNotAllowed)
 	}
 }
 
@@ -89,7 +89,7 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err != nil {
-			webapi.httpErrorf(w, http.StatusInternalServerError, "%s", err)
+			httpErrorf(w, http.StatusInternalServerError, "%s", err)
 			return
 		}
 
@@ -118,13 +118,13 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 		return
 
 	FAIL:
-		webapi.httpErrorf(w, http.StatusInternalServerError, "%s", err)
+		httpErrorf(w, http.StatusInternalServerError, "%s", err)
 
 	case "DEL":
 		webapi.env.DelSite(r.URL.RawQuery)
 
 	default:
-		webapi.httpError(w, http.StatusMethodNotAllowed)
+		httpError(w, http.StatusMethodNotAllowed)
 	}
 }
 
@@ -133,7 +133,7 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 //
 func (webapi *WebAPI) handleState(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		webapi.httpError(w, http.StatusMethodNotAllowed)
+		httpError(w, http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -169,7 +169,7 @@ AGAIN:
 //
 func (webapi *WebAPI) handleCounters(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		webapi.httpError(w, http.StatusMethodNotAllowed)
+		httpError(w, http.StatusMethodNotAllowed)
 		return
 	}
 
@@ -197,25 +197,6 @@ AGAIN:
 //
 func (webapi *WebAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	webapi.mux.ServeHTTP(w, r)
-}
-
-//
-// Return HTTP error
-//
-func (webapi *WebAPI) httpError(w http.ResponseWriter, status int) {
-	webapi.httpErrorf(w, status, fmt.Sprintf("%s", http.StatusText(status)))
-}
-
-//
-// Return HTTP error with caller-provided textual description
-//
-func (webapi *WebAPI) httpErrorf(w http.ResponseWriter, status int,
-	format string, args ...interface{}) {
-
-	msg := fmt.Sprintf("%d ", status)
-	msg += fmt.Sprintf(format, args...)
-
-	http.Error(w, msg, status)
 }
 
 //

@@ -44,7 +44,7 @@ func (proxy *Tproxy) handleRegularHttp(
 
 	if err != nil {
 		proxy.env.Debug("  %s", err)
-		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		httpErrorf(w, http.StatusServiceUnavailable, "%s", err)
 		return
 	}
 
@@ -76,20 +76,20 @@ func (proxy *Tproxy) handleConnect(
 
 	dest_conn, err := transport.Dial("tcp", r.Host)
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		httpErrorf(w, http.StatusServiceUnavailable, "%s", err)
 		return
 	}
 
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		http.Error(w, "Hijacking not supported", http.StatusInternalServerError)
+		httpErrorf(w, http.StatusInternalServerError, "Hijacking not supported")
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	client_conn, _, err := hijacker.Hijack()
 	if err != nil {
-		http.Error(w, err.Error(), http.StatusServiceUnavailable)
+		httpErrorf(w, http.StatusServiceUnavailable, "%s", err)
 		return
 	}
 
@@ -110,6 +110,8 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	_, local := proxy.localhosts[r.Host]
 	if local {
 		if strings.HasPrefix(r.URL.Path, "/api/") {
+			dump, _ := httputil.DumpRequest(r, false)
+			proxy.env.Debug("===== request =====\n%s", dump)
 			proxy.env.Debug("local->webapi")
 			proxy.webapi.ServeHTTP(w, r)
 		} else {
@@ -123,7 +125,7 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	host, _ = NetSplitHostPort(strings.ToLower(r.Host), "")
 	if host == HTTP_SERVER_HOST {
 		// HTTP_SERVER_HOST attempted with invalid port
-		http.Error(w, "Invalid port", http.StatusServiceUnavailable)
+		httpErrorf(w, http.StatusServiceUnavailable, "Invalid port")
 		return
 	}
 
@@ -147,7 +149,7 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 		transport = proxy.sshTransport
 	case RouterBlock:
 		proxy.env.IncCounter(&proxy.env.Counters.HTTPRqBlocked)
-		http.Error(w, "Site blocked", http.StatusForbidden)
+		httpErrorf(w, http.StatusForbidden, "Site blocked")
 		return
 	default:
 		panic("internal error")

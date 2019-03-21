@@ -7,6 +7,7 @@ package main
 import (
 	"context"
 	"errors"
+	"fmt"
 	"net"
 	"net/http"
 	"sync"
@@ -86,7 +87,10 @@ func NewSSHTransport(env *Env) *SSHTransport {
 	}
 
 	t.newClientCond = sync.NewCond(&t.newClientLock)
-	t.Transport.Dial = t.Dial
+	t.Transport.Dial = func(net, addr string) (net.Conn, error) {
+		conn, err := t.Dial(net, addr)
+		return conn, err
+	}
 
 	t.Connect(t.env.GetServerParams())
 
@@ -167,6 +171,8 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	}
 	if err != nil {
 		t.disconnectWait.Done()
+		err = fmt.Errorf("Can't connect to the server %q: %s",
+			params.Addr, err)
 		return nil, err
 	}
 
@@ -174,6 +180,8 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	conn, err := clnt.Dial(net, addr)
 	if err != nil {
 		clnt.unref()
+		err = fmt.Errorf("Server can connect to %q: %s",
+			addr, err)
 		return nil, err
 	}
 
