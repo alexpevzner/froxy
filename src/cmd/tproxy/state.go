@@ -14,8 +14,8 @@ import (
 // The persistent state
 //
 type State struct {
-	Server *ServerParams `json:"server,omitempty"` // Server parameters
-	Sites  []SiteParams  `json:"sites,omitempty"`  // List of forwarded sites
+	Server *ServerParams `json:"server"` // Server parameters
+	Sites  []SiteParams  `json:"sites"`  // List of forwarded sites
 }
 
 //
@@ -47,6 +47,10 @@ type SiteParams struct {
 // Load state
 //
 func (state *State) Load(file string) error {
+	// Reset the state
+	state.Server = &ServerParams{}
+	state.Sites = []SiteParams{}
+
 	// Read the state file
 	data, err := ioutil.ReadFile(file)
 	if err != nil {
@@ -54,11 +58,7 @@ func (state *State) Load(file string) error {
 	}
 
 	// Parse the state
-	var newstate State
-	err = json.Unmarshal(data, &newstate)
-	if err == nil {
-		*state = newstate
-	}
+	err = json.Unmarshal(data, &state)
 
 	return err
 }

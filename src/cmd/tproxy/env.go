@@ -61,7 +61,10 @@ func NewEnv() *Env {
 	os.MkdirAll(env.pathUserConfDir, 0700)
 	os.MkdirAll(env.pathUserStateDir, 0700)
 
-	env.state.Load(env.pathUserStateFile)
+	err := env.state.Load(env.pathUserStateFile)
+	if err != nil {
+		env.state.Save(env.pathUserStateFile)
+	}
 
 	return env
 }
