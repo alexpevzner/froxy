@@ -219,7 +219,11 @@ func (l *Logger) write(level Level, m string, path ...*Logger) {
 		}
 
 		buf.WriteString("\n")
-		os.Stdout.Write(buf.Bytes())
+		if level >= WARN {
+			os.Stderr.Write(buf.Bytes())
+		} else {
+			os.Stdout.Write(buf.Bytes())
+		}
 	}
 }
 
