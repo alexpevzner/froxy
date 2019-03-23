@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"net"
 	"net/http"
 	"net/http/httputil"
 	"pages"
@@ -21,6 +22,7 @@ type Tproxy struct {
 	router          *Router             // Request router
 	webapi          *WebAPI             // JS API handler
 	localhosts      map[string]struct{} // Hosts considered local
+	listener        net.Listener        // TCP listener
 	httpSrv         *http.Server        // Local HTTP server instance
 	sshTransport    *SSHTransport       // SSH transport
 	directTransport *DirectTransport    // Direct transport
@@ -167,8 +169,11 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 //
 // Run a proxy
 //
-func (proxy *Tproxy) Run() error {
-	return proxy.httpSrv.ListenAndServe()
+func (proxy *Tproxy) Run() {
+	err := proxy.httpSrv.Serve(proxy.listener)
+	if err != nil {
+		panic("Internal error: " + err.Error())
+	}
 }
 
 //
@@ -193,7 +198,6 @@ func NewTproxy(port int) (*Tproxy, error) {
 		HTTP_SERVER_HOST,
 	} {
 		hp := fmt.Sprintf("%s:%d", h, port)
-		env.Debug("local: %s", hp)
 		proxy.localhosts[hp] = struct{}{}
 	}
 
@@ -207,6 +211,13 @@ func NewTproxy(port int) (*Tproxy, error) {
 	proxy.httpSrv = &http.Server{
 		Addr:    fmt.Sprintf("127.0.0.1:%d", port),
 		Handler: http.HandlerFunc(proxy.httpHandler),
+	}
+
+	// Create TCP listener
+	var err error
+	proxy.listener, err = net.Listen("tcp", proxy.httpSrv.Addr)
+	if err != nil {
+		return nil, err
 	}
 
 	env.Debug("Starting HTTP server at http://%s", proxy.httpSrv.Addr)

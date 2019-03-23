@@ -18,6 +18,7 @@ var (
 	opt_uninstall = flag.Bool("u", false, "Kill and uninstall the TProxy")
 	opt_kill      = flag.Bool("k", false, "Kill running TProxy")
 	opt_run       = flag.Bool("r", false, "Run TProxy in background")
+	opt_detach    = flag.Bool("detach", false, "Close stdin/stdout/stderr after initialization")
 )
 
 //
@@ -78,11 +79,20 @@ func main() {
 
 	// Run tproxy
 	proxy, err := NewTproxy(*opt_port)
-	if err == nil {
-		err = proxy.Run()
-	}
-
 	if err != nil {
 		log.Exit("%s", err)
 	}
+
+	if *opt_detach {
+		// FIXME -- it is temporary, buggy, UNIX-only solution
+		os.Stdin.Close()
+		os.Stdout.Close()
+		os.Stderr.Close()
+
+		os.Stdin, _ = os.Open("/dev/null")
+		os.Stdout, _ = os.OpenFile("log", os.O_RDWR|os.O_CREATE, 0644)
+		os.Stderr, _ = os.OpenFile("log", os.O_RDWR|os.O_CREATE, 0644)
+	}
+
+	proxy.Run()
 }
