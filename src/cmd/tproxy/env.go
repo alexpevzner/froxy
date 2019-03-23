@@ -21,15 +21,15 @@ type Env struct {
 	*Ebus
 
 	// System paths
-	pathSysConfDir   string // System-wide configuration directory
-	pathUserHomeDir  string // User home directory
-	pathUserConfDir  string // User-specific configuration directory
-	pathUserStateDir string // User specific persistent state directory
+	PathSysConfDir   string // System-wide configuration directory
+	PathUserHomeDir  string // User home directory
+	PathUserConfDir  string // User-specific configuration directory
+	PathUserStateDir string // User specific persistent state directory
 
 	// File paths
-	pathUserConfFile  string // User-specific configuration file
-	pathUserStateFile string // User-specific persistent state file
-	pathUserLogFile   string // User-specific log file
+	PathUserConfFile  string // User-specific configuration file
+	PathUserStateFile string // User-specific persistent state file
+	PathUserLogFile   string // User-specific log file
 
 	// Persistent state
 	stateLock sync.RWMutex // State access lock
@@ -56,16 +56,16 @@ func NewEnv() *Env {
 	}
 
 	env.populateOsPaths()
-	env.pathUserConfFile = filepath.Join(env.pathUserConfDir, "tproxy.cfg")
-	env.pathUserStateFile = filepath.Join(env.pathUserConfDir, "tproxy.state")
-	env.pathUserLogFile = filepath.Join(env.pathUserConfDir, "tproxy.log")
+	env.PathUserConfFile = filepath.Join(env.PathUserConfDir, "tproxy.cfg")
+	env.PathUserStateFile = filepath.Join(env.PathUserConfDir, "tproxy.state")
+	env.PathUserLogFile = filepath.Join(env.PathUserConfDir, "tproxy.log")
 
-	os.MkdirAll(env.pathUserConfDir, 0700)
-	os.MkdirAll(env.pathUserStateDir, 0700)
+	os.MkdirAll(env.PathUserConfDir, 0700)
+	os.MkdirAll(env.PathUserStateDir, 0700)
 
-	err := env.state.Load(env.pathUserStateFile)
+	err := env.state.Load(env.PathUserStateFile)
 	if err != nil {
-		env.state.Save(env.pathUserStateFile)
+		env.state.Save(env.PathUserStateFile)
 	}
 
 	return env
@@ -92,7 +92,7 @@ func (env *Env) GetServerParams() *ServerParams {
 func (env *Env) SetServerParams(s *ServerParams) {
 	env.stateLock.Lock()
 	env.state.Server = s
-	env.state.Save(env.pathUserStateFile)
+	env.state.Save(env.PathUserStateFile)
 	env.stateLock.Unlock()
 }
 
@@ -138,7 +138,7 @@ func (env *Env) SetSite(host string, site SiteParams) {
 	env.state.Sites = append(env.state.Sites, site)
 
 SAVE:
-	env.state.Save(env.pathUserStateFile)
+	env.state.Save(env.PathUserStateFile)
 }
 
 //
@@ -167,7 +167,7 @@ func (env *Env) DelSite(host string) {
 	copy(env.state.Sites[pos:], env.state.Sites[pos+1:])
 	env.state.Sites = env.state.Sites[:len(env.state.Sites)-1]
 
-	env.state.Save(env.pathUserStateFile)
+	env.state.Save(env.PathUserStateFile)
 }
 
 // ----- Connection state -----

@@ -20,8 +20,8 @@ func (env *Env) populateOsPaths() {
 		panic(err.Error())
 	}
 
-	env.pathSysConfDir = "/etc/tproxy"
-	env.pathUserHomeDir = user.HomeDir
-	env.pathUserConfDir = filepath.Join(env.pathUserHomeDir, ".tproxy")
-	env.pathUserStateDir = env.pathUserConfDir
+	env.PathSysConfDir = "/etc/tproxy"
+	env.PathUserHomeDir = user.HomeDir
+	env.PathUserConfDir = filepath.Join(env.PathUserHomeDir, ".tproxy")
+	env.PathUserStateDir = env.PathUserConfDir
 }

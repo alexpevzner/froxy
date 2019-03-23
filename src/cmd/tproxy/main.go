@@ -94,11 +94,11 @@ func main() {
 			env.Exit("Open %q: %s", os.DevNull, err)
 		}
 
-		out, err = syscall.Open(env.pathUserLogFile,
+		out, err = syscall.Open(env.PathUserLogFile,
 			syscall.O_CREAT|syscall.O_WRONLY|syscall.O_APPEND, 0644)
 
 		if err != nil {
-			env.Exit("Open %q: %s", env.pathUserLogFile, err)
+			env.Exit("Open %q: %s", env.PathUserLogFile, err)
 		}
 
 		if err != nil {

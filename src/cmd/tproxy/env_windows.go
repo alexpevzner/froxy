@@ -29,11 +29,11 @@ import (
 //
 func (env *Env) populateOsPaths() {
 	progdata := getKnownFolder(&C.FOLDERID_ProgramData)
-	env.pathSysConfDir = filepath.Join(progdata, "TProxy")
+	env.PathSysConfDir = filepath.Join(progdata, "TProxy")
 
-	env.pathUserHomeDir = getKnownFolder(&C.FOLDERID_Profile)
-	env.pathUserConfDir = getKnownFolder(&C.FOLDERID_LocalAppData)
-	env.pathUserStateDir = env.pathUserConfDir
+	env.PathUserHomeDir = getKnownFolder(&C.FOLDERID_Profile)
+	env.PathUserConfDir = getKnownFolder(&C.FOLDERID_LocalAppData)
+	env.PathUserStateDir = env.PathUserConfDir
 }
 
 // Get known folder by FOLDERID_xxx ID
