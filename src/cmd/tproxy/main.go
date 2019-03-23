@@ -8,7 +8,6 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"syscall"
 )
 
 //----- Program options -----
@@ -88,29 +87,10 @@ func main() {
 
 	// Detach stdin/stdout/stderr
 	if *opt_detach {
-		var in, out int
-		in, err = syscall.Open(os.DevNull, syscall.O_RDONLY, 0644)
-		if err != nil {
-			env.Exit("Open %q: %s", os.DevNull, err)
-		}
-
-		out, err = syscall.Open(env.PathUserLogFile,
-			syscall.O_CREAT|syscall.O_WRONLY|syscall.O_APPEND, 0644)
-
-		if err != nil {
-			env.Exit("Open %q: %s", env.PathUserLogFile, err)
-		}
-
+		err = env.Detach()
 		if err != nil {
 			env.Exit("%s", err)
 		}
-
-		syscall.Dup2(in, syscall.Stdin)
-		syscall.Dup2(out, syscall.Stdout)
-		syscall.Dup2(out, syscall.Stderr)
-
-		syscall.Close(in)
-		syscall.Close(out)
 	}
 
 	// Run tproxy

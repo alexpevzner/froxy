@@ -19,6 +19,7 @@ static inline void freeStr(PWSTR str) {
 import "C"
 
 import (
+	"errors"
 	"path/filepath"
 	"syscall"
 	"unsafe"
@@ -49,4 +50,11 @@ func getKnownFolder(id *C.GUID) string {
 	C.freeStr(out)
 
 	return dir
+}
+
+//
+// Detach stdin/stdout/stderr
+//
+func (env *Env) Detach() error {
+	return errors.New("Detach not implemented")
 }
