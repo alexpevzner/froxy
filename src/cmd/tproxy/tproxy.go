@@ -179,9 +179,8 @@ func (proxy *Tproxy) Run() {
 //
 // Create a Tproxy instance
 //
-func NewTproxy(port int) (*Tproxy, error) {
+func NewTproxy(env *Env, port int) (*Tproxy, error) {
 	// Create Tproxy structure
-	env := NewEnv()
 	proxy := &Tproxy{
 		env:        env,
 		router:     NewRouter(env),

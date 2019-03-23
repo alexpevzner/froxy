@@ -8,7 +8,7 @@ import (
 	"flag"
 	"fmt"
 	"os"
-	"tproxy/log"
+	"syscall"
 )
 
 //----- Program options -----
@@ -77,22 +77,42 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Run tproxy
-	proxy, err := NewTproxy(*opt_port)
+	// Create environment
+	env := NewEnv()
+
+	// Create tproxy
+	proxy, err := NewTproxy(env, *opt_port)
 	if err != nil {
-		log.Exit("%s", err)
+		env.Exit("%s", err)
 	}
 
+	// Detach stdin/stdout/stderr
 	if *opt_detach {
-		// FIXME -- it is temporary, buggy, UNIX-only solution
-		os.Stdin.Close()
-		os.Stdout.Close()
-		os.Stderr.Close()
+		var in, out int
+		in, err = syscall.Open(os.DevNull, syscall.O_RDONLY, 0644)
+		if err != nil {
+			env.Exit("Open %q: %s", os.DevNull, err)
+		}
 
-		os.Stdin, _ = os.Open("/dev/null")
-		os.Stdout, _ = os.OpenFile("log", os.O_RDWR|os.O_CREATE, 0644)
-		os.Stderr, _ = os.OpenFile("log", os.O_RDWR|os.O_CREATE, 0644)
+		out, err = syscall.Open(env.pathUserLogFile,
+			syscall.O_CREAT|syscall.O_WRONLY|syscall.O_APPEND, 0644)
+
+		if err != nil {
+			env.Exit("Open %q: %s", env.pathUserLogFile, err)
+		}
+
+		if err != nil {
+			env.Exit("%s", err)
+		}
+
+		syscall.Dup2(in, syscall.Stdin)
+		syscall.Dup2(out, syscall.Stdout)
+		syscall.Dup2(out, syscall.Stderr)
+
+		syscall.Close(in)
+		syscall.Close(out)
 	}
 
+	// Run tproxy
 	proxy.Run()
 }

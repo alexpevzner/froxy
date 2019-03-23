@@ -29,6 +29,7 @@ type Env struct {
 	// File paths
 	pathUserConfFile  string // User-specific configuration file
 	pathUserStateFile string // User-specific persistent state file
+	pathUserLogFile   string // User-specific log file
 
 	// Persistent state
 	stateLock sync.RWMutex // State access lock
@@ -57,6 +58,7 @@ func NewEnv() *Env {
 	env.populateOsPaths()
 	env.pathUserConfFile = filepath.Join(env.pathUserConfDir, "tproxy.cfg")
 	env.pathUserStateFile = filepath.Join(env.pathUserConfDir, "tproxy.state")
+	env.pathUserLogFile = filepath.Join(env.pathUserConfDir, "tproxy.log")
 
 	os.MkdirAll(env.pathUserConfDir, 0700)
 	os.MkdirAll(env.pathUserStateDir, 0700)
