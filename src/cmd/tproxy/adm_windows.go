@@ -4,8 +4,16 @@
 
 package main
 
+/*
+#define NTDDI_VERSION NTDDI_WIN7
+#include <windows.h>
+*/
+import "C"
+
 import (
 	"errors"
+	"os"
+	"syscall"
 )
 
 //
@@ -23,10 +31,18 @@ func (adm *Adm) Uninstall() error {
 }
 
 //
-// Run TProxy in background
+// Create os.ProcAttr to run TProxy in background
 //
-func (adm *Adm) Run() error {
-	return errors.New("Not implemented")
+func (adm *Adm) RunProcAddr() *os.ProcAttr {
+	sys := &syscall.SysProcAttr{
+		HideWindow: true,
+		CreationFlags: uint32(C.CREATE_NO_WINDOW |
+			C.DETACHED_PROCESS),
+	}
+	attr := &os.ProcAttr{
+		Sys: sys,
+	}
+	return attr
 }
 
 //
