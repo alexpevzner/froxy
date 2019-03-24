@@ -30,11 +30,9 @@ import (
 // Populate system-specific paths
 //
 func (env *Env) populateOsPaths() {
-	progdata := getKnownFolder(&C.FOLDERID_ProgramData)
-	env.PathSysConfDir = filepath.Join(progdata, "TProxy")
-
+	env.PathSysConfDir = filepath.Join(getKnownFolder(&C.FOLDERID_ProgramData), "TProxy")
 	env.PathUserHomeDir = getKnownFolder(&C.FOLDERID_Profile)
-	env.PathUserConfDir = getKnownFolder(&C.FOLDERID_LocalAppData)
+	env.PathUserConfDir = filepath.Join(getKnownFolder(&C.FOLDERID_LocalAppData), "TProxy")
 	env.PathUserStateDir = env.PathUserConfDir
 }
 
