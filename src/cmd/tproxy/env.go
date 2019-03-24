@@ -5,11 +5,13 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"syscall"
 	"tproxy/log"
 )
 
@@ -20,11 +22,12 @@ type Env struct {
 	*log.Logger
 	*Ebus
 
-	// System paths
+	// Directories
 	PathSysConfDir   string // System-wide configuration directory
 	PathUserHomeDir  string // User home directory
 	PathUserConfDir  string // User-specific configuration directory
 	PathUserStateDir string // User specific persistent state directory
+	PathUserLogDir   string // User log dir
 
 	// File paths
 	PathUserConfFile  string // User-specific configuration file
@@ -55,20 +58,50 @@ func NewEnv() *Env {
 		state:  &State{},
 	}
 
+	// Populate paths
 	env.populateOsPaths()
 	env.PathUserConfFile = filepath.Join(env.PathUserConfDir, "tproxy.cfg")
 	env.PathUserStateFile = filepath.Join(env.PathUserConfDir, "tproxy.state")
-	env.PathUserLogFile = filepath.Join(env.PathUserConfDir, "tproxy.log")
+	env.PathUserLogFile = filepath.Join(env.PathUserLogDir, "tproxy.log")
 
-	os.MkdirAll(env.PathUserConfDir, 0700)
-	os.MkdirAll(env.PathUserStateDir, 0700)
+	// Create directories
+	done := make(map[string]struct{})
+	for _, dir := range []string{env.PathUserConfDir, env.PathUserStateDir, env.PathUserLogDir} {
+		_, ok := done[dir]
+		if !ok {
+			done[dir] = struct{}{}
+			os.MkdirAll(dir, 0700)
+		}
 
+	}
+
+	// Load state
 	err := env.state.Load(env.PathUserStateFile)
 	if err != nil {
 		env.state.Save(env.PathUserStateFile)
 	}
 
 	return env
+}
+
+// ----- stdin/stdout/stderr redirection -----
+//
+// Detach stdin/stdout/stderr from console
+//
+func (env *Env) Detach() error {
+	nul, err := syscall.Open(os.DevNull, syscall.O_RDONLY, 0644)
+	if err != nil {
+		return fmt.Errorf("Open %q: %s", os.DevNull, err)
+	}
+
+	logfile, err := NewLogfile(env.PathUserLogFile)
+	if err != nil {
+		return err
+	}
+
+	out := logfile.Fd()
+
+	return env.StdRedirect(uintptr(nul), out, out)
 }
 
 // ----- Persistent configuration -----

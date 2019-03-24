@@ -19,8 +19,6 @@ static inline void freeStr(PWSTR str) {
 import "C"
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 	"syscall"
 	"unsafe"
@@ -34,6 +32,7 @@ func (env *Env) populateOsPaths() {
 	env.PathUserHomeDir = getKnownFolder(&C.FOLDERID_Profile)
 	env.PathUserConfDir = filepath.Join(getKnownFolder(&C.FOLDERID_LocalAppData), "TProxy")
 	env.PathUserStateDir = env.PathUserConfDir
+	env.PathUserLogDir = filepath.Join(env.PathUserStateDir, "log")
 }
 
 // Get known folder by FOLDERID_xxx ID
@@ -52,24 +51,12 @@ func getKnownFolder(id *C.GUID) string {
 }
 
 //
-// Detach stdin/stdout/stderr
+// Redirect stdin/stdout/stderr
 //
-func (env *Env) Detach() error {
-	nul, err := syscall.Open(os.DevNull, syscall.O_RDONLY, 0644)
-	if err != nil {
-		return fmt.Errorf("Open %q: %s", os.DevNull, err)
-	}
-
-	log, err := syscall.Open(env.PathUserLogFile,
-		syscall.O_CREAT|syscall.O_WRONLY|syscall.O_APPEND, 0644)
-
-	if err != nil {
-		return fmt.Errorf("Open %q: %s", env.PathUserLogFile, err)
-	}
-
-	C.SetStdHandle(C.STD_INPUT_HANDLE, C.HANDLE(nul))
-	C.SetStdHandle(C.STD_OUTPUT_HANDLE, C.HANDLE(log))
-	C.SetStdHandle(C.STD_ERROR_HANDLE, C.HANDLE(log))
+func (env *Env) StdRedirect(stdin, stdout, stderr uintptr) error {
+	C.SetStdHandle(C.STD_INPUT_HANDLE, C.HANDLE(stdin))
+	C.SetStdHandle(C.STD_OUTPUT_HANDLE, C.HANDLE(stdout))
+	C.SetStdHandle(C.STD_ERROR_HANDLE, C.HANDLE(stderr))
 
 	return nil
 }
