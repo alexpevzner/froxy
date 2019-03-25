@@ -52,7 +52,7 @@ type Env struct {
 //
 // Create new environment
 //
-func NewEnv() (*Env, error) {
+func NewEnv(port int) (*Env, error) {
 	env := &Env{
 		Logger: &log.DefaultLogger,
 		Ebus:   NewEbus(),
@@ -83,10 +83,13 @@ func NewEnv() (*Env, error) {
 		return nil, err
 	}
 
-	// Load state
-	err = env.state.Load(env.PathUserStateFile)
+	// Load state and update
+	env.state.Load(env.PathUserStateFile)
+	env.state.Port = port
+
+	err = env.state.Save(env.PathUserStateFile)
 	if err != nil {
-		env.state.Save(env.PathUserStateFile)
+		return nil, fmt.Errorf("%q: failed to save", env.PathUserStateFile)
 	}
 
 	return env, nil
@@ -113,6 +116,17 @@ func (env *Env) Detach() error {
 }
 
 // ----- Persistent configuration -----
+//
+// Get TCP port
+//
+func (env *Env) GetPort() int {
+	port := env.state.Port
+	if port == 0 {
+		port = HTTP_SERVER_PORT
+	}
+	return port
+}
+
 //
 // Get server parameters
 //

@@ -77,14 +77,14 @@ func main() {
 	}
 
 	// Create environment
-	env, err := NewEnv()
+	env, err := NewEnv(*opt_port)
 	if err != nil {
 		fmt.Fprintf(os.Stderr, "%s\n", err)
 		os.Exit(1)
 	}
 
 	// Create tproxy
-	proxy, err := NewTproxy(env, *opt_port)
+	proxy, err := NewTproxy(env)
 	if err != nil {
 		env.Exit("%s", err)
 	}

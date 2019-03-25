@@ -14,6 +14,7 @@ import (
 // The persistent state
 //
 type State struct {
+	Port   int           `json:"port"`   // TCP port TProxy runs on
 	Server *ServerParams `json:"server"` // Server parameters
 	Sites  []SiteParams  `json:"sites"`  // List of forwarded sites
 }
