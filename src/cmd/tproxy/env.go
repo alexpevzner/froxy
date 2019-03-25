@@ -33,6 +33,7 @@ type Env struct {
 	PathUserConfFile  string // User-specific configuration file
 	PathUserStateFile string // User-specific persistent state file
 	PathUserLogFile   string // User-specific log file
+	PathUserLockFile  string // User-specific lock file
 
 	// Persistent state
 	stateLock sync.RWMutex // State access lock
@@ -51,7 +52,7 @@ type Env struct {
 //
 // Create new environment
 //
-func NewEnv() *Env {
+func NewEnv() (*Env, error) {
 	env := &Env{
 		Logger: &log.DefaultLogger,
 		Ebus:   NewEbus(),
@@ -63,6 +64,7 @@ func NewEnv() *Env {
 	env.PathUserConfFile = filepath.Join(env.PathUserConfDir, "tproxy.cfg")
 	env.PathUserStateFile = filepath.Join(env.PathUserConfDir, "tproxy.state")
 	env.PathUserLogFile = filepath.Join(env.PathUserLogDir, "tproxy.log")
+	env.PathUserLockFile = filepath.Join(env.PathUserConfDir, "tproxy.lock")
 
 	// Create directories
 	done := make(map[string]struct{})
@@ -75,13 +77,19 @@ func NewEnv() *Env {
 
 	}
 
+	// Acquire a lock file
+	_, err := AcquireLockfile(env.PathUserLockFile)
+	if err != nil {
+		return nil, err
+	}
+
 	// Load state
-	err := env.state.Load(env.PathUserStateFile)
+	err = env.state.Load(env.PathUserStateFile)
 	if err != nil {
 		env.state.Save(env.PathUserStateFile)
 	}
 
-	return env
+	return env, nil
 }
 
 // ----- stdin/stdout/stderr redirection -----
