@@ -12,6 +12,7 @@ import "C"
 
 import (
 	"errors"
+	"fmt"
 	"syscall"
 )
 
@@ -28,7 +29,7 @@ type Lockfile struct {
 func AcquireLockfile(path string) (*Lockfile, error) {
 	pathp, err := syscall.UTF16PtrFromString(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("%s: can't convert to UTF16")
 	}
 
 	fd, err := syscall.CreateFile(
