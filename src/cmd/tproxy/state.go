@@ -7,7 +7,9 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"io"
 	"io/ioutil"
+	"os"
 )
 
 //
@@ -53,7 +55,21 @@ func (state *State) Load(file string) error {
 	state.Sites = []SiteParams{}
 
 	// Read the state file
-	data, err := ioutil.ReadFile(file)
+	f, err := os.Open(file)
+	if err != nil {
+		return err
+	}
+
+	defer f.Close()
+
+	err = FileLock(f, false, true)
+	if err != nil {
+		return err
+	}
+
+	defer FileUnlock(f)
+
+	data, err := ioutil.ReadAll(f)
 	if err != nil {
 		return err
 	}
@@ -83,5 +99,31 @@ func (state *State) Save(file string) error {
 	}
 
 	// Write to file
-	return ioutil.WriteFile(file, buf.Bytes(), 0600)
+	f, err := os.OpenFile(file, os.O_WRONLY|os.O_CREATE, 0600)
+	if err != nil {
+		return err
+	}
+
+	err = FileLock(f, true, true)
+	if err != nil {
+		f.Close()
+		return err
+	}
+
+	err = f.Truncate(0)
+	if err == nil {
+		n, err2 := f.Write(buf.Bytes())
+		if err2 == nil && n < buf.Len() {
+			err2 = io.ErrShortWrite
+		}
+		err = err2
+	}
+
+	FileUnlock(f)
+
+	if err2 := f.Close(); err == nil {
+		err = err2
+	}
+
+	return err
 }
