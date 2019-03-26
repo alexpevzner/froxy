@@ -19,6 +19,7 @@ static inline void freeStr(PWSTR str) {
 import "C"
 
 import (
+	"os"
 	"path/filepath"
 	"syscall"
 	"unsafe"
@@ -54,6 +55,18 @@ func getKnownFolder(id *C.GUID) string {
 // Redirect stdin/stdout/stderr
 //
 func (env *Env) StdRedirect(stdin, stdout, stderr uintptr) error {
+	os.Stdin.Close()
+	os.Stdout.Close()
+	os.Stderr.Close()
+
+	syscall.Stdin = syscall.Handle(stdin)
+	syscall.Stdout = syscall.Handle(stdout)
+	syscall.Stderr = syscall.Handle(stderr)
+
+	os.Stdin = os.NewFile(uintptr(syscall.Stdin), "/dev/stdin")
+	os.Stdout = os.NewFile(uintptr(syscall.Stdout), "/dev/stdout")
+	os.Stderr = os.NewFile(uintptr(syscall.Stderr), "/dev/stderr")
+
 	C.SetStdHandle(C.STD_INPUT_HANDLE, C.HANDLE(stdin))
 	C.SetStdHandle(C.STD_OUTPUT_HANDLE, C.HANDLE(stdout))
 	C.SetStdHandle(C.STD_ERROR_HANDLE, C.HANDLE(stderr))
