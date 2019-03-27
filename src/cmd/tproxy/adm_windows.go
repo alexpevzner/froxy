@@ -13,6 +13,7 @@ import "C"
 import (
 	"errors"
 	"os"
+	"os/exec"
 	"syscall"
 )
 
@@ -50,4 +51,11 @@ func (adm *Adm) RunProcAddr() *os.ProcAttr {
 //
 func (adm *Adm) Kill() error {
 	return errors.New("Not implemented")
+}
+
+//
+// Open URL in a browser
+//
+func (adm *Adm) OpenURL(url string) error {
+	return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
 }

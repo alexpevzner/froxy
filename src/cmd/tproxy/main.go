@@ -18,6 +18,7 @@ var (
 	opt_kill      = flag.Bool("k", false, "Kill running TProxy")
 	opt_run       = flag.Bool("r", false, "Run TProxy in background")
 	opt_detach    = flag.Bool("detach", false, "Close stdin/stdout/stderr after initialization")
+	opt_open      = flag.Bool("open", false, "Open TProxy configuration in browser window")
 )
 
 //
@@ -40,14 +41,14 @@ func main() {
 	}
 
 	admcnt := 0
-	for _, f := range []bool{*opt_install, *opt_uninstall, *opt_kill, *opt_run} {
+	for _, f := range []bool{*opt_install, *opt_uninstall, *opt_kill, *opt_run, *opt_open} {
 		if f {
 			admcnt++
 		}
 	}
 
 	if admcnt > 1 {
-		fmt.Fprintf(os.Stderr, "Options -i, -u, -k and -r are mutually exclusive\n")
+		fmt.Fprintf(os.Stderr, "Options -i, -u, -k, -r and -open are mutually exclusive\n")
 		os.Exit(2)
 	}
 
@@ -56,7 +57,7 @@ func main() {
 
 	// Perform administration actions, if required
 	if admcnt != 0 {
-		adm := Adm{Port: *opt_port}
+		adm := Adm{Port: *opt_port, Env: env}
 		var err error
 		switch {
 		case *opt_install:
@@ -67,6 +68,8 @@ func main() {
 			err = adm.Kill()
 		case *opt_run:
 			err = adm.Run()
+		case *opt_open:
+			err = adm.Open()
 		default:
 			panic("Internal error")
 		}

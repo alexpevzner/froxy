@@ -18,7 +18,8 @@ import (
 // TProxy administrator
 //
 type Adm struct {
-	Port int // -p port
+	Port int  // -p port
+	Env  *Env // Environment
 }
 
 //
@@ -86,4 +87,12 @@ func (adm *Adm) Run() error {
 	proc.Release()
 
 	return nil
+}
+
+//
+// Open configuration window
+//
+func (adm *Adm) Open() error {
+	url := fmt.Sprintf("http://localhost:%d", adm.Env.GetPort())
+	return adm.OpenURL(url)
 }
