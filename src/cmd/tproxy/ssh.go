@@ -111,11 +111,13 @@ func (t *SSHTransport) Connect(params *ServerParams) {
 	t.Disconnect()
 
 	if !params.Configured() {
+		t.disconnectReason = sshErrServerNotConfigured
 		return
 	}
 
 	t.disconnectLock.Lock()
 	t.params = params
+	t.disconnectReason = nil
 	t.disconnectCtx, t.disconnectCtxCancel = context.WithCancel(
 		context.Background())
 
