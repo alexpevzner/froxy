@@ -39,6 +39,9 @@ type Env struct {
 	stateLock sync.RWMutex // State access lock
 	state     *State       // TProxy persistent state
 
+	// tproxy.lock
+	tproxyLock *Lockfile // Handle of tproxy.lock
+
 	// Connection state
 	connStateLock sync.Mutex // Access lock
 	connState     ConnState  // Current state
@@ -52,7 +55,7 @@ type Env struct {
 //
 // Create new environment
 //
-func NewEnv(port int) (*Env, error) {
+func NewEnv() *Env {
 	env := &Env{
 		Logger: &log.DefaultLogger,
 		Ebus:   NewEbus(),
@@ -77,22 +80,41 @@ func NewEnv(port int) (*Env, error) {
 
 	}
 
-	// Acquire a lock file
-	_, err := AcquireLockfile(env.PathUserLockFile)
-	if err != nil {
-		return nil, err
-	}
-
-	// Load state and update
+	// Load state
 	env.state.Load(env.PathUserStateFile)
-	env.state.Port = port
 
-	err = env.state.Save(env.PathUserStateFile)
-	if err != nil {
-		return nil, fmt.Errorf("%q: failed to save", env.PathUserStateFile)
+	return env
+}
+
+// ----- Multiple run avoidance -----
+//
+// Acquire tproxy.lock
+//
+func (env *Env) TproxyLockAcquire() error {
+	if env.tproxyLock != nil {
+		panic("internal error")
 	}
 
-	return env, nil
+	// Acquire a lock file
+	lock, err := AcquireLockfile(env.PathUserLockFile)
+	if err != nil {
+		return err
+	}
+
+	env.tproxyLock = lock
+	return nil
+}
+
+//
+// Release tproxy.lock
+//
+func (env *Env) TproxyLockRelease() {
+	if env.tproxyLock == nil {
+		panic("internal error")
+	}
+
+	env.tproxyLock.Release()
+	env.tproxyLock = nil
 }
 
 // ----- stdin/stdout/stderr redirection -----
@@ -117,13 +139,26 @@ func (env *Env) Detach() error {
 
 // ----- Persistent configuration -----
 //
+// Set TCP port
+//
+func (env *Env) SetPort(port int) {
+	env.stateLock.Lock()
+	env.state.Port = port
+	env.state.Save(env.PathUserStateFile)
+	env.stateLock.Unlock()
+}
+
+//
 // Get TCP port
 //
 func (env *Env) GetPort() int {
+	env.stateLock.RLock()
 	port := env.state.Port
 	if port == 0 {
 		port = HTTP_SERVER_PORT
 	}
+	env.stateLock.RUnlock()
+
 	return port
 }
 

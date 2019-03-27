@@ -39,7 +39,6 @@ func main() {
 		os.Exit(2)
 	}
 
-	// Perform administration actions, if required
 	admcnt := 0
 	for _, f := range []bool{*opt_install, *opt_uninstall, *opt_kill, *opt_run} {
 		if f {
@@ -52,6 +51,10 @@ func main() {
 		os.Exit(2)
 	}
 
+	// Create environment
+	env := NewEnv()
+
+	// Perform administration actions, if required
 	if admcnt != 0 {
 		adm := Adm{Port: *opt_port}
 		var err error
@@ -76,14 +79,14 @@ func main() {
 		os.Exit(0)
 	}
 
-	// Create environment
-	env, err := NewEnv(*opt_port)
+	// Acquire tproxy.lock
+	err := env.TproxyLockAcquire()
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
+		env.Exit("%s", err)
 	}
 
 	// Create tproxy
+	env.SetPort(*opt_port)
 	proxy, err := NewTproxy(env)
 	if err != nil {
 		env.Exit("%s", err)
