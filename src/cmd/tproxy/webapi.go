@@ -36,6 +36,7 @@ func NewWebAPI(env *Env) *WebAPI {
 	webapi.mux.HandleFunc("/api/sites", webapi.handleSites)
 	webapi.mux.HandleFunc("/api/state", webapi.handleState)
 	webapi.mux.HandleFunc("/api/counters", webapi.handleCounters)
+	webapi.mux.HandleFunc("/api/shutdown", webapi.handleShutdown)
 
 	return webapi
 }
@@ -193,6 +194,18 @@ AGAIN:
 	}
 
 	webapi.replyJSON(w, &webapi.env.Counters)
+}
+
+//
+// Handle /api/shudtown requests
+//
+func (webapi *WebAPI) handleShutdown(w http.ResponseWriter, r *http.Request) {
+	if r.Method != "TPROXY" {
+		httpError(w, http.StatusMethodNotAllowed)
+		return
+	}
+
+	webapi.env.Raise(EventShutdownRequested)
 }
 
 //

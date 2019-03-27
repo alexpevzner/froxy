@@ -16,9 +16,29 @@ import (
 type Event uint
 
 const (
-	EventConnStateChanged = Event(iota)
+	EventStartup = Event(iota)
+	EventConnStateChanged
 	EventCountersChanged
+	EventShutdownRequested
 )
+
+//
+// Event->string
+//
+func (e Event) String() string {
+	switch e {
+	case EventStartup:
+		return "EventStartup"
+	case EventConnStateChanged:
+		return "EventConnStateChanged"
+	case EventCountersChanged:
+		return "EventCountersChanged"
+	case EventShutdownRequested:
+		return "EventShutdownRequested"
+	}
+
+	panic("internal error")
+}
 
 //
 // The event bus

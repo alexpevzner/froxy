@@ -9,6 +9,7 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"net/http"
 	"os"
 	"strings"
 	"unicode"
@@ -87,6 +88,21 @@ func (adm *Adm) Run() error {
 	proc.Release()
 
 	return nil
+}
+
+//
+// Kill running TProxy
+//
+func (adm *Adm) Kill() error {
+	url := fmt.Sprintf("http://localhost:%d", adm.Env.GetPort())
+	url += "/api/shutdown"
+
+	rq, err := http.NewRequest("TPROXY", url, nil)
+	if err == nil {
+		_, err = http.DefaultClient.Do(rq)
+	}
+
+	return err
 }
 
 //

@@ -170,6 +170,7 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 // Run a proxy
 //
 func (proxy *Tproxy) Run() {
+	proxy.env.Startup()
 	err := proxy.httpSrv.Serve(proxy.listener)
 	if err != nil {
 		panic("Internal error: " + err.Error())

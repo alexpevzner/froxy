@@ -339,3 +339,31 @@ func (env *Env) IncCounter(cnt *int32) {
 func (env *Env) DecCounter(cnt *int32) {
 	env.AddCounter(cnt, -1)
 }
+
+// ----- Events -----
+//
+// Notify environment that TProxy is about to start
+//
+func (env *Env) Startup() {
+	if env.tproxyLock == nil {
+		panic("internal error")
+	}
+
+	go env.eventGoroutine()
+	env.Raise(EventStartup)
+}
+
+//
+// This goroutine monitors all events
+//
+func (env *Env) eventGoroutine() {
+	events := env.Sub()
+	for {
+		e := <-events
+		env.Debug("%s", e)
+		switch e {
+		case EventShutdownRequested:
+			os.Exit(0)
+		}
+	}
+}

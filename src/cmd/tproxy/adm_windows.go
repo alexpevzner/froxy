@@ -47,13 +47,6 @@ func (adm *Adm) RunProcAddr() *os.ProcAttr {
 }
 
 //
-// Kill running TProxy
-//
-func (adm *Adm) Kill() error {
-	return errors.New("Not implemented")
-}
-
-//
 // Open URL in a browser
 //
 func (adm *Adm) OpenURL(url string) error {
