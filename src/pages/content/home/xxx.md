@@ -1,4 +1,4 @@
-<script src="/api.js" defer> </script>
+<script src="/js/api.js" defer> </script>
 
 Here you can edit the TProxy configuration
 

@@ -1,8 +1,8 @@
 +++
 title = "Statistics Counters"
 +++
-<script src="/api.js" defer> </script>
-<script src="/counters.js" defer> </script>
+<script src="/js/api.js" defer> </script>
+<script src="/js/counters.js" defer> </script>
 
 Various statistics counters collected here for debugging and troubleshooting
 purposes
