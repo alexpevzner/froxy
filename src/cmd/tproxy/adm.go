@@ -12,9 +12,9 @@ import (
 	"io/ioutil"
 	"net/http"
 	"os"
-	"pages"
 	"path/filepath"
 	"strings"
+	"tproxy/pages"
 	"unicode"
 )
 

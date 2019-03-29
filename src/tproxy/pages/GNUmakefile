@@ -1,4 +1,4 @@
-include ../../Rules.mak
+include ../../../Rules.mak
 
 all_local:
 	hugo

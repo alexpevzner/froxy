@@ -11,10 +11,10 @@ import (
 	"net/http"
 	"net/http/httputil"
 	"os"
-	"pages"
 	"strings"
 	"sync"
 	"sync/atomic"
+	"tproxy/pages"
 )
 
 //

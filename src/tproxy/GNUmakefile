@@ -1,4 +1,5 @@
 include ../../Rules.mak
 
 SUBDIRS	= \
-    log
+    log \
+    pages
