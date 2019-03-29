@@ -12,7 +12,7 @@ import (
 // Request router
 //
 type Router struct {
-	env *Env // Common environment
+	tproxy *Tproxy // Back link to Tproxy
 }
 
 //
@@ -45,9 +45,9 @@ func (a RouterAnswer) String() string {
 //
 // Create new router
 //
-func NewRouter(env *Env) *Router {
+func NewRouter(tproxy *Tproxy) *Router {
 	return &Router{
-		env: env,
+		tproxy: tproxy,
 	}
 }
 
@@ -56,7 +56,7 @@ func NewRouter(env *Env) *Router {
 // false if site must be accessed directly
 //
 func (r *Router) Route(host string) (answer RouterAnswer) {
-	sites := r.env.GetSites()
+	sites := r.tproxy.GetSites()
 	found := (*SiteParams)(nil)
 
 	for _, site := range sites {

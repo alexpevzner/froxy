@@ -22,7 +22,7 @@ import (
 //
 type SSHTransport struct {
 	http.Transport              // SSH-backed http.Transport
-	env            *Env         // Back link to environment
+	tproxy         *Tproxy      // Back link to Tproxy
 	params         ServerParams // Server parameters
 
 	// Management of active sessions
@@ -73,7 +73,7 @@ type sshConn struct {
 //
 // Create new SSH transport
 //
-func NewSSHTransport(env *Env) *SSHTransport {
+func NewSSHTransport(tproxy *Tproxy) *SSHTransport {
 	t := &SSHTransport{
 		Transport: http.Transport{
 			Proxy:                 nil,
@@ -82,7 +82,7 @@ func NewSSHTransport(env *Env) *SSHTransport {
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 		},
-		env:     env,
+		tproxy:  tproxy,
 		clients: make(map[*sshClient]struct{}),
 	}
 
@@ -92,7 +92,7 @@ func NewSSHTransport(env *Env) *SSHTransport {
 		return conn, err
 	}
 
-	t.Connect(t.env.GetServerParams())
+	t.Connect(t.tproxy.GetServerParams())
 
 	return t
 }
@@ -187,8 +187,8 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 		return nil, err
 	}
 
-	t.env.Debug("SSS: connection established")
-	t.env.IncCounter(&t.env.Counters.SSHConnections)
+	t.tproxy.Debug("SSS: connection established")
+	t.tproxy.IncCounter(&t.tproxy.Counters.SSHConnections)
 
 	return &sshConn{Conn: conn, client: clnt}, nil
 }
@@ -278,7 +278,7 @@ func (t *SSHTransport) newClient(
 	}
 
 	// Create SSH configuration
-	t.env.Debug("params=%#v)", params)
+	t.tproxy.Debug("params=%#v)", params)
 
 	cfg := &ssh.ClientConfig{
 		User: params.Login,
@@ -309,7 +309,7 @@ func (t *SSHTransport) newClient(
 		return nil, err
 	}
 
-	t.env.SetConnState(ConnEstablished, "")
+	t.tproxy.SetConnState(ConnEstablished, "")
 
 	// Create &sshClient structure
 	clnt = &sshClient{
@@ -319,7 +319,7 @@ func (t *SSHTransport) newClient(
 	}
 
 	t.clientsLock.Lock()
-	t.env.IncCounter(&t.env.Counters.SSHSessions)
+	t.tproxy.IncCounter(&t.tproxy.Counters.SSHSessions)
 	t.clients[clnt] = struct{}{}
 	t.clientsLock.Unlock()
 
@@ -329,11 +329,11 @@ func (t *SSHTransport) newClient(
 
 		t.clientsLock.Lock()
 
-		t.env.DecCounter(&t.env.Counters.SSHSessions)
+		t.tproxy.DecCounter(&t.tproxy.Counters.SSHSessions)
 		delete(t.clients, clnt)
 
 		if len(t.clients) == 0 {
-			t.env.SetConnState(ConnTrying, err.Error())
+			t.tproxy.SetConnState(ConnTrying, err.Error())
 		}
 
 		t.disconnectWait.Done()
@@ -362,9 +362,9 @@ func (conn *sshConn) Close() error {
 	if atomic.SwapUint32(&conn.closed, 1) == 0 {
 		t := conn.client.transport
 
-		t.env.Debug("SSS: connection closed")
+		t.tproxy.Debug("SSS: connection closed")
 
-		t.env.DecCounter(&t.env.Counters.SSHConnections)
+		t.tproxy.DecCounter(&t.tproxy.Counters.SSHConnections)
 		err = conn.Conn.Close()
 		conn.client.unref()
 	}

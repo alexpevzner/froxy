@@ -10,7 +10,6 @@ import (
 	"path/filepath"
 	"strings"
 	"sync"
-	"sync/atomic"
 	"syscall"
 	"tproxy/log"
 )
@@ -20,7 +19,6 @@ import (
 //
 type Env struct {
 	*log.Logger
-	*Ebus
 
 	// Directories
 	PathSysConfDir   string // System-wide configuration directory
@@ -41,14 +39,6 @@ type Env struct {
 
 	// tproxy.lock
 	tproxyLock *Lockfile // Handle of tproxy.lock
-
-	// Connection state
-	connStateLock sync.Mutex // Access lock
-	connState     ConnState  // Current state
-	connStateInfo string     // Info string
-
-	// Statistic counters
-	Counters Counters // Collection of statistic counters
 }
 
 // ----- Constructor -----
@@ -58,7 +48,6 @@ type Env struct {
 func NewEnv() *Env {
 	env := &Env{
 		Logger: &log.DefaultLogger,
-		Ebus:   NewEbus(),
 		state:  &State{},
 	}
 
@@ -263,112 +252,4 @@ func (env *Env) DelSite(host string) {
 	env.state.Sites = env.state.Sites[:len(env.state.Sites)-1]
 
 	env.state.Save(env.PathUserStateFile)
-}
-
-// ----- Connection state -----
-//
-// Connection states
-//
-type ConnState int
-
-const (
-	ConnNotConfigured = ConnState(iota)
-	ConnTrying
-	ConnEstablished
-)
-
-//
-// ConnState -> ("name", "default info string")
-//
-func (s ConnState) Strings() (string, string) {
-	switch s {
-	case ConnNotConfigured:
-		return "noconfig", "Server not configured"
-	case ConnTrying:
-		return "trying", ""
-	case ConnEstablished:
-		return "established", "Connected to the server"
-	}
-
-	panic("internal error")
-}
-
-//
-// Get connection state
-//
-func (env *Env) GetConnState() (state ConnState, info string) {
-	env.connStateLock.Lock()
-	state = env.connState
-	info = env.connStateInfo
-	env.connStateLock.Unlock()
-
-	return
-}
-
-//
-// Set connection state
-//
-func (env *Env) SetConnState(state ConnState, info string) {
-	env.connStateLock.Lock()
-
-	if env.connState != state {
-		env.connState = state
-		env.connStateInfo = info
-
-		env.Raise(EventConnStateChanged)
-	}
-
-	env.connStateLock.Unlock()
-}
-
-// ----- Statistics counters -----
-//
-// Add value to the statistics counter
-//
-func (env *Env) AddCounter(cnt *int32, val int32) {
-	atomic.AddInt32(cnt, val)
-	atomic.AddUint64(&env.Counters.Tag, 1)
-	env.Raise(EventCountersChanged)
-}
-
-//
-// Increment the statistics counter
-//
-func (env *Env) IncCounter(cnt *int32) {
-	env.AddCounter(cnt, 1)
-}
-
-//
-// Decrement the statistics counter
-//
-func (env *Env) DecCounter(cnt *int32) {
-	env.AddCounter(cnt, -1)
-}
-
-// ----- Events -----
-//
-// Notify environment that TProxy is about to start
-//
-func (env *Env) Startup() {
-	if env.tproxyLock == nil {
-		panic("internal error")
-	}
-
-	go env.eventGoroutine()
-	env.Raise(EventStartup)
-}
-
-//
-// This goroutine monitors all events
-//
-func (env *Env) eventGoroutine() {
-	events := env.Sub()
-	for {
-		e := <-events
-		env.Debug("%s", e)
-		switch e {
-		case EventShutdownRequested:
-			os.Exit(0)
-		}
-	}
 }

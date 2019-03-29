@@ -17,8 +17,8 @@ import (
 // JS API handler
 //
 type WebAPI struct {
-	env *Env
-	mux *http.ServeMux
+	tproxy *Tproxy
+	mux    *http.ServeMux
 }
 
 var _ = http.Handler(&WebAPI{})
@@ -26,10 +26,10 @@ var _ = http.Handler(&WebAPI{})
 //
 // Create new JS API handler instance
 //
-func NewWebAPI(env *Env) *WebAPI {
+func NewWebAPI(tproxy *Tproxy) *WebAPI {
 	webapi := &WebAPI{
-		env: env,
-		mux: http.NewServeMux(),
+		tproxy: tproxy,
+		mux:    http.NewServeMux(),
 	}
 
 	webapi.mux.HandleFunc("/api/server", webapi.handleServer)
@@ -47,7 +47,7 @@ func NewWebAPI(env *Env) *WebAPI {
 func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		conf := (IDNServerParams)(webapi.env.GetServerParams())
+		conf := (IDNServerParams)(webapi.tproxy.GetServerParams())
 		webapi.replyJSON(w, conf)
 
 	case "PUT":
@@ -63,7 +63,7 @@ func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 			goto FAIL
 		}
 
-		webapi.env.SetServerParams((ServerParams)(data))
+		webapi.tproxy.SetServerParams((ServerParams)(data))
 		return
 
 	FAIL:
@@ -94,15 +94,15 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		webapi.env.Debug("host=%s", host)
+		webapi.tproxy.Debug("host=%s", host)
 		host = IDNEncode(host)
-		webapi.env.Debug("host decoded=%s", host)
+		webapi.tproxy.Debug("host decoded=%s", host)
 	}
 
 	// Handle request
 	switch r.Method {
 	case "GET":
-		conf := (IDNSiteParamsList)(webapi.env.GetSites())
+		conf := (IDNSiteParamsList)(webapi.tproxy.GetSites())
 		webapi.replyJSON(w, conf)
 
 	case "PUT":
@@ -118,14 +118,14 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 			goto FAIL
 		}
 
-		webapi.env.SetSite(host, SiteParams(data))
+		webapi.tproxy.SetSite(host, SiteParams(data))
 		return
 
 	FAIL:
 		httpErrorf(w, http.StatusInternalServerError, "%s", err)
 
 	case "DEL":
-		webapi.env.DelSite(host)
+		webapi.tproxy.DelSite(host)
 
 	default:
 		httpError(w, http.StatusMethodNotAllowed)
@@ -141,11 +141,11 @@ func (webapi *WebAPI) handleState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	events := webapi.env.Sub(EventConnStateChanged)
-	defer webapi.env.Unsub(events)
+	events := webapi.tproxy.Sub(EventConnStateChanged)
+	defer webapi.tproxy.Unsub(events)
 
 AGAIN:
-	state, info := webapi.env.GetConnState()
+	state, info := webapi.tproxy.GetConnState()
 	stateName, stateInfo := state.Strings()
 	if info == "" {
 		info = stateInfo
@@ -177,11 +177,11 @@ func (webapi *WebAPI) handleCounters(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	events := webapi.env.Sub(EventCountersChanged)
-	defer webapi.env.Unsub(events)
+	events := webapi.tproxy.Sub(EventCountersChanged)
+	defer webapi.tproxy.Unsub(events)
 
 AGAIN:
-	counters := webapi.env.Counters
+	counters := webapi.tproxy.Counters
 	tag := fmt.Sprintf("%d", counters.Tag)
 
 	if tag == r.URL.RawQuery {
@@ -193,7 +193,7 @@ AGAIN:
 		}
 	}
 
-	webapi.replyJSON(w, &webapi.env.Counters)
+	webapi.replyJSON(w, &webapi.tproxy.Counters)
 }
 
 //
@@ -205,7 +205,7 @@ func (webapi *WebAPI) handleShutdown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	webapi.env.Raise(EventShutdownRequested)
+	webapi.tproxy.Raise(EventShutdownRequested)
 }
 
 //

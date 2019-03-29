@@ -10,22 +10,118 @@ import (
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"os"
 	"pages"
 	"strings"
+	"sync"
+	"sync/atomic"
 )
 
 //
 // tproxy instance
 //
 type Tproxy struct {
-	env             *Env                // Common environment
-	router          *Router             // Request router
-	webapi          *WebAPI             // JS API handler
-	localhosts      map[string]struct{} // Hosts considered local
-	listener        net.Listener        // TCP listener
-	httpSrv         *http.Server        // Local HTTP server instance
-	sshTransport    *SSHTransport       // SSH transport
-	directTransport *DirectTransport    // Direct transport
+	*Env  // Common environment
+	*Ebus // Event bus
+
+	// Connection state
+	connStateLock sync.Mutex // Access lock
+	connState     ConnState  // Current state
+	connStateInfo string     // Info string
+
+	// Statistic counters
+	Counters Counters // Collection of statistic counters
+
+	// Tproxy parts
+	router     *Router             // Request router
+	webapi     *WebAPI             // JS API handler
+	localhosts map[string]struct{} // Hosts considered local
+	listener   net.Listener        // TCP listener
+	httpSrv    *http.Server        // Local HTTP server instance
+
+	// Transports
+	sshTransport    *SSHTransport    // SSH transport
+	directTransport *DirectTransport // Direct transport
+}
+
+// ----- Connection state -----
+//
+// Connection states
+//
+type ConnState int
+
+const (
+	ConnNotConfigured = ConnState(iota)
+	ConnTrying
+	ConnEstablished
+)
+
+//
+// ConnState -> ("name", "default info string")
+//
+func (s ConnState) Strings() (string, string) {
+	switch s {
+	case ConnNotConfigured:
+		return "noconfig", "Server not configured"
+	case ConnTrying:
+		return "trying", ""
+	case ConnEstablished:
+		return "established", "Connected to the server"
+	}
+
+	panic("internal error")
+}
+
+//
+// Get connection state
+//
+func (proxy *Tproxy) GetConnState() (state ConnState, info string) {
+	proxy.connStateLock.Lock()
+	state = proxy.connState
+	info = proxy.connStateInfo
+	proxy.connStateLock.Unlock()
+
+	return
+}
+
+//
+// Set connection state
+//
+func (proxy *Tproxy) SetConnState(state ConnState, info string) {
+	proxy.connStateLock.Lock()
+
+	if proxy.connState != state {
+		proxy.connState = state
+		proxy.connStateInfo = info
+
+		proxy.Raise(EventConnStateChanged)
+	}
+
+	proxy.connStateLock.Unlock()
+}
+
+// ----- Statistics counters -----
+//
+// Add value to the statistics counter
+//
+func (proxy *Tproxy) AddCounter(cnt *int32, val int32) {
+	atomic.AddInt32(cnt, val)
+	atomic.AddUint64(&proxy.Counters.Tag, 1)
+	proxy.Raise(EventCountersChanged)
+}
+
+//
+// Increment the statistics counter
+//
+func (proxy *Tproxy) IncCounter(cnt *int32) {
+	proxy.AddCounter(cnt, 1)
+}
+
+//
+// Decrement the statistics counter
+//
+func (proxy *Tproxy) DecCounter(cnt *int32) {
+	proxy.AddCounter(cnt, -1)
 }
 
 // ----- Proxying regular HTTP requests (GET/PUT/HEAD etc) -----
@@ -40,12 +136,12 @@ func (proxy *Tproxy) handleRegularHttp(
 	httpRemoveHopByHopHeaders(r.Header)
 
 	dump, _ := httputil.DumpRequest(r, false)
-	proxy.env.Debug("===== request =====\n%s", dump)
+	proxy.Debug("===== request =====\n%s", dump)
 
 	resp, err := transport.RoundTrip(r)
 
 	if err != nil {
-		proxy.env.Debug("  %s", err)
+		proxy.Debug("  %s", err)
 		httpErrorf(w, http.StatusServiceUnavailable, "%s", err)
 		return
 	}
@@ -58,7 +154,7 @@ func (proxy *Tproxy) handleRegularHttp(
 //
 func (proxy *Tproxy) returnHttpResponse(w http.ResponseWriter, resp *http.Response) {
 	dump, _ := httputil.DumpResponse(resp, false)
-	proxy.env.Debug("===== response =====\n%s", dump)
+	proxy.Debug("===== response =====\n%s", dump)
 
 	httpCopyHeaders(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
@@ -95,7 +191,7 @@ func (proxy *Tproxy) handleConnect(
 		return
 	}
 
-	ioTransferData(proxy.env, client_conn, dest_conn)
+	ioTransferData(proxy.Env, client_conn, dest_conn)
 }
 
 //
@@ -103,7 +199,7 @@ func (proxy *Tproxy) handleConnect(
 // and CONNECT request handlers
 //
 func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
-	proxy.env.Debug("%s %s %s", r.Method, r.URL, r.Proto)
+	proxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
 
 	// Normalize hostname
 	host := strings.ToLower(r.Host)
@@ -113,11 +209,11 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	if local {
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			dump, _ := httputil.DumpRequest(r, false)
-			proxy.env.Debug("===== request =====\n%s", dump)
-			proxy.env.Debug("local->webapi")
+			proxy.Debug("===== request =====\n%s", dump)
+			proxy.Debug("local->webapi")
 			proxy.webapi.ServeHTTP(w, r)
 		} else {
-			proxy.env.Debug("local->site")
+			proxy.Debug("local->site")
 			pages.FileServer.ServeHTTP(w, r)
 		}
 		return
@@ -132,25 +228,25 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rt := proxy.router.Route(host)
-	proxy.env.Debug("router answer=%s", rt)
-	proxy.env.Debug("host=%v", r.Host)
+	proxy.Debug("router answer=%s", rt)
+	proxy.Debug("host=%v", r.Host)
 
 	// Update counters
-	proxy.env.IncCounter(&proxy.env.Counters.HTTPRqReceived)
-	proxy.env.IncCounter(&proxy.env.Counters.HTTPRqPending)
-	defer proxy.env.DecCounter(&proxy.env.Counters.HTTPRqPending)
+	proxy.IncCounter(&proxy.Counters.HTTPRqReceived)
+	proxy.IncCounter(&proxy.Counters.HTTPRqPending)
+	defer proxy.DecCounter(&proxy.Counters.HTTPRqPending)
 
 	// Choose transport
 	var transport Transport
 	switch rt {
 	case RouterBypass:
-		proxy.env.IncCounter(&proxy.env.Counters.HTTPRqDirect)
+		proxy.IncCounter(&proxy.Counters.HTTPRqDirect)
 		transport = proxy.directTransport
 	case RouterForward:
-		proxy.env.IncCounter(&proxy.env.Counters.HTTPRqForwarded)
+		proxy.IncCounter(&proxy.Counters.HTTPRqForwarded)
 		transport = proxy.sshTransport
 	case RouterBlock:
-		proxy.env.IncCounter(&proxy.env.Counters.HTTPRqBlocked)
+		proxy.IncCounter(&proxy.Counters.HTTPRqBlocked)
 		httpErrorf(w, http.StatusForbidden, "Site blocked")
 		return
 	default:
@@ -170,10 +266,27 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 // Run a proxy
 //
 func (proxy *Tproxy) Run() {
-	proxy.env.Startup()
+	go proxy.eventGoroutine()
+	proxy.Raise(EventStartup)
+
 	err := proxy.httpSrv.Serve(proxy.listener)
 	if err != nil {
 		panic("Internal error: " + err.Error())
+	}
+}
+
+//
+// Event monitoring goroutine
+//
+func (proxy *Tproxy) eventGoroutine() {
+	events := proxy.Sub()
+	for {
+		e := <-events
+		proxy.Debug("%s", e)
+		switch e {
+		case EventShutdownRequested:
+			os.Exit(0)
+		}
 	}
 }
 
@@ -183,11 +296,13 @@ func (proxy *Tproxy) Run() {
 func NewTproxy(env *Env, port int) (*Tproxy, error) {
 	// Create Tproxy structure
 	proxy := &Tproxy{
-		env:        env,
-		router:     NewRouter(env),
-		webapi:     NewWebAPI(env),
+		Env:        env,
+		Ebus:       NewEbus(),
 		localhosts: make(map[string]struct{}),
 	}
+
+	proxy.webapi = NewWebAPI(proxy)
+	proxy.router = NewRouter(proxy)
 
 	// Populate table of local host names
 	for _, h := range []string{
@@ -204,8 +319,8 @@ func NewTproxy(env *Env, port int) (*Tproxy, error) {
 	proxy.localhosts[HTTP_SERVER_HOST] = struct{}{}
 
 	// Create transports
-	proxy.sshTransport = NewSSHTransport(env)
-	proxy.directTransport = NewDirectTransport(env)
+	proxy.sshTransport = NewSSHTransport(proxy)
+	proxy.directTransport = NewDirectTransport(proxy)
 
 	// Create HTTP server
 	proxy.httpSrv = &http.Server{
@@ -220,10 +335,12 @@ func NewTproxy(env *Env, port int) (*Tproxy, error) {
 		return nil, err
 	}
 
-	env.Debug("Starting HTTP server at http://%s", proxy.httpSrv.Addr)
+	proxy.Debug("Starting HTTP server at http://%s", proxy.httpSrv.Addr)
 
 	// Update last used port
-	env.SetPort(port)
+	if port != proxy.GetPort() {
+		proxy.SetPort(port)
+	}
 
 	return proxy, nil
 }

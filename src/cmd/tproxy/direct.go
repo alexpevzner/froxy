@@ -16,8 +16,8 @@ import (
 // Transport that connects directly
 //
 type DirectTransport struct {
-	http.Transport      // Direct http.Transport
-	env            *Env // Back link to environment
+	http.Transport         // Direct http.Transport
+	tproxy         *Tproxy // Back link to Tproxy
 }
 
 //
@@ -32,7 +32,7 @@ type directConn struct {
 //
 // Create new DirectTransport
 //
-func NewDirectTransport(env *Env) *DirectTransport {
+func NewDirectTransport(tproxy *Tproxy) *DirectTransport {
 	t := &DirectTransport{
 		Transport: http.Transport{
 			Proxy:                 nil,
@@ -41,7 +41,7 @@ func NewDirectTransport(env *Env) *DirectTransport {
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 		},
-		env: env,
+		tproxy: tproxy,
 	}
 
 	t.Transport.DialContext = t.DialContext
@@ -73,7 +73,7 @@ func (t *DirectTransport) DialContext(ctx context.Context,
 		return nil, err
 	}
 
-	t.env.IncCounter(&t.env.Counters.TCPConnections)
+	t.tproxy.IncCounter(&t.tproxy.Counters.TCPConnections)
 
 	dirconn := &directConn{
 		Conn:      conn,
@@ -91,7 +91,7 @@ func (conn *directConn) Close() error {
 
 	if atomic.SwapUint32(&conn.closed, 1) == 0 {
 		t := conn.transport
-		t.env.DecCounter(&t.env.Counters.TCPConnections)
+		t.tproxy.DecCounter(&t.tproxy.Counters.TCPConnections)
 		err = conn.Conn.Close()
 	}
 
