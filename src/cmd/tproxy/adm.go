@@ -16,7 +16,7 @@ import (
 )
 
 //
-// TProxy administrator
+// TProxy administration environment
 //
 type Adm struct {
 	Port int  // -p port

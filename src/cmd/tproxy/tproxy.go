@@ -180,7 +180,7 @@ func (proxy *Tproxy) Run() {
 //
 // Create a Tproxy instance
 //
-func NewTproxy(env *Env) (*Tproxy, error) {
+func NewTproxy(env *Env, port int) (*Tproxy, error) {
 	// Create Tproxy structure
 	proxy := &Tproxy{
 		env:        env,
@@ -197,7 +197,7 @@ func NewTproxy(env *Env) (*Tproxy, error) {
 		"[::1]",
 		HTTP_SERVER_HOST,
 	} {
-		hp := fmt.Sprintf("%s:%d", h, env.GetPort())
+		hp := fmt.Sprintf("%s:%d", h, port)
 		proxy.localhosts[hp] = struct{}{}
 	}
 
@@ -209,7 +209,7 @@ func NewTproxy(env *Env) (*Tproxy, error) {
 
 	// Create HTTP server
 	proxy.httpSrv = &http.Server{
-		Addr:    fmt.Sprintf("127.0.0.1:%d", env.GetPort()),
+		Addr:    fmt.Sprintf("127.0.0.1:%d", port),
 		Handler: http.HandlerFunc(proxy.httpHandler),
 	}
 
@@ -221,6 +221,9 @@ func NewTproxy(env *Env) (*Tproxy, error) {
 	}
 
 	env.Debug("Starting HTTP server at http://%s", proxy.httpSrv.Addr)
+
+	// Update last used port
+	env.SetPort(port)
 
 	return proxy, nil
 }

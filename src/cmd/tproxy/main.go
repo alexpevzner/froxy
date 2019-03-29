@@ -19,6 +19,7 @@ var (
 	opt_run       = flag.Bool("r", false, "Run TProxy in background")
 	opt_detach    = flag.Bool("detach", false, "Close stdin/stdout/stderr after initialization")
 	opt_open      = flag.Bool("open", false, "Open TProxy configuration in browser window")
+	opt_used      = make(map[string]struct{})
 )
 
 //
@@ -30,9 +31,42 @@ func Usage() {
 	flag.PrintDefaults()
 }
 
+//
+// TProxy administration (install/uninstall etc)
+//
+func TproxyAdm(env *Env) {
+	adm := Adm{Port: *opt_port, Env: env}
+	var err error
+	switch {
+	case *opt_install:
+		err = adm.Install()
+	case *opt_uninstall:
+		err = adm.Uninstall()
+	case *opt_kill:
+		err = adm.Kill()
+	case *opt_run:
+		err = adm.Run()
+	case *opt_open:
+		err = adm.Open()
+	default:
+		panic("Internal error")
+	}
+
+	if err != nil {
+		fmt.Fprintf(os.Stderr, "%s\n", err)
+		os.Exit(1)
+	}
+
+	os.Exit(0)
+}
+
 func main() {
+	// Create environment
+	env := NewEnv()
+
 	// Parse command-line options
 	flag.Usage = Usage
+	flag.Lookup("p").DefValue = fmt.Sprintf("%d", env.GetPort())
 
 	flag.Parse()
 	if flag.NArg() != 0 {
@@ -40,6 +74,12 @@ func main() {
 		os.Exit(2)
 	}
 
+	// Obtain list of actually used flags
+	flag.Visit(func(f *flag.Flag) {
+		opt_used[f.Name] = struct{}{}
+	})
+
+	// Validate arguments -- check administrative options
 	admcnt := 0
 	for _, f := range []bool{*opt_install, *opt_uninstall, *opt_kill, *opt_run, *opt_open} {
 		if f {
@@ -52,34 +92,22 @@ func main() {
 		os.Exit(2)
 	}
 
-	// Create environment
-	env := NewEnv()
+	// Check port
+	if _, ok := opt_used["p"]; ok {
+		if *opt_port < 1 || *opt_port > 0xffff {
+			env.Exit("Port number %d out of range", *opt_port)
+		}
+
+		if *opt_uninstall || *opt_kill || *opt_open {
+			env.Exit("Option -p is not compatible with -u, -k and -open")
+		}
+	} else {
+		*opt_port = env.GetPort()
+	}
 
 	// Perform administration actions, if required
 	if admcnt != 0 {
-		adm := Adm{Port: *opt_port, Env: env}
-		var err error
-		switch {
-		case *opt_install:
-			err = adm.Install()
-		case *opt_uninstall:
-			err = adm.Uninstall()
-		case *opt_kill:
-			err = adm.Kill()
-		case *opt_run:
-			err = adm.Run()
-		case *opt_open:
-			err = adm.Open()
-		default:
-			panic("Internal error")
-		}
-
-		if err != nil {
-			fmt.Fprintf(os.Stderr, "%s\n", err)
-			os.Exit(1)
-		}
-
-		os.Exit(0)
+		TproxyAdm(env)
 	}
 
 	// Acquire tproxy.lock
@@ -89,8 +117,7 @@ func main() {
 	}
 
 	// Create tproxy
-	env.SetPort(*opt_port)
-	proxy, err := NewTproxy(env)
+	proxy, err := NewTproxy(env, *opt_port)
 	if err != nil {
 		env.Exit("%s", err)
 	}

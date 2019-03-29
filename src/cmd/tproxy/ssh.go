@@ -21,9 +21,9 @@ import (
 // The SSH transport for net.http
 //
 type SSHTransport struct {
-	http.Transport               // SSH-backed http.Transport
-	env            *Env          // Back link to environment
-	params         *ServerParams // Server parameters
+	http.Transport              // SSH-backed http.Transport
+	env            *Env         // Back link to environment
+	params         ServerParams // Server parameters
 
 	// Management of active sessions
 	clientsLock sync.Mutex              // Access lock
@@ -107,7 +107,7 @@ func NewSSHTransport(env *Env) *SSHTransport {
 // If transport was already connected, previous connection
 // terminates
 //
-func (t *SSHTransport) Connect(params *ServerParams) {
+func (t *SSHTransport) Connect(params ServerParams) {
 	t.Disconnect()
 
 	if !params.Configured() {
@@ -265,7 +265,7 @@ func (t *SSHTransport) newClientDone() {
 //
 func (t *SSHTransport) newClient(
 	ctx context.Context,
-	params *ServerParams) (*sshClient, error) {
+	params ServerParams) (*sshClient, error) {
 
 	// Obtain grant to dial new session
 	t.newClientWait()

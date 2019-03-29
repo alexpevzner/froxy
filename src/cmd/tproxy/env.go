@@ -165,12 +165,9 @@ func (env *Env) GetPort() int {
 //
 // Get server parameters
 //
-func (env *Env) GetServerParams() *ServerParams {
+func (env *Env) GetServerParams() ServerParams {
 	env.stateLock.RLock()
 	s := env.state.Server
-	if s == nil {
-		s = &ServerParams{}
-	}
 	env.stateLock.RUnlock()
 
 	return s
@@ -179,7 +176,7 @@ func (env *Env) GetServerParams() *ServerParams {
 //
 // Set server parameters
 //
-func (env *Env) SetServerParams(s *ServerParams) {
+func (env *Env) SetServerParams(s ServerParams) {
 	env.stateLock.Lock()
 	env.state.Server = s
 	env.state.Save(env.PathUserStateFile)
@@ -210,14 +207,21 @@ func (env *Env) SetSite(host string, site SiteParams) {
 	host = strings.ToLower(host)
 	site.Host = strings.ToLower(site.Host)
 
+	// Acquire state lock
 	env.stateLock.Lock()
 	defer env.stateLock.Unlock()
 
+	// Create a copy of sites list. Router may work with
+	// previous version, so instead of patching the list,
+	// we will atomically replace it with the new version
+	sites := make([]SiteParams, len(env.state.Sites))
+	copy(sites, env.state.Sites)
+
 	// Site already listed?
-	for i, s := range env.state.Sites {
+	for i, s := range sites {
 		if host == s.Host {
 			if s != site {
-				env.state.Sites[i] = site
+				sites[i] = site
 				goto SAVE
 			}
 			return // Nothing changed
@@ -225,9 +229,10 @@ func (env *Env) SetSite(host string, site SiteParams) {
 	}
 
 	// New site
-	env.state.Sites = append(env.state.Sites, site)
+	sites = append(sites, site)
 
 SAVE:
+	env.state.Sites = sites
 	env.state.Save(env.PathUserStateFile)
 }
 

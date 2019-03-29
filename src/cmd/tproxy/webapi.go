@@ -47,7 +47,7 @@ func NewWebAPI(env *Env) *WebAPI {
 func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		conf := (*IDNServerParams)(webapi.env.GetServerParams())
+		conf := (IDNServerParams)(webapi.env.GetServerParams())
 		webapi.replyJSON(w, conf)
 
 	case "PUT":
@@ -63,7 +63,7 @@ func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 			goto FAIL
 		}
 
-		webapi.env.SetServerParams((*ServerParams)(&data))
+		webapi.env.SetServerParams((ServerParams)(data))
 		return
 
 	FAIL:
