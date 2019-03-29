@@ -35,8 +35,11 @@ func Usage() {
 // TProxy administration (install/uninstall etc)
 //
 func TproxyAdm(env *Env) {
-	adm := Adm{Port: *opt_port, Env: env}
-	var err error
+	adm, err := NewAdm(env, *opt_port)
+	if err != nil {
+		adm.Exit("%s", err)
+	}
+
 	switch {
 	case *opt_install:
 		err = adm.Install()
@@ -53,8 +56,7 @@ func TproxyAdm(env *Env) {
 	}
 
 	if err != nil {
-		fmt.Fprintf(os.Stderr, "%s\n", err)
-		os.Exit(1)
+		adm.Exit("%s", err)
 	}
 
 	os.Exit(0)

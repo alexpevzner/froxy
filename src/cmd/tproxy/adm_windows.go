@@ -26,12 +26,6 @@ import (
 func (adm *Adm) CreateDesktopShortcut(outpath, comment, args string,
 	startup bool) error {
 
-	// Obtain name of executable file
-	exe, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
 	// Lock OS thread. Otherwise OLE will get crazy
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -53,8 +47,8 @@ func (adm *Adm) CreateDesktopShortcut(outpath, comment, args string,
 		return err
 	}
 	idispatch := cs.ToIDispatch()
-	oleutil.PutProperty(idispatch, "IconLocation", adm.Env.PathUserIconFile)
-	oleutil.PutProperty(idispatch, "TargetPath", exe)
+	oleutil.PutProperty(idispatch, "IconLocation", adm.PathUserIconFile)
+	oleutil.PutProperty(idispatch, "TargetPath", adm.OsExecutable)
 	oleutil.PutProperty(idispatch, "Arguments", args)
 	oleutil.PutProperty(idispatch, "Description", comment)
 	oleutil.PutProperty(idispatch, "WindowStyle", 7)

@@ -22,8 +22,22 @@ import (
 // TProxy administration environment
 //
 type Adm struct {
-	Port int  // -p port
-	Env  *Env // Environment
+	*Env                // Environment
+	port         int    // -p port
+	OsExecutable string // Path to executable file
+}
+
+//
+// Create new administrative environment
+//
+func NewAdm(env *Env, port int) (*Adm, error) {
+	adm := &Adm{Env: env, port: port}
+	exe, err := os.Executable()
+	if err != nil {
+		return nil, err
+	}
+	adm.OsExecutable = exe
+	return adm, nil
 }
 
 //
@@ -31,7 +45,7 @@ type Adm struct {
 //
 func (adm *Adm) Install() error {
 	// Fetch icon from resources
-	_, path := filepath.Split(adm.Env.PathUserIconFile)
+	_, path := filepath.Split(adm.PathUserIconFile)
 	path = "icons/" + path
 
 	var icon []byte
@@ -45,14 +59,14 @@ func (adm *Adm) Install() error {
 	}
 
 	// Save icon to disk
-	err = ioutil.WriteFile(adm.Env.PathUserIconFile, icon, 0644)
+	err = ioutil.WriteFile(adm.PathUserIconFile, icon, 0644)
 	if err != nil {
 		return err
 	}
 
 	// Create desktop entry
 	err = adm.CreateDesktopShortcut(
-		adm.Env.PathUserDesktopFile,
+		adm.PathUserDesktopFile,
 		"Open TProxy configuration page in a web browser",
 		"-open",
 		false,
@@ -60,7 +74,7 @@ func (adm *Adm) Install() error {
 
 	if err == nil {
 		err = adm.CreateDesktopShortcut(
-			adm.Env.PathUserStartupFile,
+			adm.PathUserStartupFile,
 			"Start TProxy service",
 			"-r",
 			true,
@@ -79,9 +93,9 @@ func (adm *Adm) Install() error {
 // Uninstall TProxy
 //
 func (adm *Adm) Uninstall() error {
-	os.Remove(adm.Env.PathUserDesktopFile)
-	os.Remove(adm.Env.PathUserStartupFile)
-	os.Remove(adm.Env.PathUserIconFile)
+	os.Remove(adm.PathUserDesktopFile)
+	os.Remove(adm.PathUserStartupFile)
+	os.Remove(adm.PathUserIconFile)
 
 	return nil
 }
@@ -111,19 +125,14 @@ func (adm *Adm) Run() error {
 	attr.Files = []*os.File{devnull, wstdout, wstderr}
 
 	// Initialize process arguments
-	exe, err := os.Executable()
-	if err != nil {
-		return err
-	}
-
 	argv := []string{
-		exe,
-		"-p", fmt.Sprintf("%d", adm.Port),
+		adm.OsExecutable,
+		"-p", fmt.Sprintf("%d", adm.port),
 		"-detach",
 	}
 
 	// Start new process
-	proc, err := os.StartProcess(exe, argv, attr)
+	proc, err := os.StartProcess(adm.OsExecutable, argv, attr)
 	if err != nil {
 		return err
 	}
@@ -157,7 +166,7 @@ func (adm *Adm) Run() error {
 // Kill running TProxy
 //
 func (adm *Adm) Kill() error {
-	url := fmt.Sprintf("http://localhost:%d", adm.Env.GetPort())
+	url := fmt.Sprintf("http://localhost:%d", adm.GetPort())
 	url += "/api/shutdown"
 
 	rq, err := http.NewRequest("TPROXY", url, nil)
@@ -172,6 +181,6 @@ func (adm *Adm) Kill() error {
 // Open configuration window
 //
 func (adm *Adm) Open() error {
-	url := fmt.Sprintf("http://localhost:%d", adm.Env.GetPort())
+	url := fmt.Sprintf("http://localhost:%d", adm.GetPort())
 	return adm.OpenURL(url)
 }

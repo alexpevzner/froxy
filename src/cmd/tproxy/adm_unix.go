@@ -19,13 +19,9 @@ import (
 //
 func (adm *Adm) CreateDesktopShortcut(outpath, comment, args string,
 	startup bool) error {
-	// Obtain name of executable file
-	cmd, err := os.Executable()
-	if err != nil {
-		return err
-	}
 
-	// Append args
+	// Build command with args
+	cmd := adm.OsExecutable
 	if args != "" {
 		cmd += " " + args
 	}
@@ -39,7 +35,7 @@ Terminal=false`
 
 	text += fmt.Sprintf("\nComment=%s", comment)
 	text += fmt.Sprintf("\nExec=%s", cmd)
-	text += fmt.Sprintf("\nIcon=%s", adm.Env.PathUserIconFile)
+	text += fmt.Sprintf("\nIcon=%s", adm.PathUserIconFile)
 	text += "\n"
 
 	mode := os.FileMode(0755)
