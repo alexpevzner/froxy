@@ -21,17 +21,21 @@ type Env struct {
 	*log.Logger
 
 	// Directories
-	PathSysConfDir   string // System-wide configuration directory
-	PathUserHomeDir  string // User home directory
-	PathUserConfDir  string // User-specific configuration directory
-	PathUserStateDir string // User specific persistent state directory
-	PathUserLogDir   string // User log dir
+	PathSysConfDir     string // System-wide configuration directory
+	PathUserHomeDir    string // User home directory
+	PathUserConfDir    string // User-specific configuration directory
+	PathUserStateDir   string // User specific persistent state directory
+	PathUserLogDir     string // User log dir
+	PathUserDesktopDir string // User Desktop folder
+	PathUserStartupDir string // User Startup folder
 
 	// File paths
-	PathUserConfFile  string // User-specific configuration file
-	PathUserStateFile string // User-specific persistent state file
-	PathUserLogFile   string // User-specific log file
-	PathUserLockFile  string // User-specific lock file
+	PathUserConfFile    string // User-specific configuration file
+	PathUserStateFile   string // User-specific persistent state file
+	PathUserLogFile     string // User-specific log file
+	PathUserLockFile    string // User-specific lock file
+	PathUserDesktopFile string // User-specific desktop entry
+	PathUserStartupFile string // User-specific startup entry
 
 	// Persistent state
 	stateLock sync.RWMutex // State access lock
