@@ -8,7 +8,9 @@ package main
 import (
 	"bufio"
 	"bytes"
+	"compress/gzip"
 	"fmt"
+	"io"
 	"os"
 	"time"
 )
@@ -81,7 +83,6 @@ func (l *Logfile) goroutine() {
 		stat, err := l.file.Stat()
 		if err == nil && stat.Size() >= LOG_MAX_FILE_SIZE {
 			l.rotate()
-			l.reopen()
 		}
 	}
 }
@@ -101,6 +102,45 @@ func (l *Logfile) reopen() error {
 }
 
 //
+// gzip the log
+//
+func (l *Logfile) gzip(ipath, opath string) error {
+	// Open input file
+	ifile, err := os.Open(ipath)
+	if err != nil {
+		return err
+	}
+
+	defer ifile.Close()
+
+	// Open output file
+	ofile, err := os.OpenFile(opath, os.O_WRONLY|os.O_TRUNC|os.O_CREATE, 0644)
+	if err != nil {
+		return err
+	}
+
+	// gzip ifile->ofile
+	w := gzip.NewWriter(ofile)
+	_, err = io.Copy(w, ifile)
+	err2 := w.Close()
+	err3 := ofile.Close()
+
+	switch {
+	case err == nil && err2 != nil:
+		err = err2
+	case err == nil && err3 != nil:
+		err = err3
+	}
+
+	// Cleanup and exit
+	if err != nil {
+		os.Remove(opath)
+	}
+
+	return err
+}
+
+//
 // Rotate log files
 //
 func (l *Logfile) rotate() {
@@ -108,14 +148,21 @@ func (l *Logfile) rotate() {
 	for i := LOG_MAX_BACKUP_FILES; i >= 0; i-- {
 		nextpath := l.path
 		if i > 0 {
-			nextpath += fmt.Sprintf(".%d", i-1)
+			nextpath += fmt.Sprintf(".%d.gz", i-1)
 		}
 
-		if prevpath == "" {
+		switch i {
+		case LOG_MAX_BACKUP_FILES:
 			os.Remove(nextpath)
-		} else {
+		case 0:
+			err := l.gzip(nextpath, prevpath)
+			if err == nil {
+				l.file.Truncate(0)
+			}
+		default:
 			os.Rename(nextpath, prevpath)
 		}
+
 		prevpath = nextpath
 	}
 
