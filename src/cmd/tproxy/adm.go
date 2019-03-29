@@ -9,8 +9,11 @@ import (
 	"errors"
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net/http"
 	"os"
+	"pages"
+	"path/filepath"
 	"strings"
 	"unicode"
 )
@@ -21,6 +24,55 @@ import (
 type Adm struct {
 	Port int  // -p port
 	Env  *Env // Environment
+}
+
+//
+// Install TProxy
+//
+func (adm *Adm) Install() error {
+	// Fetch icon from resources
+	_, path := filepath.Split(adm.Env.PathUserIconFile)
+	path = "icons/" + path
+
+	var icon []byte
+	iconfile, err := pages.AssetFS.Open(path)
+	if err == nil {
+		icon, err = ioutil.ReadAll(iconfile)
+		iconfile.Close()
+	}
+	if err != nil {
+		return fmt.Errorf("Resource %q: %s", path, err)
+	}
+
+	// Save icon to disk
+	err = ioutil.WriteFile(adm.Env.PathUserIconFile, icon, 0644)
+	if err != nil {
+		return err
+	}
+
+	// Create desktop entry
+	err = adm.CreateDesktopShortcut(
+		adm.Env.PathUserDesktopFile,
+		"Open TProxy configuration page in a web browser",
+		"-open",
+		false,
+	)
+
+	if err == nil {
+		err = adm.CreateDesktopShortcut(
+			adm.Env.PathUserStartupFile,
+			"Start TProxy service",
+			"-r",
+			true,
+		)
+	}
+
+	// Undo changes in a case of errors
+	if err != nil {
+		adm.Uninstall()
+	}
+
+	return err
 }
 
 //

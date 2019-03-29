@@ -18,9 +18,10 @@ import (
 )
 
 //
-// Install TProxy
+// Create desktop shortcut
 //
-func (adm *Adm) Install() error {
+func (adm *Adm) CreateDesktopShortcut(outpath, comment, args string,
+	startup bool) error {
 	return errors.New("Not implemented")
 }
 

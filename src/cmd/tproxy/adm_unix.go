@@ -11,63 +11,43 @@ import (
 	"io/ioutil"
 	"os"
 	"os/exec"
-	"pages"
-	"path/filepath"
 	"syscall"
 )
 
-const desktop_entry = `[Desktop Entry]
-Type=Application
-Version=1.0
-Name=TProxy
-Terminal=false
-Comment=Open TProxy configuration page in a web browser`
-
 //
-// Install TProxy
+// Create desktop shortcut
 //
-func (adm *Adm) Install() error {
-	// Fetch icon from resources
-	_, path := filepath.Split(adm.Env.PathUserIconFile)
-	path = "icons/" + path
-
-	var icon []byte
-	iconfile, err := pages.AssetFS.Open(path)
-	if err == nil {
-		icon, err = ioutil.ReadAll(iconfile)
-		iconfile.Close()
-	}
-	if err != nil {
-		return fmt.Errorf("Resource %q: %s", path, err)
-	}
-
-	// Save icon to disk
-	err = ioutil.WriteFile(adm.Env.PathUserIconFile, icon, 0644)
-	if err != nil {
-		return err
-	}
-
+func (adm *Adm) CreateDesktopShortcut(outpath, comment, args string,
+	startup bool) error {
 	// Obtain name of executable file
-	exec, err := os.Executable()
+	cmd, err := os.Executable()
 	if err != nil {
 		return err
+	}
+
+	// Append args
+	if args != "" {
+		cmd += " " + args
 	}
 
 	// Create desktop entry
-	text := desktop_entry
-	text += fmt.Sprintf("\nExec=%s -open", exec)
-	text += fmt.Sprintf("\nIcon=%s", path)
+	text := `[Desktop Entry]
+Type=Application
+Version=1.0
+Name=TProxy
+Terminal=false`
+
+	text += fmt.Sprintf("\nComment=%s", comment)
+	text += fmt.Sprintf("\nExec=%s", cmd)
+	text += fmt.Sprintf("\nIcon=%s", adm.Env.PathUserIconFile)
 	text += "\n"
 
-	err = ioutil.WriteFile(adm.Env.PathUserDesktopFile, []byte(text), 0755)
-	if err != nil {
-		return err
+	mode := os.FileMode(0755)
+	if startup {
+		mode = 0644
 	}
 
-	// Create autostart entry
-	// TODO
-
-	return nil
+	return ioutil.WriteFile(outpath, []byte(text), mode)
 }
 
 //
