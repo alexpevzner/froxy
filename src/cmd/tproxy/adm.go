@@ -22,21 +22,32 @@ import (
 // TProxy administration environment
 //
 type Adm struct {
-	*Env                // Environment
-	port         int    // -p port
-	OsExecutable string // Path to executable file
+	*Env                   // Environment
+	port            int    // -p port
+	OsExecutable    string // Path to executable file
+	TProxyIsRunning bool   // TProxy is running
 }
 
 //
 // Create new administrative environment
 //
 func NewAdm(env *Env, port int) (*Adm, error) {
+	// ----- Create Adm structure -----
 	adm := &Adm{Env: env, port: port}
 	exe, err := os.Executable()
 	if err != nil {
 		return nil, err
 	}
 	adm.OsExecutable = exe
+
+	// ----- Attempt to acquire tproxy.lock -----
+	err = adm.TproxyLockAcquire()
+	if err != nil && err != ErrTProxyRunning {
+		return nil, err
+	}
+
+	adm.TProxyIsRunning = err != nil
+
 	return adm, nil
 }
 
@@ -44,6 +55,12 @@ func NewAdm(env *Env, port int) (*Adm, error) {
 // Install TProxy
 //
 func (adm *Adm) Install() error {
+	// Kill TProxy if it is running
+	err := adm.Kill()
+	if err != nil {
+		return err
+	}
+
 	// Fetch icon from resources
 	_, path := filepath.Split(adm.PathUserIconFile)
 	path = "icons/" + path
@@ -93,6 +110,13 @@ func (adm *Adm) Install() error {
 // Uninstall TProxy
 //
 func (adm *Adm) Uninstall() error {
+	// Kill TProxy if it is running
+	err := adm.Kill()
+	if err != nil {
+		return err
+	}
+
+	// Remove installed files
 	os.Remove(adm.PathUserDesktopFile)
 	os.Remove(adm.PathUserStartupFile)
 	os.Remove(adm.PathUserIconFile)
@@ -166,12 +190,36 @@ func (adm *Adm) Run() error {
 // Kill running TProxy
 //
 func (adm *Adm) Kill() error {
+	// TProxy not running? Perfect, nothing to do
+	if !adm.TProxyIsRunning {
+		return nil
+	}
+
+	// Create shutdown request
 	url := fmt.Sprintf("http://localhost:%d", adm.GetPort())
 	url += "/api/shutdown"
 
 	rq, err := http.NewRequest("TPROXY", url, nil)
+	if err != nil {
+		return err
+	}
+
+	// Send request and wait until connection is closed
+	// Don't worry about errors too much here -- if TProxy
+	// leave, we will get an error but its not a problem
+	rsp, err := http.DefaultClient.Do(rq)
 	if err == nil {
-		_, err = http.DefaultClient.Do(rq)
+		io.Copy(ioutil.Discard, rsp.Body)
+		rsp.Body.Close()
+	}
+
+	// And reacquire the tproxy.lock
+	err = adm.TproxyLockAcquire()
+	if err == ErrTProxyRunning {
+		err = ErrCantKillTProxy
+	}
+	if err == nil {
+		adm.TProxyIsRunning = false
 	}
 
 	return err

@@ -11,7 +11,6 @@ package main
 import "C"
 
 import (
-	"errors"
 	"fmt"
 	"syscall"
 )
@@ -43,7 +42,7 @@ func AcquireLockfile(path string) (*Lockfile, error) {
 	)
 
 	if err == syscall.Errno(C.ERROR_SHARING_VIOLATION) {
-		return nil, errors.New("TProxy already running")
+		return nil, ErrTProxyRunning
 	}
 
 	if err != nil {

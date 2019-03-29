@@ -7,7 +7,6 @@
 package main
 
 import (
-	"errors"
 	"syscall"
 )
 
@@ -33,7 +32,7 @@ func AcquireLockfile(path string) (*Lockfile, error) {
 
 	err = syscall.Flock(fd, syscall.LOCK_EX|syscall.LOCK_NB)
 	if err != nil {
-		return nil, errors.New("TProxy already running")
+		return nil, ErrTProxyRunning
 	}
 
 	return &Lockfile{fd}, nil

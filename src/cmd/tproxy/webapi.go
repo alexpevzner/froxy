@@ -6,7 +6,6 @@ package main
 
 import (
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"net/http"
@@ -86,7 +85,7 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 		host, err = url.QueryUnescape(r.URL.RawQuery)
 
 		if err == nil && r.Method == "DEL" && host == "" {
-			err = errors.New("invalid query: host parameter missed")
+			err = ErrHttpHostMissed
 		}
 
 		if err != nil {
@@ -206,6 +205,17 @@ func (webapi *WebAPI) handleShutdown(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webapi.tproxy.Raise(EventShutdownRequested)
+
+	// Hijack the connection so it will be closed only
+	// after TProxy exit
+
+	r.ProtoMinor = 0 // Hack to suppress Transfer-Encoding
+	w.WriteHeader(http.StatusOK)
+
+	hijacker, ok := w.(http.Hijacker)
+	if ok {
+		hijacker.Hijack()
+	}
 }
 
 //
