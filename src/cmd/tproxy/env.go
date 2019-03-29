@@ -28,6 +28,7 @@ type Env struct {
 	PathUserLogDir     string // User log dir
 	PathUserDesktopDir string // User Desktop folder
 	PathUserStartupDir string // User Startup folder
+	PathUserIconsDir   string // User icons directory
 
 	// File paths
 	PathUserConfFile    string // User-specific configuration file
@@ -36,6 +37,7 @@ type Env struct {
 	PathUserLockFile    string // User-specific lock file
 	PathUserDesktopFile string // User-specific desktop entry
 	PathUserStartupFile string // User-specific startup entry
+	PathUserIconFile    string // Path to icon file
 
 	// Persistent state
 	stateLock sync.RWMutex // State access lock

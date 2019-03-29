@@ -25,13 +25,6 @@ func (adm *Adm) Install() error {
 }
 
 //
-// Uninstall TProxy
-//
-func (adm *Adm) Uninstall() error {
-	return errors.New("Not implemented")
-}
-
-//
 // Create os.ProcAttr to run TProxy in background
 //
 func (adm *Adm) RunProcAddr() *os.ProcAttr {

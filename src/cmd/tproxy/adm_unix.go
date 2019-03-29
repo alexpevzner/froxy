@@ -7,7 +7,6 @@
 package main
 
 import (
-	"errors"
 	"fmt"
 	"io/ioutil"
 	"os"
@@ -29,7 +28,9 @@ Comment=Open TProxy configuration page in a web browser`
 //
 func (adm *Adm) Install() error {
 	// Fetch icon from resources
-	path := "icons/tproxy.svg"
+	_, path := filepath.Split(adm.Env.PathUserIconFile)
+	path = "icons/" + path
+
 	var icon []byte
 	iconfile, err := pages.AssetFS.Open(path)
 	if err == nil {
@@ -41,8 +42,7 @@ func (adm *Adm) Install() error {
 	}
 
 	// Save icon to disk
-	path = filepath.Join(adm.Env.PathUserConfDir, "tproxy.svg")
-	err = ioutil.WriteFile(path, icon, 0644)
+	err = ioutil.WriteFile(adm.Env.PathUserIconFile, icon, 0644)
 	if err != nil {
 		return err
 	}
@@ -68,13 +68,6 @@ func (adm *Adm) Install() error {
 	// TODO
 
 	return nil
-}
-
-//
-// Uninstall TProxy
-//
-func (adm *Adm) Uninstall() error {
-	return errors.New("Not implemented")
 }
 
 //

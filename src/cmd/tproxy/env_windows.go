@@ -36,9 +36,11 @@ func (env *Env) populateOsPaths() {
 	env.PathUserLogDir = filepath.Join(env.PathUserStateDir, "log")
 	env.PathUserDesktopDir = getKnownFolder(&C.FOLDERID_Desktop)
 	env.PathUserStartupDir = getKnownFolder(&C.FOLDERID_Startup)
+	env.PathUserIconsDir = env.PathUserConfDir
 
 	env.PathUserDesktopFile = filepath.Join(env.PathUserDesktopDir, "tproxy.lnk")
 	env.PathUserStartupFile = filepath.Join(env.PathUserStartupDir, "tproxy.lnk")
+	env.PathUserIconFile = filepath.Join(env.PathUserIconsDir, "tproxy.ico")
 }
 
 // Get known folder by FOLDERID_xxx ID

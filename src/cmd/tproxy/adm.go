@@ -24,6 +24,17 @@ type Adm struct {
 }
 
 //
+// Uninstall TProxy
+//
+func (adm *Adm) Uninstall() error {
+	os.Remove(adm.Env.PathUserDesktopFile)
+	os.Remove(adm.Env.PathUserStartupFile)
+	os.Remove(adm.Env.PathUserIconFile)
+
+	return nil
+}
+
+//
 // Run TProxy in background
 //
 func (adm *Adm) Run() error {
