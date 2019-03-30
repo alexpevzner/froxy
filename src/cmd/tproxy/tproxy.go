@@ -61,11 +61,11 @@ const (
 func (s ConnState) Strings() (string, string) {
 	switch s {
 	case ConnNotConfigured:
-		return "noconfig", "Server not configured"
+		return "noconfig", "server not configured"
 	case ConnTrying:
-		return "trying", ""
+		return "trying", "trying..."
 	case ConnEstablished:
-		return "established", "Connected to the server"
+		return "established", "connected to the server"
 	}
 
 	panic("internal error")
@@ -97,6 +97,15 @@ func (proxy *Tproxy) SetConnState(state ConnState, info string) {
 	}
 
 	proxy.connStateLock.Unlock()
+}
+
+// ----- Connection management -----
+//
+// Set server parameters
+//
+func (proxy *Tproxy) SetServerParams(s ServerParams) {
+	proxy.Env.SetServerParams(s)
+	proxy.sshTransport.Reconnect(s)
 }
 
 // ----- Statistics counters -----
@@ -268,7 +277,6 @@ func (proxy *Tproxy) eventGoroutine() {
 	events := proxy.Sub()
 	for {
 		e := <-events
-		proxy.Debug("%s", e)
 		switch e {
 		case EventShutdownRequested:
 			os.Exit(0)

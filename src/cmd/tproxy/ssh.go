@@ -6,10 +6,10 @@ package main
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"net/http"
+	"reflect"
 	"sync"
 	"sync/atomic"
 	"time"
@@ -36,21 +36,14 @@ type SSHTransport struct {
 	newClientDialCount int        // Count of active dialers
 
 	// Disconnect/reconnect machinery
+	reconnectLock       sync.Mutex         // Reconnect lock
 	disconnectLock      sync.Mutex         // Disconnect machinery lock
-	disconnectReason    error              // Reason why not connected
 	disconnectWait      sync.WaitGroup     // To wait for disconnect completion
 	disconnectCtx       context.Context    // To break dial-in-progress
 	disconnectCtxCancel context.CancelFunc // To cancel disconnectCtx
 }
 
 var _ = Transport(&SSHTransport{})
-
-//
-// Precomputed errors
-//
-var (
-	sshErrServerNotConfigured = errors.New("Server not configured")
-)
 
 //
 // SSH client -- wraps ssh.Client
@@ -92,57 +85,62 @@ func NewSSHTransport(tproxy *Tproxy) *SSHTransport {
 		return conn, err
 	}
 
-	t.Connect(t.tproxy.GetServerParams())
+	t.Reconnect(t.tproxy.GetServerParams())
 
 	return t
 }
 
 //
-// Connect to the server
+// Reconnect to the server
 //
-// It doesn't establish server connection immediately, it
-// only initiates asynchronous process of establishing server
-// connection
+// This function updates server connection parameters, which
+// may either cause a disconnect (if params.Configured() == false)
+// or [re]connect
 //
-// If transport was already connected, previous connection
-// terminates
+// In a case of [re]connect this function doesn't establish server
+// connection immediately, it only initiates asynchronous process of
+// establishing server connection
 //
-func (t *SSHTransport) Connect(params ServerParams) {
-	t.Disconnect()
+// In a case of disconnect, this function synchronously waits until
+// all active connections has gone away
+//
+func (t *SSHTransport) Reconnect(params ServerParams) {
+	// Only one Reconnect () in time allowed
+	t.reconnectLock.Lock()
+	defer t.reconnectLock.Unlock()
 
-	if !params.Configured() {
-		t.disconnectReason = sshErrServerNotConfigured
+	// Synchronize with disconnect logic
+	t.disconnectLock.Lock()
+
+	// Something changed?
+	if reflect.DeepEqual(t.params, params) {
+		t.disconnectLock.Unlock()
 		return
 	}
 
-	t.disconnectLock.Lock()
-	t.params = params
-	t.disconnectReason = nil
+	// Cancel previous connection and reconnect
+	if t.disconnectCtxCancel != nil {
+		t.disconnectCtxCancel()
+	}
+
 	t.disconnectCtx, t.disconnectCtxCancel = context.WithCancel(
 		context.Background())
+	t.params = params
 
-	t.disconnectLock.Unlock()
-}
-
-//
-// Disconnect from the server
-//
-// This function works synchronously. When it returns, all previously
-// active server connections are terminated
-//
-func (t *SSHTransport) Disconnect() {
-	t.disconnectLock.Lock()
-
-	if t.disconnectCtx != nil {
-		t.disconnectCtxCancel()
-		t.disconnectCtx = nil
-		t.disconnectCtxCancel = nil
-		t.disconnectReason = sshErrServerNotConfigured
+	// Update connection state
+	ok := params.Configured()
+	if ok {
+		t.tproxy.SetConnState(ConnTrying, "")
+	} else {
+		t.tproxy.SetConnState(ConnNotConfigured, "")
 	}
 
 	t.disconnectLock.Unlock()
 
-	t.disconnectWait.Wait()
+	// In a case of disconnect -- wait for completion
+	if !ok {
+		t.disconnectWait.Wait()
+	}
 }
 
 //
@@ -154,14 +152,17 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 
 	ctx := t.disconnectCtx
 	params := t.params
-	err := t.disconnectReason
+	var err error
 
-	if err == nil {
+	if params.Configured() {
 		t.disconnectWait.Add(1)
+	} else {
+		err = ErrServerNotConfigured
 	}
 
 	t.disconnectLock.Unlock()
 
+	// Can connect?
 	if err != nil {
 		return nil, err
 	}
@@ -332,7 +333,7 @@ func (t *SSHTransport) newClient(
 		t.tproxy.DecCounter(&t.tproxy.Counters.SSHSessions)
 		delete(t.clients, clnt)
 
-		if len(t.clients) == 0 {
+		if len(t.clients) == 0 && ctx.Err() == nil {
 			t.tproxy.SetConnState(ConnTrying, err.Error())
 		}
 
