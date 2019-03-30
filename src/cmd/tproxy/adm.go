@@ -128,6 +128,12 @@ func (adm *Adm) Uninstall() error {
 // Run TProxy in background
 //
 func (adm *Adm) Run() error {
+	if adm.TProxyIsRunning {
+		return ErrTProxyRunning
+	}
+
+	adm.TproxyLockRelease()
+
 	// Create stdout/stderr pipes
 	rstdout, wstdout, err := os.Pipe()
 	if err != nil {
