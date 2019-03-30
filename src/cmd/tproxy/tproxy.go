@@ -9,7 +9,6 @@ import (
 	"io"
 	"net"
 	"net/http"
-	"net/http/httputil"
 	"os"
 	"strings"
 	"sync"
@@ -135,13 +134,9 @@ func (proxy *Tproxy) handleRegularHttp(
 
 	httpRemoveHopByHopHeaders(r.Header)
 
-	dump, _ := httputil.DumpRequest(r, false)
-	proxy.Debug("===== request =====\n%s", dump)
-
 	resp, err := transport.RoundTrip(r)
 
 	if err != nil {
-		proxy.Debug("  %s", err)
 		httpErrorf(w, http.StatusServiceUnavailable, "%s", err)
 		return
 	}
@@ -153,9 +148,6 @@ func (proxy *Tproxy) handleRegularHttp(
 // Return HTTP response back to the client
 //
 func (proxy *Tproxy) returnHttpResponse(w http.ResponseWriter, resp *http.Response) {
-	dump, _ := httputil.DumpResponse(resp, false)
-	proxy.Debug("===== response =====\n%s", dump)
-
 	httpCopyHeaders(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
 	io.Copy(w, resp.Body)
@@ -208,12 +200,8 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	_, local := proxy.localhosts[r.Host]
 	if local {
 		if strings.HasPrefix(r.URL.Path, "/api/") {
-			dump, _ := httputil.DumpRequest(r, false)
-			proxy.Debug("===== request =====\n%s", dump)
-			proxy.Debug("local->webapi")
 			proxy.webapi.ServeHTTP(w, r)
 		} else {
-			proxy.Debug("local->site")
 			pages.FileServer.ServeHTTP(w, r)
 		}
 		return
@@ -228,8 +216,6 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	rt := proxy.router.Route(host)
-	proxy.Debug("router answer=%s", rt)
-	proxy.Debug("host=%v", r.Host)
 
 	// Update counters
 	proxy.IncCounter(&proxy.Counters.HTTPRqReceived)
@@ -335,7 +321,7 @@ func NewTproxy(env *Env, port int) (*Tproxy, error) {
 		return nil, err
 	}
 
-	proxy.Debug("Starting HTTP server at http://%s", proxy.httpSrv.Addr)
+	proxy.Info("Starting HTTP server at http://%s", proxy.httpSrv.Addr)
 
 	// Update last used port
 	if port != proxy.GetPort() {

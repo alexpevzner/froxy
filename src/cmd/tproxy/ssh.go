@@ -187,7 +187,7 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 		return nil, err
 	}
 
-	t.tproxy.Debug("SSS: connection established")
+	t.tproxy.Debug("SSH: connection established")
 	t.tproxy.IncCounter(&t.tproxy.Counters.SSHConnections)
 
 	return &sshConn{Conn: conn, client: clnt}, nil
@@ -362,7 +362,7 @@ func (conn *sshConn) Close() error {
 	if atomic.SwapUint32(&conn.closed, 1) == 0 {
 		t := conn.client.transport
 
-		t.tproxy.Debug("SSS: connection closed")
+		t.tproxy.Debug("SSH: connection closed")
 
 		t.tproxy.DecCounter(&t.tproxy.Counters.SSHConnections)
 		err = conn.Conn.Close()
