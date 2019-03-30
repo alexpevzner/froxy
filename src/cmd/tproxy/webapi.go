@@ -204,18 +204,27 @@ func (webapi *WebAPI) handleShutdown(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	webapi.tproxy.Raise(EventShutdownRequested)
-
 	// Hijack the connection so it will be closed only
 	// after TProxy exit
-
-	r.ProtoMinor = 0 // Hack to suppress Transfer-Encoding
-	w.WriteHeader(http.StatusOK)
-
+	//
+	// Here we manually generate a minimalist valid HTTP response
+	// header and keep connection open until OS closes it after
+	// TProxy exit. We use HTTP version 1.0, because it allows
+	// (unlike HTTP 1.1) data streaming with EOF indicated
+	// by closing the connection.
+	//
+	// When connection finally closed, client will know that
+	// TProxy shutdown completed
 	hijacker, ok := w.(http.Hijacker)
 	if ok {
-		hijacker.Hijack()
+		c, _, err := hijacker.Hijack()
+		if err == nil {
+			c.Write([]byte("HTTP/1.0 200 OK\r\n\r\n"))
+		}
 	}
+
+	// Raise shutdown event
+	webapi.tproxy.Raise(EventShutdownRequested)
 }
 
 //
