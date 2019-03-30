@@ -152,6 +152,7 @@ func (proxy *Tproxy) handleRegularHttp(
 		return
 	}
 
+	httpRemoveHopByHopHeaders(resp.Header)
 	proxy.returnHttpResponse(w, resp)
 }
 
