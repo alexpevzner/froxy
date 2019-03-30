@@ -141,6 +141,8 @@ func (proxy *Tproxy) handleRegularHttp(
 	r *http.Request,
 	transport Transport) {
 
+	proxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
+
 	httpRemoveHopByHopHeaders(r.Header)
 
 	resp, err := transport.RoundTrip(r)
@@ -173,6 +175,8 @@ func (proxy *Tproxy) handleConnect(
 	r *http.Request,
 	transport Transport) {
 
+	proxy.Debug("%s %s %s", r.Method, r.Host, r.Proto)
+
 	dest_conn, err := transport.Dial("tcp", r.Host)
 	if err != nil {
 		httpErrorf(w, http.StatusServiceUnavailable, "%s", err)
@@ -200,8 +204,6 @@ func (proxy *Tproxy) handleConnect(
 // and CONNECT request handlers
 //
 func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
-	proxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
-
 	// Normalize hostname
 	host := strings.ToLower(r.Host)
 
