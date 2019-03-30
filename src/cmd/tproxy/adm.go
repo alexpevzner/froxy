@@ -235,6 +235,11 @@ func (adm *Adm) Kill() error {
 // Open configuration window
 //
 func (adm *Adm) Open() error {
+	err := adm.Run()
+	if err != nil && err != ErrTProxyRunning {
+		return err
+	}
+
 	url := fmt.Sprintf("http://localhost:%d", adm.GetPort())
 	return adm.OpenURL(url)
 }
