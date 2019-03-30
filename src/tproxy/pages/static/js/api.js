@@ -276,7 +276,7 @@ tproxy.UiSetStatus = function(color, text) {
         return;
     }
 
-    status.style = "color:" + color;
+    status.style.color = color;
     status.innerHTML = text;
 };
 

@@ -17,7 +17,6 @@ title = "TProxy Configuration"
 	<tr>
 		<td>Password:</td>
 		<td><input id="password" type="text" style="width: 95%;" /></td>
-		</td>
 	</tr>
 	<tr>
 		<td><input type="button" value="Ok" onclick="tproxy.Ui(SubmitServerParams)"/></td>
