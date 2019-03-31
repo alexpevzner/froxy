@@ -143,17 +143,26 @@ func (proxy *Tproxy) handleRegularHttp(
 
 	proxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
 
+	// Strip hop-by-hop headers. Preserve Upgrade header, if any
 	httpRemoveHopByHopHeaders(r.Header)
 
+	// Perform round-trip
 	resp, err := transport.RoundTrip(r)
-
 	if err != nil {
 		httpErrorf(w, http.StatusServiceUnavailable, "%s", err)
 		return
 	}
 
 	httpRemoveHopByHopHeaders(resp.Header)
-	proxy.returnHttpResponse(w, resp)
+
+	// Finish response, unless protocol is upgraded
+	if resp.StatusCode != http.StatusSwitchingProtocols {
+		proxy.returnHttpResponse(w, resp)
+		return
+	}
+
+	// Handle protocol switch
+	// TODO
 }
 
 //
@@ -162,9 +171,11 @@ func (proxy *Tproxy) handleRegularHttp(
 func (proxy *Tproxy) returnHttpResponse(w http.ResponseWriter, resp *http.Response) {
 	httpCopyHeaders(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
-	io.Copy(w, resp.Body)
 
-	resp.Body.Close()
+	if resp.Body != nil {
+		io.Copy(w, resp.Body)
+		resp.Body.Close()
+	}
 }
 
 // ----- Proxying CONNECT request -----

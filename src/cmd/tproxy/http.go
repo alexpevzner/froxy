@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"net/http"
+	"net/textproto"
 	"strings"
 )
 
@@ -22,7 +23,6 @@ var httpHopByHopHeaders = []string{
 	"Te",
 	"Trailer",
 	"Transfer-Encoding",
-	"Upgrade",
 }
 
 //
@@ -37,15 +37,21 @@ func httpCopyHeaders(dst, src http.Header) {
 }
 
 //
-// Remove hop-by-hop headers
+// Remove hop-by-hop headers.
 //
-func httpRemoveHopByHopHeaders(hdr http.Header) {
+// Upgrade headers are preserved, and if present, this function
+// returns true
+//
+func httpRemoveHopByHopHeaders(hdr http.Header) bool {
 	// We must delete headers listed in Connection
 	if c, ok := hdr["Connection"]; ok {
 		for _, v := range c {
 			for _, k := range strings.Split(v, ",") {
 				if k = strings.TrimSpace(k); k != "" {
-					hdr.Del(k)
+					k = textproto.CanonicalMIMEHeaderKey(k)
+					if k != "Upgrade" {
+						delete(hdr, k)
+					}
 				}
 			}
 		}
@@ -55,6 +61,14 @@ func httpRemoveHopByHopHeaders(hdr http.Header) {
 	for _, k := range httpHopByHopHeaders {
 		delete(hdr, k)
 	}
+
+	// Restore "Connection: Upgrade" header
+	_, upgraded := hdr["Upgrade"]
+	if upgraded {
+		hdr["Connection"] = []string{"Upgrade"}
+	}
+
+	return upgraded
 }
 
 //
