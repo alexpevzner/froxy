@@ -9,6 +9,7 @@ purposes
 
 Name                              | Value
 ----------------------------------|---------------
+Local User Connections            | <div id="user_conns"></div>
 Direct TCP Connections            | <div id="tcp_conns"></div>
 SSH Client Sessions               | <div id="ssh_sessions"></div>
 SSH-tunneled TCP Connections      | <div id="ssh_conns"></div>

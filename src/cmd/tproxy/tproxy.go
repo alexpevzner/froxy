@@ -353,7 +353,7 @@ func NewTproxy(env *Env, port int) (*Tproxy, error) {
 
 	// Create TCP listener
 	var err error
-	proxy.listener, err = net.Listen("tcp", proxy.httpSrv.Addr)
+	proxy.listener, err = NewListener(proxy, proxy.httpSrv.Addr)
 	if err != nil {
 		return nil, err
 	}
