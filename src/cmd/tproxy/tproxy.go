@@ -144,7 +144,22 @@ func (proxy *Tproxy) handleRegularHttp(
 	proxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
 
 	// Strip hop-by-hop headers. Preserve Upgrade header, if any
-	httpRemoveHopByHopHeaders(r.Header)
+	upgrade := httpRemoveHopByHopHeaders(r.Header)
+	if upgrade {
+		// FIXME
+		//
+		// Protocol upgrade is hard to implement with Go < 1.12.
+		// Starting from Go 1.12 http.Response.Body implements
+		// io.Writer interface, so protocol upgrade becomes simple
+		// task.
+		//
+		// As for now, we explicitly reject upgrade requests.
+		// Actually it's not a big problem, because browsers
+		// implement websockets by calling proxy's CONNECT method
+		// rather that GET with upgrade
+		httpErrorf(w, http.StatusServiceUnavailable,
+			"Protocol upgrade is not implemented")
+	}
 
 	// Perform round-trip
 	resp, err := transport.RoundTrip(r)
