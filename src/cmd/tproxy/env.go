@@ -5,13 +5,13 @@
 package main
 
 import (
+	"cmd/tproxy/internal/log"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
-	"tproxy/log"
 )
 
 //
