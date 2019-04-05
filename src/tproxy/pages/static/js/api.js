@@ -396,6 +396,10 @@ tproxy.UiSetInput = function(id, value) {
             break;
         }
         break;
+
+    case "SELECT":
+        obj.value = value;
+        break;
     }
 };
 

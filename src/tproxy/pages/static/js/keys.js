@@ -110,6 +110,13 @@ function TableInputAction (input, elm, row) {
 function UpdateKeys (keys) {
     var sz = keys.length;
 
+
+    // Update "you have no keys" notice
+    var nokeys = document.getElementById("nokeys");
+    if (nokeys) {
+        nokeys.hidden = !!sz;
+    }
+
     // Sort keys
     keys.sort(function (a, b) {
         // Sort by comments first

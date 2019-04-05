@@ -31,6 +31,7 @@ title = "SSH Keys Management"
 </table>
 
 **Manage keys you have:**
+<div id="nokeys">You don't have any key...</div>
 <table>
     <tbody id="tbody">
         <tr id="template" hidden><td>
