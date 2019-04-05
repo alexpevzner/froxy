@@ -66,6 +66,12 @@ tproxy._.http_request = function(method, query, data) {
     };
 
     if (rq._ui) {
+        if (!tproxy._.ui) {
+            tproxy._.uitimer = window.setTimeout(
+                tproxy._.pleasewait.bind(null, true),
+                100
+            );
+        }
         tproxy._.ui ++;
     }
 
@@ -120,6 +126,10 @@ tproxy._.http_request = function(method, query, data) {
 
             if (rq._ui) {
                 tproxy._.ui --;
+                if (!tproxy._.ui) {
+                    window.clearTimeout(tproxy._.uitimer);
+                    tproxy._.pleasewait(false);
+                }
             }
         }
     };
@@ -151,6 +161,41 @@ tproxy._.http_error = function(text, reason, object) {
 tproxy._.http_interror = function(reason, object) {
     return tproxy._.http_error("Internal error", reason, object);
 };
+
+// ----- UI helpers -----
+//
+// Display or remove "please wait" animation on a top of the current page
+//
+tproxy._.pleasewait = function (enable) {
+    var body = document.body;
+    var wait = document.getElementById("id_wait");
+
+    if (!body) {
+        return;
+    }
+
+    if (enable) {
+        if (wait) {
+            return;
+        }
+
+        body.style.position = "relative";
+
+        wait = document.createElement("div");
+        wait.id = "id_wait";
+        wait.className = "wait";
+        wait.innerHTML = "<div class=\"ring\" id=\"id_ring\"></div>";
+
+        body.appendChild(wait);
+    } else {
+        if (!wait) {
+            return;
+        }
+
+        body.removeChild(wait);
+    }
+};
+
 
 // ----- Public API -----
 //
@@ -414,6 +459,15 @@ tproxy.BgReloadWhenReady = function() {
 // Initialize stuff
 //
 tproxy._.init = function() {
+    // Preload /css/tproxy.css
+    var head  = document.getElementsByTagName("head")[0];
+    var link  = document.createElement("link");
+    link.rel  = "stylesheet";
+    link.type = "text/css";
+    link.href = "/css/tproxy.css";
+    link.media = "all";
+    head.appendChild(link);
+
     tproxy.BgStartStatus();
 };
 
