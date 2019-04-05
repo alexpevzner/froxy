@@ -30,11 +30,13 @@ type KeySet struct {
 // Key information structure, for WebAPI
 //
 type KeyInfo struct {
+	Id       string       `json:"id"`                  // Key id
 	Type     keys.KeyType `json:"type"`                // Key type
-	FpSHA256 string       `json:"fp_sha256",omitempty` // SHA-256 fingerprint
-	FpMD5    string       `json:"fp_md5",omitempty`    // MD5 fingerprint
-	Comment  string       `json:"comment",omitempty`   // Key Comment
+	FpSHA256 string       `json:"fp_sha256,omitempty"` // SHA-256 fingerprint
+	FpMD5    string       `json:"fp_md5,omitempty"`    // MD5 fingerprint
+	Comment  string       `json:"comment,omitempty"`   // Key Comment
 	Enabled  bool         `json:"enabled"`             // Key is enabled
+	Pubkey   string       `json:"pubkey,omitempty"`    // Public key
 }
 
 //
@@ -61,10 +63,12 @@ func (set *KeySet) GetKeys() []KeyInfo {
 	keys := []KeyInfo{}
 	for _, key := range set.keys {
 		info := KeyInfo{
+			Id:       set.fileName(key),
 			Type:     key.Type,
 			FpSHA256: key.FingerprintSHA256(),
 			FpMD5:    key.FingerprintMD5(),
 			Comment:  key.Comment,
+			Pubkey:   key.AuthorizedKey(),
 		}
 
 		_, info.Enabled = set.enabled[info.FpSHA256]
@@ -112,12 +116,11 @@ func (set *KeySet) KeyMod(id string, info *KeyInfo) error {
 		return set.updateKey(key, updateKey, updateEnabled, info.Enabled)
 	}
 
-	return set.deleteKey(key)
+	return nil
 }
 
 //
-// Del key from KeySet. id is the key's
-// SHA256 fingerpring
+// Del key from KeySet.
 //
 func (set *KeySet) KeyDel(id string) error {
 	// Acquire the lock
@@ -156,7 +159,7 @@ func (set *KeySet) KeyGen(info *KeyInfo) (*KeyInfo, error) {
 	}
 
 	// Save the key to memory
-	id := key.FingerprintSHA256()
+	id := set.fileName(key)
 	set.keys[id] = key
 	if info.Enabled {
 		set.enabled[id] = struct{}{}
@@ -164,7 +167,7 @@ func (set *KeySet) KeyGen(info *KeyInfo) (*KeyInfo, error) {
 
 	// Update info
 	newinfo := *info
-	newinfo.FpSHA256 = id
+	newinfo.FpSHA256 = key.FingerprintSHA256()
 	newinfo.FpMD5 = key.FingerprintMD5()
 
 	return &newinfo, nil
@@ -259,20 +262,21 @@ func (set *KeySet) load() {
 				continue
 			}
 
-			loadedKeys[key.FingerprintSHA256()] = key
+			loadedKeys[name] = key
 
 		case pathExtEnabled:
 			enabled[name] = struct{}{}
 		}
 
 		// Update keyset
-		set.keys = loadedKeys
-		set.enabled = make(map[string]struct{})
-		for _, key := range loadedKeys {
-			if _, ok := enabled[set.fileName(key)]; ok {
-				set.enabled[key.FingerprintSHA256()] = struct{}{}
+		for id, _ := range enabled {
+			if _, ok := loadedKeys[id]; !ok {
+				delete(enabled, id)
 			}
 		}
+
+		set.keys = loadedKeys
+		set.enabled = enabled
 	}
 }
 
@@ -304,8 +308,8 @@ func (set *KeySet) updateKey(key *keys.Key, updateKey, updateEnabled, enabled bo
 // Delete key from disk
 //
 func (set *KeySet) deleteKey(key *keys.Key) error {
-	path := filepath.Join(set.env.PathUserKeysDir)
+	path := set.filePath(key)
 	os.Remove(path)
-	os.Remove(path + ".use")
+	os.Remove(path + "." + pathExtEnabled)
 	return nil
 }

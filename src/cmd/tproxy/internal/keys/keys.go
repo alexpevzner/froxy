@@ -374,7 +374,7 @@ func (key *Key) AuthorizedKey() string {
 	comment := strings.TrimFunc(key.Comment, unicode.IsSpace)
 	if comment != "" {
 		s = strings.TrimRight(s, "\n")
-		s += " " + comment
+		s += " " + comment + "\n"
 	}
 	return s
 }

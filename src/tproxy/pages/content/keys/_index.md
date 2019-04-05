@@ -32,30 +32,35 @@ title = "SSH Keys Management"
 
 **Manage keys you have:**
 <table>
-    <tbody>
-        <tr><td>
+    <tbody id="tbody">
+        <tr id="template" hidden><td>
             <table>
                 <tbody>
                     <tr>
-                        <td colspan=2>
-                            <input type="checkbox"/>
+                        <td>
+                            <input id="add.enable" type="checkbox"/>
                             Enable this key
-                            <input type="button" value="Delete this Key"/>
+                        </td>
+                        <td>
+                            <input id="add.delete" type="button" value="Delete this Key"/>
                         </td>
                     </tr>
                     <tr>
-                        <td>Comment:</td><td><div id="list.comment"/></td>
+                        <td>
+			    Comment:</td><td><input id="add.comment" type="text""/>
+                            <input id="add.sendcomment" type="button" value="Update"/>
+                        </td>
                     </tr>
                     <tr>
-                        <td>Key Type:</td><div id="list.type"/></td>
+                        <td>Key Type:</td><td><div id="add.type"/></td>
                     </tr>
                     <tr>
                         <td>SHA-256&nbsp;fingerprint:</td>
-                        <td><div id="list.sha256">0000000000000000000000000000000000000000000000000000000000000000<div></td>
+                        <td><div id="add.sha256"/></td>
                     </tr>
                     <tr>
                         <td>MD5&nbsp;fingerprint:</td>
-                        <td><div id="list.md5">00000000000000000000000000000000</div></td>
+                        <td><div id="add.md5"/></td>
                     </tr>
                     <tr>
                         <td colspan=2>**Public Key**</td>
@@ -65,13 +70,13 @@ title = "SSH Keys Management"
                     </tr>
                     <tr>
                         <td colspan=2>
-                            <textarea id="list.pubtext" style="overflow:auto;resize:none" rows=4 cols=50 readonly></textarea>
+                            <textarea id="add.pubkey" style="overflow:auto;resize:none" rows=4 cols=50 readonly></textarea>
                         </td>
                     </tr>
                     <tr>
                         <td colspan=2>
-                            <input id="list.pub-copy" type="button" value="Copy to Clipboard" onclick="tproxy.Ui(PubKeyCopy)"/>
-                            <input id="list.pub-save" type="button" value="Download As a File" onclick="tproxy.Ui(PubKeySave)"/>
+                            <input id="add.pub-copy" type="button" value="Copy to Clipboard"/>
+                            <input id="add.pub-save" type="button" value="Download As a File"/>
                         </td>
                     </tr>
                 </tbody>

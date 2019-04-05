@@ -241,8 +241,10 @@ func (webapi *WebAPI) handleKeys(w http.ResponseWriter, r *http.Request) {
 
 	case "PUT":
 		err = webapi.tproxy.KeyMod(id, &info)
+
 	case "DEL":
 		err = webapi.tproxy.KeyDel(id)
+
 	case "POST":
 		webapi.tproxy.Debug("rq=%#v", info)
 		_, err = webapi.tproxy.KeyGen(&info)

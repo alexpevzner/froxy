@@ -213,6 +213,66 @@ tproxy.GetCounters = function (tag) {
     return tproxy._.http_request("GET", q);
 };
 
+// ----- Key management -----
+//
+// Get all keys
+//
+tproxy.GetKeys = function () {
+    return tproxy._.http_request("GET", "/api/keys");
+};
+
+//
+// Generate key
+//
+tproxy.GenKey = function (type, comment) {
+    return tproxy._.http_request(
+        "POST",
+        "/api/keys",
+        { type: type, comment: comment }
+    );
+};
+
+//
+// Update key
+//
+tproxy.UpdateKey = function (id, enabled, comment) {
+    return tproxy._.http_request(
+        "PUT",
+        "/api/keys?" + id,
+        { enabled: enabled, comment: comment }
+    );
+};
+
+//
+// Delete key
+//
+tproxy.DeleteKey = function (id) {
+    return tproxy._.http_request(
+        "DEL",
+        "/api/keys?" + id
+    );
+};
+
+// ----- DOM helpers -----
+//
+// Get all (including indirect) children of a given element
+//
+tproxy.DomChildren = function (element) {
+    if (!element.children) {
+        return [];
+    }
+
+    var children = Array.from(element.children);
+    var fulllist = [];
+
+    fulllist = fulllist.concat(children);
+    for (var i = 0; i < children.length; i ++) {
+        fulllist = fulllist.concat(tproxy.DomChildren(children[i]));
+    }
+
+    return fulllist;
+};
+
 // ----- UI helper functions -----
 //
 // Wrapper for functions that called as input events handlers.
@@ -237,7 +297,13 @@ tproxy.Ui = function(fn) {
 //
 tproxy.UiGetInput = function(id) {
     var obj = document.getElementById(id);
-    if (obj && obj.tagName == "INPUT") {
+
+    if (!obj) {
+        return undefined;
+    }
+
+    switch (obj.tagName) {
+    case "INPUT":
         switch (obj.type) {
         case "text":
             return obj.value;
@@ -245,7 +311,12 @@ tproxy.UiGetInput = function(id) {
         case "checkbox":
             return !!obj.checked;
         }
+        break;
+
+    case "SELECT":
+        return obj.value;
     }
+
     return undefined;
 };
 
@@ -254,7 +325,22 @@ tproxy.UiGetInput = function(id) {
 //
 tproxy.UiSetInput = function(id, value) {
     var obj = document.getElementById(id);
-    if (obj && obj.tagName == "INPUT") {
+
+    if (!obj) {
+        return;
+    }
+
+    if (value == undefined ) {
+        value = "";
+    }
+
+    switch (obj.tagName) {
+    case "DIV":
+    case "TEXTAREA":
+        obj.innerText = value;
+        break;
+
+    case "INPUT":
         switch (obj.type) {
         case "text":
             obj.value = value ? value : "";
@@ -264,6 +350,7 @@ tproxy.UiSetInput = function(id, value) {
             obj.checked = !!value;
             break;
         }
+        break;
     }
 };
 
