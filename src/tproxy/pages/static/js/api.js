@@ -208,9 +208,12 @@ tproxy.GetServerParams = function() {
 //
 // Set server parameters - returns HTTP request
 //
-tproxy.SetServerParams = function(addr, login, password) {
+tproxy.SetServerParams = function(addr, login, password, usekey) {
     var d = {
-        addr: addr, login: login, password: password
+        addr: addr,
+        login: login,
+        password: password,
+        usekey: usekey
     };
     return tproxy._.http_request("PUT", "/api/server", d);
 };

@@ -54,6 +54,16 @@ func NewKeySet(env *Env) *KeySet {
 }
 
 //
+// Check if user has at least 1 enabled key
+//
+func (set *KeySet) HasKeys() bool {
+	set.lock.Lock()
+	defer set.lock.Unlock()
+
+	return len(set.enabled) > 0
+}
+
+//
 // Get keys
 //
 func (set *KeySet) GetKeys() []KeyInfo {
