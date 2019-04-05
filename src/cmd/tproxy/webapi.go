@@ -35,6 +35,7 @@ func NewWebAPI(tproxy *Tproxy) *WebAPI {
 	webapi.mux.HandleFunc("/api/sites", webapi.handleSites)
 	webapi.mux.HandleFunc("/api/state", webapi.handleState)
 	webapi.mux.HandleFunc("/api/counters", webapi.handleCounters)
+	webapi.mux.HandleFunc("/api/keys", webapi.handleKeys)
 	webapi.mux.HandleFunc("/api/shutdown", webapi.handleShutdown)
 
 	return webapi
@@ -190,6 +191,66 @@ AGAIN:
 	}{stateName, info}
 
 	webapi.replyJSON(w, &data)
+}
+
+//
+// Handle /api/keys requests
+//
+// GET /api/keys    - get list of keys as array of KeyInfo structures
+// PUT /api/keys?id - update existent key. Accepts KeyInfo structure,
+//                    but only Comment and Enabled parameters can be
+//                    updated (other fields are ignored)
+// DEL /api/keys?id - Deletes a key
+// POST /api/keys   - Accepts KeyInfo structure and generates new
+//                    key. Fingerprints are ignored, if present
+//
+// Id parameter, where required, is the sha-256 fingerprint of
+// the key
+//
+func (webapi *WebAPI) handleKeys(w http.ResponseWriter, r *http.Request) {
+	// Obtain key id, if required
+	var id string
+	if r.Method == "PUT" || r.Method == "DEL" {
+		id = r.URL.RawQuery
+		if id == "" {
+			httpErrorf(w, http.StatusInternalServerError, "%s", ErrKeyIdMissed)
+			return
+		}
+	}
+
+	// Decode KeyInfo structure, if required
+	var info KeyInfo
+	if r.Method == "PUT" || r.Method == "POST" {
+		body, err := ioutil.ReadAll(r.Body)
+
+		if err == nil {
+			err = json.Unmarshal(body, &info)
+		}
+
+		if err != nil {
+			httpErrorf(w, http.StatusInternalServerError, "%s", err)
+			return
+		}
+	}
+
+	// Handle request
+	var err error
+	switch r.Method {
+	case "GET":
+		webapi.replyJSON(w, webapi.tproxy.GetKeys())
+
+	case "PUT":
+		err = webapi.tproxy.KeyMod(id, &info)
+	case "DEL":
+		err = webapi.tproxy.KeyDel(id)
+	case "POST":
+		webapi.tproxy.Debug("rq=%#v", info)
+		_, err = webapi.tproxy.KeyGen(&info)
+	}
+
+	if err != nil {
+		httpErrorf(w, http.StatusInternalServerError, "%s", err)
+	}
 }
 
 //

@@ -20,8 +20,9 @@ import (
 // tproxy instance
 //
 type Tproxy struct {
-	*Env  // Common environment
-	*Ebus // Event bus
+	*Env    // Common environment
+	*Ebus   // Event bus
+	*KeySet // Key set
 
 	// Connection state
 	connStateLock sync.Mutex // Access lock
@@ -321,6 +322,7 @@ func NewTproxy(env *Env, port int) (*Tproxy, error) {
 	proxy := &Tproxy{
 		Env:        env,
 		Ebus:       NewEbus(),
+		KeySet:     NewKeySet(env),
 		localhosts: make(map[string]struct{}),
 	}
 

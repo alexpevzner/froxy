@@ -6,8 +6,10 @@ package keys
 import (
 	"crypto/ecdsa"
 	"crypto/elliptic"
+	"crypto/md5"
 	"crypto/rand"
 	"crypto/rsa"
+	"crypto/sha256"
 	"crypto/x509"
 	"encoding/json"
 	"encoding/pem"
@@ -54,6 +56,36 @@ func (t KeyType) String() string {
 	}
 
 	return fmt.Sprintf("unknown(%d)", t)
+}
+
+//
+// Marshal KeyType to JSON
+//
+func (t KeyType) MarshalJSON() ([]byte, error) {
+	return []byte(`"` + t.String() + `"`), nil
+}
+
+//
+// Unmarshal KeyType from JSON
+//
+func (t *KeyType) UnmarshalJSON(data []byte) error {
+	switch s := string(data); s {
+	case `"rsa-2048"`:
+		*t = KeyRsa2048
+	case `"rsa-4096"`:
+		*t = KeyRsa4096
+	case `"ecdsa-256"`:
+		*t = KeyEcdsa256
+	case `"ecdsa-384"`:
+		*t = KeyEcdsa384
+	case `"ecdsa-521"`:
+		*t = KeyEcdsa521
+	case `"ed25519"`:
+		*t = KeyEd25519
+	default:
+		return fmt.Errorf("Invalid key type %s", s)
+	}
+	return nil
 }
 
 //
@@ -305,17 +337,33 @@ func (key *Key) Signer() ssh.Signer {
 }
 
 //
-// Generate SHA256 fingerprint
+// Generate SHA256 fingerprint in OpenSSH text format
 //
 func (key *Key) FingerprintSHA256() string {
 	return ssh.FingerprintSHA256(key.signer.PublicKey())
 }
 
 //
-// Generate MD5 fingerprint
+// Generate MD5 fingerprin in OpenSSH text formatt
 //
 func (key *Key) FingerprintMD5() string {
 	return ssh.FingerprintLegacyMD5(key.signer.PublicKey())
+}
+
+//
+// Generate SHA256 binary fingerprint
+//
+func (key *Key) BinFingerprintSHA256() []byte {
+	sum := sha256.Sum256(key.signer.PublicKey().Marshal())
+	return sum[:]
+}
+
+//
+// Generate MD5 binary fingerprint
+//
+func (key *Key) BinFingerprintMD5() []byte {
+	sum := md5.Sum(key.signer.PublicKey().Marshal())
+	return sum[:]
 }
 
 //

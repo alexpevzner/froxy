@@ -34,6 +34,7 @@ func (env *Env) populateOsPaths() {
 	env.PathUserConfDir = filepath.Join(getKnownFolder(&C.FOLDERID_LocalAppData), "TProxy")
 	env.PathUserStateDir = env.PathUserConfDir
 	env.PathUserLogDir = filepath.Join(env.PathUserStateDir, "log")
+	env.PathUserKeysDir = filepath.Join(env.PathUserStateDir, "keys")
 	env.PathUserDesktopDir = getKnownFolder(&C.FOLDERID_Desktop)
 	env.PathUserStartupDir = getKnownFolder(&C.FOLDERID_Startup)
 	env.PathUserIconsDir = env.PathUserConfDir

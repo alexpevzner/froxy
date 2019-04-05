@@ -26,6 +26,7 @@ type Env struct {
 	PathUserConfDir    string // User-specific configuration directory
 	PathUserStateDir   string // User specific persistent state directory
 	PathUserLogDir     string // User log dir
+	PathUserKeysDir    string // User keys directory
 	PathUserDesktopDir string // User Desktop folder
 	PathUserStartupDir string // User Startup folder
 	PathUserIconsDir   string // User icons directory
@@ -66,7 +67,11 @@ func NewEnv() *Env {
 
 	// Create directories
 	done := make(map[string]struct{})
-	for _, dir := range []string{env.PathUserConfDir, env.PathUserStateDir, env.PathUserLogDir} {
+	for _, dir := range []string{env.PathUserConfDir,
+		env.PathUserStateDir,
+		env.PathUserLogDir,
+		env.PathUserKeysDir} {
+
 		_, ok := done[dir]
 		if !ok {
 			done[dir] = struct{}{}
