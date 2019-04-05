@@ -16,34 +16,6 @@ function SubmitServerParams () {
     );
 }
 
-// ----- SSH key management -----
-//
-// Generate SSH key
-//
-function GenKey() {
-    alert("Not implemented");
-}
-
-//
-// Copy public key to clipboard
-//
-function PubKeyCopy() {
-    var el = document.getElementById("key-pubtext");
-    var text = el.value;
-
-    if (el.value) {
-        el.select();
-        document.execCommand("copy");
-    }
-}
-
-//
-// Save public key to file
-//
-function PubKeySave() {
-    alert("Not implemented");
-}
-
 // ----- Initialization -----
 //
 // Page initialization
@@ -51,7 +23,6 @@ function PubKeySave() {
 function init() {
     var rq = tproxy.GetServerParams();
     rq.OnSuccess = function (data) {
-        tproxy._.debug("xxx", data);
         tproxy.UiSetInput("addr", data.addr);
         tproxy.UiSetInput("login", data.login);
         tproxy.UiSetInput("password", data.password);
