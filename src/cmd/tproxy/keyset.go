@@ -71,7 +71,7 @@ func (set *KeySet) GetKeys() []KeyInfo {
 			Pubkey:   key.AuthorizedKey(),
 		}
 
-		_, info.Enabled = set.enabled[info.FpSHA256]
+		_, info.Enabled = set.enabled[info.Id]
 
 		keys = append(keys, info)
 	}
@@ -237,6 +237,7 @@ func (set *KeySet) load() {
 		ext := filepath.Ext(name)
 		if ext != "" {
 			name = name[:len(name)-len(ext)]
+			ext = ext[1:]
 		}
 
 		if !set.checkName(name) {
@@ -267,17 +268,20 @@ func (set *KeySet) load() {
 		case pathExtEnabled:
 			enabled[name] = struct{}{}
 		}
-
-		// Update keyset
-		for id, _ := range enabled {
-			if _, ok := loadedKeys[id]; !ok {
-				delete(enabled, id)
-			}
-		}
-
-		set.keys = loadedKeys
-		set.enabled = enabled
 	}
+
+	// Update keyset
+	for id, _ := range enabled {
+		if _, ok := loadedKeys[id]; !ok {
+			delete(enabled, id)
+		}
+	}
+
+	set.env.Debug("1 %v", loadedKeys)
+	set.env.Debug("2 %v", enabled)
+
+	set.keys = loadedKeys
+	set.enabled = enabled
 }
 
 //

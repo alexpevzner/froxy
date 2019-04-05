@@ -24,7 +24,8 @@ function ResetGenKeyParameters () {
 function GenKey () {
     var rq = tproxy.GenKey(
         tproxy.UiGetInput("key-type"),
-        tproxy.UiGetInput("key-comment")
+        tproxy.UiGetInput("key-comment"),
+        true
     );
 
     rq.OnSuccess = function () {

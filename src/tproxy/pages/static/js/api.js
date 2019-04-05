@@ -269,11 +269,11 @@ tproxy.GetKeys = function () {
 //
 // Generate key
 //
-tproxy.GenKey = function (type, comment) {
+tproxy.GenKey = function (type, comment, enabled) {
     return tproxy._.http_request(
         "POST",
         "/api/keys",
-        { type: type, comment: comment }
+        { type: type, comment: comment, enabled: enabled }
     );
 };
 
