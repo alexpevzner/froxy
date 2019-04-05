@@ -43,6 +43,9 @@ func NewWebAPI(tproxy *Tproxy) *WebAPI {
 //
 // Handle /api/server requests
 //
+// GET - get server parameters. Returns IDNServerParams structure
+// PUT - set server parameters. Receives IDNServerParams structure
+//
 func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
@@ -75,6 +78,17 @@ func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 
 //
 // Handle /api/sites requests
+//
+// GET /api/sites      - get all sites
+// DEL /api/sites?host - del particular site
+// PUT /api/sites?host - set particular site.
+//                       Receives IDNSiteParams structure
+//
+// Note, PUT identifies site by query parameter, not by the Host
+// field of the IDNSiteParams structure. So to change host name
+// in the existing record, query parameter must point to the
+// existent host, and structure must contain a new host name
+//
 //
 func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 	var host string
@@ -134,6 +148,17 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 //
 // Handle /api/state requests
 //
+// GET /api/state[?prev] - get connectivity state
+//
+// Returns the following JSON object:
+//     {
+//         "state": "noconfig" | "trying" | "established",
+//         "info":  "some human-readable explanation"
+//     }
+//
+// If query parameter present, GET waits until state becomes
+// different from the previous state, as set in the query
+//
 func (webapi *WebAPI) handleState(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		httpError(w, http.StatusMethodNotAllowed)
@@ -170,6 +195,12 @@ AGAIN:
 //
 // Handle /api/counters requests
 //
+// GET /api/counters[?tag] - returns Counters structure
+//
+// If query parameter present, GET waits until Counters.Tag
+// becomes different from the tag, specified in the query.
+// Note, Counters.Tag increments at every Counters update
+//
 func (webapi *WebAPI) handleCounters(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		httpError(w, http.StatusMethodNotAllowed)
@@ -197,6 +228,11 @@ AGAIN:
 
 //
 // Handle /api/shudtown requests
+//
+// TPROXY /api/shudtown - initiates TProxy shutdown. Connection
+//                        remains open until TProxy process termination,
+//                        so requester may synchronize with shutdown
+//                        completion
 //
 func (webapi *WebAPI) handleShutdown(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "TPROXY" {
