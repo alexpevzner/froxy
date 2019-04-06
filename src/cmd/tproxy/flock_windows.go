@@ -22,11 +22,11 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 	var flags C.DWORD
 
 	if exclusive {
-		flags = C.LOCKFILE_EXCLUSIVE_LOCK
+		flags |= C.LOCKFILE_EXCLUSIVE_LOCK
 	}
 
 	if !wait {
-		flags = C.LOCKFILE_FAIL_IMMEDIATELY
+		flags |= C.LOCKFILE_FAIL_IMMEDIATELY
 	}
 
 	var ovp C.OVERLAPPED
@@ -44,7 +44,12 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 		return nil
 	}
 
-	return syscall.GetLastError()
+	err := syscall.GetLastError()
+	if err == nil {
+		err = ErrLockIsBysy
+	}
+
+	return err
 }
 
 //
