@@ -7,6 +7,7 @@ package main
 import (
 	"fmt"
 	"io"
+	"io/ioutil"
 	"net"
 	"net/http"
 	"os"
@@ -228,6 +229,28 @@ func (proxy *Tproxy) handleConnect(
 }
 
 //
+// ResponseWriter.OnError hook
+//
+func (proxy *Tproxy) httpOnError(w http.ResponseWriter, status int) []byte {
+	if status != 404 {
+		return nil
+	}
+	file, err := pages.AssetFS.Open("404/index.html")
+	if err != nil {
+		return nil
+	}
+	data, err := ioutil.ReadAll(file)
+	file.Close()
+
+	if err != nil {
+		return nil
+	}
+
+	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+	return data
+}
+
+//
 // handle HTTP request. Provides multiplexing between regular request
 // and CONNECT request handlers
 //
@@ -238,6 +261,11 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	// Check for request to TProxy itself
 	_, local := proxy.localhosts[r.Host]
 	if local {
+		w = &ResponseWriter{
+			ResponseWriter: w,
+			OnError:        proxy.httpOnError,
+		}
+
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			proxy.webapi.ServeHTTP(w, r)
 		} else {
