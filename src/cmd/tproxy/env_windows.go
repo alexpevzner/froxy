@@ -38,6 +38,7 @@ func (env *Env) populateOsPaths() {
 	env.PathUserDesktopDir = getKnownFolder(&C.FOLDERID_Desktop)
 	env.PathUserStartupDir = getKnownFolder(&C.FOLDERID_Startup)
 	env.PathUserIconsDir = env.PathUserConfDir
+	env.PathUserLockDir = filepath.Join(env.PathUserStateDir, "lock")
 
 	env.PathUserDesktopFile = filepath.Join(env.PathUserDesktopDir, "tproxy.lnk")
 	env.PathUserStartupFile = filepath.Join(env.PathUserStartupDir, "tproxy.lnk")

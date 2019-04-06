@@ -30,6 +30,7 @@ func (env *Env) populateOsPaths() {
 	env.PathUserDesktopDir = filepath.Join(env.PathUserHomeDir, "Desktop")
 	env.PathUserStartupDir = filepath.Join(env.PathUserHomeDir, ".config/autostart")
 	env.PathUserIconsDir = env.PathUserConfDir
+	env.PathUserLockDir = filepath.Join(env.PathUserStateDir, "lock")
 
 	env.PathUserDesktopFile = filepath.Join(env.PathUserDesktopDir, "tproxy.desktop")
 	env.PathUserStartupFile = filepath.Join(env.PathUserStartupDir, "tproxy.desktop")

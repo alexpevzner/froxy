@@ -30,6 +30,7 @@ type Env struct {
 	PathUserDesktopDir string // User Desktop folder
 	PathUserStartupDir string // User Startup folder
 	PathUserIconsDir   string // User icons directory
+	PathUserLockDir    string // User locks
 
 	// File paths
 	PathUserConfFile    string // User-specific configuration file
@@ -44,9 +45,24 @@ type Env struct {
 	stateLock sync.RWMutex // State access lock
 	state     *State       // TProxy persistent state
 
+	// Locks
+	locksCond  *sync.Cond           // To synchronize between goroutines
+	locksFiles map[EnvLock]*os.File // Currently open lock files
+
 	// tproxy.lock
 	tproxyLock *Lockfile // Handle of tproxy.lock
 }
+
+//
+// Global locks
+//
+type EnvLock string
+
+const (
+	EnvLockRun   = EnvLock("run")
+	EnvLockState = EnvLock("state")
+	EnvLockKeys  = EnvLock("keys")
+)
 
 // ----- Constructor -----
 //
@@ -54,8 +70,10 @@ type Env struct {
 //
 func NewEnv() *Env {
 	env := &Env{
-		Logger: &log.DefaultLogger,
-		state:  &State{},
+		Logger:     &log.DefaultLogger,
+		state:      &State{},
+		locksCond:  sync.NewCond(&sync.Mutex{}),
+		locksFiles: make(map[EnvLock]*os.File),
 	}
 
 	// Populate paths
@@ -70,7 +88,8 @@ func NewEnv() *Env {
 	for _, dir := range []string{env.PathUserConfDir,
 		env.PathUserStateDir,
 		env.PathUserLogDir,
-		env.PathUserKeysDir} {
+		env.PathUserKeysDir,
+		env.PathUserLockDir} {
 
 		_, ok := done[dir]
 		if !ok {
@@ -84,6 +103,64 @@ func NewEnv() *Env {
 	env.state.Load(env.PathUserStateFile)
 
 	return env
+}
+
+// ----- Global locks -----
+//
+// Acquire the global lock
+//
+func (env *Env) LockAcquire(lock EnvLock, wait bool) error {
+	env.locksCond.L.Lock()
+	defer env.locksCond.L.Unlock()
+
+	// Synchronize with other goroutines trying to
+	// acquire the same lock
+	for file := env.locksFiles[lock]; file != nil; {
+		if !wait {
+			return ErrLockIsBysy
+		}
+		env.locksCond.Wait()
+		file = env.locksFiles[lock]
+	}
+
+	// Create a lock file
+	path := filepath.Join(env.PathUserLockDir, string(lock))
+	file, err := os.OpenFile(path, os.O_WRONLY|os.O_CREATE|os.O_TRUNC, 0600)
+	if err != nil {
+		goto EXIT
+	}
+
+	env.locksFiles[lock] = file
+
+	// Try to acquire a file lock
+	env.locksCond.L.Unlock()
+	err = FileLock(file, true, wait)
+	env.locksCond.L.Lock()
+
+EXIT:
+	if err != nil {
+		if file != nil {
+			file.Close()
+			env.locksFiles[lock] = nil
+		}
+		env.locksCond.Signal()
+	}
+
+	return err
+}
+
+//
+// Release the global lock
+//
+func (env *Env) LockRelease(lock EnvLock) {
+	env.locksCond.L.Lock()
+	file := env.locksFiles[lock]
+	if file == nil {
+		panic("internal error")
+	}
+	file.Close()
+	env.locksCond.Signal()
+	env.locksCond.L.Unlock()
 }
 
 // ----- Multiple run avoidance -----

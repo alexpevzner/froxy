@@ -27,7 +27,12 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 		how |= syscall.LOCK_NB
 	}
 
-	return syscall.Flock(int(file.Fd()), how)
+	err := syscall.Flock(int(file.Fd()), how)
+	if err == syscall.Errno(syscall.EWOULDBLOCK) {
+		err = ErrLockIsBysy
+	}
+
+	return err
 }
 
 //
