@@ -48,9 +48,6 @@ type Env struct {
 	// Locks
 	locksCond  *sync.Cond           // To synchronize between goroutines
 	locksFiles map[EnvLock]*os.File // Currently open lock files
-
-	// tproxy.lock
-	tproxyLock *Lockfile // Handle of tproxy.lock
 }
 
 //
@@ -117,7 +114,7 @@ func (env *Env) LockAcquire(lock EnvLock, wait bool) error {
 	// acquire the same lock
 	for file := env.locksFiles[lock]; file != nil; {
 		if !wait {
-			return ErrLockIsBysy
+			return ErrLockIsBusy
 		}
 		env.locksCond.Wait()
 		file = env.locksFiles[lock]
@@ -150,6 +147,20 @@ EXIT:
 }
 
 //
+// Convenience wrapper on LockAcquire() -- acquire lock with wait
+//
+func (env *Env) LockWait(lock EnvLock) error {
+	return env.LockAcquire(lock, true)
+}
+
+//
+// Convenience wrapper on LockAcquire() -- acquire lock without wait
+//
+func (env *Env) LockTry(lock EnvLock) error {
+	return env.LockAcquire(lock, false)
+}
+
+//
 // Release the global lock
 //
 func (env *Env) LockRelease(lock EnvLock) {
@@ -168,30 +179,18 @@ func (env *Env) LockRelease(lock EnvLock) {
 // Acquire tproxy.lock
 //
 func (env *Env) TproxyLockAcquire() error {
-	if env.tproxyLock != nil {
-		panic("internal error")
+	err := env.LockTry(EnvLockRun)
+	if err == ErrLockIsBusy {
+		err = ErrTProxyRunning
 	}
-
-	// Acquire a lock file
-	lock, err := AcquireLockfile(env.PathUserLockFile)
-	if err != nil {
-		return err
-	}
-
-	env.tproxyLock = lock
-	return nil
+	return err
 }
 
 //
 // Release tproxy.lock
 //
 func (env *Env) TproxyLockRelease() {
-	if env.tproxyLock == nil {
-		panic("internal error")
-	}
-
-	env.tproxyLock.Release()
-	env.tproxyLock = nil
+	env.LockRelease(EnvLockRun)
 }
 
 // ----- stdin/stdout/stderr redirection -----

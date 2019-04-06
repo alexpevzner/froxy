@@ -29,7 +29,7 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 
 	err := syscall.Flock(int(file.Fd()), how)
 	if err == syscall.Errno(syscall.EWOULDBLOCK) {
-		err = ErrLockIsBysy
+		err = ErrLockIsBusy
 	}
 
 	return err

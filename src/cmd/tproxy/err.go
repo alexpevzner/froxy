@@ -16,5 +16,5 @@ var (
 	ErrServerNotConfigured = errors.New("Server not configured")
 	ErrKeyIdMissed         = errors.New("invalid query: key ID missed")
 	ErrNoSuchKey           = errors.New("Now suck key")
-	ErrLockIsBysy          = errors.New("Lock is busy")
+	ErrLockIsBusy          = errors.New("Lock is busy")
 )

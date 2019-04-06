@@ -46,7 +46,7 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 
 	err := syscall.GetLastError()
 	if err == nil {
-		err = ErrLockIsBysy
+		err = ErrLockIsBusy
 	}
 
 	return err
