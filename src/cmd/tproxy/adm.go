@@ -14,6 +14,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"time"
 	"tproxy/pages"
 	"unicode"
 )
@@ -220,7 +221,24 @@ func (adm *Adm) Kill() error {
 	}
 
 	// And reacquire the tproxy.lock
-	err = adm.TproxyLockAcquire()
+	//
+	// FIXME
+	//
+	// Sometimes exiting TProxy closes the connection, but
+	// still continues to hold a run lock. It needs a further
+	// investigation. Looks like Linux doesn't atomically release
+	// resources held by an exiting process
+	//
+	// We will try to fix it later, but for now we have a busy-wait
+	// as a temporary workaround
+	for i := 0; i < 20; i++ {
+		err = adm.TproxyLockAcquire()
+		if err != ErrTProxyRunning {
+			break
+		}
+		time.Sleep(time.Millisecond * 50)
+	}
+
 	if err == ErrTProxyRunning {
 		err = ErrCantKillTProxy
 	}
