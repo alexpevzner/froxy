@@ -1,6 +1,6 @@
 include ../../../Rules.mak
 
-deps := $(shell find -type f archetypes content layouts resources static)
+deps := $(shell find archetypes content layouts resources static -type f)
 deps += config.toml
 
 all_local: pages.gen.go
@@ -13,4 +13,3 @@ pages.gen.go: $(deps)
 
 clean_local:
 	rm -f tproxy.pages.tar.gz
-
