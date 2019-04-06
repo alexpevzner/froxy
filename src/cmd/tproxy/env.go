@@ -318,12 +318,17 @@ SAVE:
 func (env *Env) DelSite(host string) {
 	host = strings.ToLower(host)
 
+	// Acquire state lock
 	env.stateLock.Lock()
 	defer env.stateLock.Unlock()
 
+	// Create a copy of sites list
+	sites := make([]SiteParams, len(env.state.Sites))
+	copy(sites, env.state.Sites)
+
 	// Find the site
 	pos := -1
-	for i, s := range env.state.Sites {
+	for i, s := range sites {
 		if host == s.Host {
 			pos = i
 			break
@@ -335,8 +340,8 @@ func (env *Env) DelSite(host string) {
 	}
 
 	// Update list and save
-	copy(env.state.Sites[pos:], env.state.Sites[pos+1:])
-	env.state.Sites = env.state.Sites[:len(env.state.Sites)-1]
+	copy(sites[pos:], sites[pos+1:])
+	env.state.Sites = sites[:len(sites)-1]
 
 	env.state.Save(env.PathUserStateFile)
 }
