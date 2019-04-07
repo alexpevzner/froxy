@@ -41,7 +41,7 @@ type ResponseWriter struct {
 	//
 	OnSuccess func(w http.ResponseWriter, status int)
 
-	wroteHeader bool // Hider was written
+	wroteHeader bool // Header was written
 	skipBody    bool // Skip the body
 }
 
