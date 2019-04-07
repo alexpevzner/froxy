@@ -219,12 +219,21 @@ func (set *KeySet) checkName(name string) bool {
 // Load all keys from disk
 //
 func (set *KeySet) load() {
+	// Acquire keys lock
+	err := set.env.LockWait(EnvLockKeys)
+	if err != nil {
+		return
+	}
+	defer set.env.LockRelease(EnvLockKeys)
+
+	// Read keys directory
 	dir, err := ioutil.ReadDir(set.env.PathUserKeysDir)
 	if err != nil {
 		set.env.Warn("%s: %s", set.env.PathUserKeysDir, err)
 		return
 	}
 
+	// Load all keys
 	loadedKeys := make(map[string]*keys.Key)
 	enabled := make(map[string]struct{})
 
@@ -304,8 +313,15 @@ func (set *KeySet) load() {
 // Update key at disk
 //
 func (set *KeySet) updateKey(key *keys.Key, updateKey, updateEnabled, enabled bool) error {
+	// Acquire keys lock
+	err := set.env.LockWait(EnvLockKeys)
+	if err != nil {
+		return err
+	}
+	defer set.env.LockRelease(EnvLockKeys)
+
+	// Update the key
 	path := set.filePath(key)
-	var err error
 
 	if updateKey {
 		data := key.EncodePEM()
@@ -328,8 +344,17 @@ func (set *KeySet) updateKey(key *keys.Key, updateKey, updateEnabled, enabled bo
 // Delete key from disk
 //
 func (set *KeySet) deleteKey(key *keys.Key) error {
+	// Acquire keys lock
+	err := set.env.LockWait(EnvLockKeys)
+	if err != nil {
+		return err
+	}
+	defer set.env.LockRelease(EnvLockKeys)
+
+	// Delete the key
 	path := set.filePath(key)
 	os.Remove(path)
 	os.Remove(path + "." + pathExtEnabled)
+
 	return nil
 }
