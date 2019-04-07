@@ -67,14 +67,12 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 	//
 	// Just in case, I check for both variants
 	//
-	err := syscall.GetLastError()
-
-	switch err {
-	case nil, syscall.Errno(C.ERROR_LOCK_VIOLATION):
-		err = ErrLockIsBusy
+	switch errno := C.GetLastError(); errno {
+	case C.NO_ERROR, C.ERROR_LOCK_VIOLATION:
+		return ErrLockIsBusy
+	default:
+		return syscall.Errno(errno)
 	}
-
-	return err
 }
 
 //
