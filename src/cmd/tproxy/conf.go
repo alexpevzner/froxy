@@ -11,11 +11,6 @@ const (
 	//
 	HTTP_SERVER_PORT = 8888
 
-	//
-	// HTTP Host server responds on
-	//
-	HTTP_SERVER_HOST = "tproxy"
-
 	// ----- SSH configuration -----
 	//
 	// Max connections per client session

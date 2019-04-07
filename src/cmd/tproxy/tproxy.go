@@ -37,6 +37,7 @@ type Tproxy struct {
 	router     *Router             // Request router
 	webapi     *WebAPI             // JS API handler
 	localhosts map[string]struct{} // Hosts considered local
+	localport  string              // Local port as string
 	listener   net.Listener        // TCP listener
 	httpSrv    *http.Server        // Local HTTP server instance
 
@@ -263,32 +264,27 @@ func (proxy *Tproxy) httpOnError(w http.ResponseWriter, status int) []byte {
 //
 func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	// Normalize hostname
-	host := strings.ToLower(r.Host)
+	host, port := NetSplitHostPort(strings.ToLower(r.Host), "")
 
 	// Check for request to TProxy itself
-	_, local := proxy.localhosts[r.Host]
-	if local {
-		if strings.HasPrefix(r.URL.Path, "/api/") {
-			proxy.webapi.ServeHTTP(w, r)
-		} else {
-			w = &ResponseWriter{
-				ResponseWriter: w,
-				OnError:        proxy.httpOnError,
-			}
+	if port == proxy.localport {
+		_, local := proxy.localhosts[host]
+		if local {
+			if strings.HasPrefix(r.URL.Path, "/api/") {
+				proxy.webapi.ServeHTTP(w, r)
+			} else {
+				w = &ResponseWriter{
+					ResponseWriter: w,
+					OnError:        proxy.httpOnError,
+				}
 
-			pages.FileServer.ServeHTTP(w, r)
+				pages.FileServer.ServeHTTP(w, r)
+			}
+			return
 		}
-		return
 	}
 
 	// Check routing
-	host, _ = NetSplitHostPort(strings.ToLower(r.Host), "")
-	if host == HTTP_SERVER_HOST {
-		// HTTP_SERVER_HOST attempted with invalid port
-		httpErrorf(w, http.StatusServiceUnavailable, "Invalid port")
-		return
-	}
-
 	rt := proxy.router.Route(host)
 
 	// Update counters
@@ -314,6 +310,7 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Handle request
+	println(host, rt)
 	switch {
 	case r.Method == http.MethodConnect:
 		proxy.handleConnect(w, r, transport)
@@ -370,13 +367,11 @@ func NewTproxy(env *Env, port int) (*Tproxy, error) {
 		"127.0.0.1",
 		"127.1",
 		"[::1]",
-		HTTP_SERVER_HOST,
 	} {
-		hp := fmt.Sprintf("%s:%d", h, port)
-		proxy.localhosts[hp] = struct{}{}
+		proxy.localhosts[h] = struct{}{}
 	}
 
-	proxy.localhosts[HTTP_SERVER_HOST] = struct{}{}
+	proxy.localport = fmt.Sprintf("%d", port)
 
 	// Create transports
 	proxy.sshTransport = NewSSHTransport(proxy)
