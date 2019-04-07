@@ -48,7 +48,12 @@ title = "SSH Keys Management"
                     </tr>
                     <tr>
                         <td>
-			    Comment:</td><td><input id="add.comment" type="text""/>
+			    Created:</td><td><div id="add.ctime"/>
+                        </td>
+                    </tr>
+                    <tr>
+                        <td>
+			    Comment:</td><td><input id="add.comment" type="text"/>
                             <input id="add.sendcomment" type="button" value="Update"/>
                         </td>
                     </tr>
@@ -71,7 +76,7 @@ title = "SSH Keys Management"
                     </tr>
                     <tr>
                         <td colspan=2>
-                            <textarea id="add.pubkey" style="overflow:auto;resize:none" rows=4 cols=50 readonly></textarea>
+                            <textarea id="add.pubkey" style="overflow:auto;resize:none" rows=3 cols=70 readonly></textarea>
                         </td>
                     </tr>
                     <tr>

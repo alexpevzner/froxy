@@ -119,14 +119,7 @@ function UpdateKeys (keys) {
 
     // Sort keys
     keys.sort(function (a, b) {
-        // Sort by comments first
-        var n = (a.comment || "").localeCompare(b.comment || "");
-        if (n) {
-            return n;
-        }
-
-        // Otherwise sort by MD5 fingerprint
-        return a.fp_md5.localeCompare(b.fp_md5);
+        return a.date.localeCompare(b.date);
     });
 
     // Resize table
@@ -184,6 +177,26 @@ function UpdateKeys (keys) {
         tproxy.UiSetInput(n + ".md5", keys[n].fp_md5);
         tproxy.UiSetInput(n + ".pubkey", keys[n].pubkey);
         table[n].setAttribute("keyid", keys[n].id);
+
+        var months = [
+            "Jan", "Feb", "Mar", "Apr", "May", "Jun",
+            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"
+        ];
+
+        function fmtNum(n) {
+            return (n < 10 ? "0" : "") + n;
+        }
+
+        var date = new Date(keys[n].date);
+        var stddate =
+            date.getDate() + " " +
+            months[date.getMonth()] + " " +
+            date.getFullYear() + " " +
+            fmtNum(date.getHours()) + ":" +
+            fmtNum(date.getMinutes()) + "." +
+            fmtNum(date.getSeconds());
+
+        tproxy.UiSetInput(n + ".ctime", stddate);
 
         var elm = document.getElementById(n + ".hr");
         if (elm) {
