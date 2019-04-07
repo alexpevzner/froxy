@@ -13,6 +13,7 @@ import "C"
 
 import (
 	"os"
+	"runtime"
 	"syscall"
 )
 
@@ -20,6 +21,9 @@ import (
 // Lock the file
 //
 func FileLock(file *os.File, exclusive, wait bool) error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	var flags C.DWORD
 
 	if exclusive {
@@ -64,6 +68,7 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 	// Just in case, I check for both variants
 	//
 	err := syscall.GetLastError()
+
 	switch err {
 	case nil, syscall.Errno(C.ERROR_LOCK_VIOLATION):
 		err = ErrLockIsBusy
@@ -76,6 +81,9 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 // Unlock the file
 //
 func FileUnlock(file *os.File) error {
+	runtime.LockOSThread()
+	defer runtime.UnlockOSThread()
+
 	var ovp C.OVERLAPPED
 
 	ok := C.UnlockFileEx(
