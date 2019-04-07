@@ -161,14 +161,14 @@ func (proxy *Tproxy) handleRegularHttp(
 		// Actually it's not a big problem, because browsers
 		// implement websockets by calling proxy's CONNECT method
 		// rather that GET with upgrade
-		httpError(w, http.StatusServiceUnavailable,
+		proxy.httpError(w, http.StatusServiceUnavailable,
 			errors.New("Protocol upgrade is not implemented"))
 	}
 
 	// Perform round-trip
 	resp, err := transport.RoundTrip(r)
 	if err != nil {
-		httpError(w, http.StatusServiceUnavailable, err)
+		proxy.httpError(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
@@ -210,13 +210,13 @@ func (proxy *Tproxy) handleConnect(
 
 	dest_conn, err := transport.Dial("tcp", r.Host)
 	if err != nil {
-		httpError(w, http.StatusServiceUnavailable, err)
+		proxy.httpError(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		httpError(w, http.StatusInternalServerError,
+		proxy.httpError(w, http.StatusInternalServerError,
 			errors.New("Hijacking not supported"))
 		return
 	}
@@ -224,40 +224,95 @@ func (proxy *Tproxy) handleConnect(
 	w.WriteHeader(http.StatusOK)
 	client_conn, _, err := hijacker.Hijack()
 	if err != nil {
-		httpError(w, http.StatusServiceUnavailable, err)
+		proxy.httpError(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
 	ioTransferData(proxy.Env, client_conn, dest_conn)
 }
 
+// ----- HTTP requests handling -----
 //
-// ResponseWriter.OnError hook
+// Format body of error response
 //
-func (proxy *Tproxy) httpOnError(w http.ResponseWriter, status int) []byte {
-	file, err := pages.AssetFS.Open("error/index.html")
-	if err != nil {
-		return nil
+func (proxy *Tproxy) httpFormatError(status int, err error) (
+	contentType string, content []byte) {
+
+	// Fetch HTML error template
+	var html []byte
+	if file, err := pages.AssetFS.Open("error/index.html"); err == nil {
+		html, err = ioutil.ReadAll(file)
+		file.Close()
+
+		if err != nil {
+			html = nil
+		}
 	}
-	data, err := ioutil.ReadAll(file)
-	file.Close()
 
-	if err != nil {
-		return nil
+	// If no html, format simple text message
+	if html == nil {
+		s := fmt.Sprintf("%d %s\n", status, http.StatusText(status))
+		if err != nil {
+			s += fmt.Sprintf("%s\n", err)
+		}
+
+		contentType = "text/plain; charset=utf-8"
+		content = []byte(s)
+		return
 	}
 
-	w.Header().Set("Content-Type", "text/html; charset=utf-8")
-
-	data = []byte(os.Expand(string(data), func(name string) string {
+	// Substitute error information into HTML template
+	contentType = "text/html; charset=utf-8"
+	content = []byte(os.Expand(string(html), func(name string) string {
 		switch name {
 		case "ERROR":
 			return http.StatusText(status)
 		case "STATUS":
 			return fmt.Sprintf("%d", status)
+		case "MESSAGE":
+			if err == nil {
+				return ""
+			} else {
+				return err.Error()
+			}
 		}
 		return ""
 	}))
-	return data
+
+	return
+}
+
+//
+// Reply with HTTP error
+//
+func (proxy *Tproxy) httpError(w http.ResponseWriter, status int, err error) {
+	/*
+		FIXME - doesn't work due to relative links
+		in the HTML document
+
+		contentType, content := proxy.httpFormatError(status, err)
+		w.Header().Set("Content-Type", contentType)
+		w.WriteHeader(status)
+
+		w.Write(content)
+	*/
+
+	s := fmt.Sprintf("%d %s\n", status, http.StatusText(status))
+	if err != nil {
+		s += fmt.Sprintf("%s\n", err)
+	}
+
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.Write([]byte(s))
+}
+
+//
+// ResponseWriter.OnError hook
+//
+func (proxy *Tproxy) httpOnError(w http.ResponseWriter, status int) []byte {
+	contentType, content := proxy.httpFormatError(status, nil)
+	w.Header().Set("Content-Type", contentType)
+	return content
 }
 
 //
@@ -305,7 +360,7 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 		transport = proxy.sshTransport
 	case RouterBlock:
 		proxy.IncCounter(&proxy.Counters.HTTPRqBlocked)
-		httpError(w, http.StatusForbidden, ErrSiteBlocked)
+		proxy.httpError(w, http.StatusForbidden, ErrSiteBlocked)
 		return
 	default:
 		panic("internal error")

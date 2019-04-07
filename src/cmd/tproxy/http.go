@@ -5,7 +5,6 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
 	"net/textproto"
 	"strings"
@@ -69,16 +68,4 @@ func httpRemoveHopByHopHeaders(hdr http.Header) bool {
 	}
 
 	return upgraded
-}
-
-//
-// Fail HTTP request
-//
-func httpError(w http.ResponseWriter, status int, err error) {
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.WriteHeader(status)
-	fmt.Fprintf(w, "%d %s\n", status, http.StatusText(status))
-	if err != nil {
-		fmt.Fprintf(w, "%s\n", err)
-	}
 }
