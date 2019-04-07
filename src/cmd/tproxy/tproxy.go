@@ -310,7 +310,6 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 
 	// Handle request
-	println(host, rt)
 	switch {
 	case r.Method == http.MethodConnect:
 		proxy.handleConnect(w, r, transport)
