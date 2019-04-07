@@ -337,6 +337,13 @@ func (key *Key) Signer() ssh.Signer {
 }
 
 //
+// Get key id
+//
+func (key *Key) Id() string {
+	return fmt.Sprintf("%x", key.BinFingerprintMD5())
+}
+
+//
 // Generate SHA256 fingerprint in OpenSSH text format
 //
 func (key *Key) FingerprintSHA256() string {

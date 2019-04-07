@@ -7,7 +7,6 @@ package main
 import (
 	"crypto/md5"
 	"errors"
-	"fmt"
 	"io/ioutil"
 	"os"
 	"path/filepath"
@@ -73,7 +72,7 @@ func (set *KeySet) GetKeys() []KeyInfo {
 	keys := []KeyInfo{}
 	for _, key := range set.keys {
 		info := KeyInfo{
-			Id:       set.fileName(key),
+			Id:       key.Id(),
 			Type:     key.Type,
 			FpSHA256: key.FingerprintSHA256(),
 			FpMD5:    key.FingerprintMD5(),
@@ -169,7 +168,7 @@ func (set *KeySet) KeyGen(info *KeyInfo) (*KeyInfo, error) {
 	}
 
 	// Save the key to memory
-	id := set.fileName(key)
+	id := key.Id()
 	set.keys[id] = key
 	if info.Enabled {
 		set.enabled[id] = struct{}{}
@@ -189,17 +188,10 @@ const (
 )
 
 //
-// Get key's file name (without directory)
-//
-func (set *KeySet) fileName(key *keys.Key) string {
-	return fmt.Sprintf("%x", key.BinFingerprintMD5())
-}
-
-//
 // Get key's full path
 //
 func (set *KeySet) filePath(key *keys.Key) string {
-	return filepath.Join(set.env.PathUserKeysDir, set.fileName(key))
+	return filepath.Join(set.env.PathUserKeysDir, key.Id())
 }
 
 //
@@ -264,7 +256,7 @@ func (set *KeySet) load() {
 			if err == nil {
 				err = key.DecodePEM(data)
 			}
-			if err == nil && name != set.fileName(key) {
+			if err == nil && name != key.Id() {
 				err = errors.New("file name doesn't match the key")
 			}
 
@@ -287,11 +279,25 @@ func (set *KeySet) load() {
 		}
 	}
 
-	set.env.Debug("1 %v", loadedKeys)
-	set.env.Debug("2 %v", enabled)
-
 	set.keys = loadedKeys
 	set.enabled = enabled
+
+	// Print debug messages
+	set.env.Debug("Loaded keys:")
+	for id, key := range set.keys {
+		s := id
+		switch _, enabled := set.enabled[id]; {
+		case !enabled && key.Comment == "":
+		case !enabled && key.Comment != "":
+			s += "   " + key.Comment
+		case enabled && key.Comment == "":
+			s += " *"
+		case enabled && key.Comment != "":
+			s += " * " + key.Comment
+		}
+
+		set.env.Debug(" %s", s)
+	}
 }
 
 //
