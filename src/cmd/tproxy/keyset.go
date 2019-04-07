@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"sync"
+	"time"
 
 	"cmd/tproxy/internal/keys"
 )
@@ -19,10 +20,24 @@ import (
 // Set of keys with disk persistence
 //
 type KeySet struct {
-	env     *Env                 // Back link to environment
-	lock    sync.Mutex           // Access lock
-	keys    map[string]*keys.Key // Key id->key map
-	enabled map[string]struct{}  // Enabled keys, by id
+	env   *Env                 // Back link to environment
+	lock  sync.Mutex           // Access lock
+	keys  map[string]*keys.Key // Key id->Key
+	infos map[string]*KeyInfo  // Key id->KeyInfo
+}
+
+//
+// Create a KeySet
+//
+func NewKeySet(env *Env) *KeySet {
+	set := &KeySet{
+		env:   env,
+		keys:  make(map[string]*keys.Key),
+		infos: make(map[string]*KeyInfo),
+	}
+
+	set.load()
+	return set
 }
 
 //
@@ -36,20 +51,21 @@ type KeyInfo struct {
 	Comment  string       `json:"comment,omitempty"`   // Key Comment
 	Enabled  bool         `json:"enabled"`             // Key is enabled
 	Pubkey   string       `json:"pubkey,omitempty"`    // Public key
+	Date     time.Time    `json:"date,omitempty"`      // Creation date
 }
 
 //
-// Create a KeySet
+// Create KeyInfo from key
 //
-func NewKeySet(env *Env) *KeySet {
-	set := &KeySet{
-		env:     env,
-		keys:    make(map[string]*keys.Key),
-		enabled: make(map[string]struct{}),
+func NewKeyInfo(key *keys.Key) *KeyInfo {
+	return &KeyInfo{
+		Id:       key.Id(),
+		Type:     key.Type,
+		FpSHA256: key.FingerprintSHA256(),
+		FpMD5:    key.FingerprintMD5(),
+		Comment:  key.Comment,
+		Pubkey:   key.AuthorizedKey(),
 	}
-
-	set.load()
-	return set
 }
 
 //
@@ -59,7 +75,13 @@ func (set *KeySet) HasKeys() bool {
 	set.lock.Lock()
 	defer set.lock.Unlock()
 
-	return len(set.enabled) > 0
+	for _, info := range set.infos {
+		if info.Enabled {
+			return true
+		}
+	}
+
+	return false
 }
 
 //
@@ -69,29 +91,18 @@ func (set *KeySet) GetKeys() []KeyInfo {
 	set.lock.Lock()
 	defer set.lock.Unlock()
 
-	keys := []KeyInfo{}
-	for _, key := range set.keys {
-		info := KeyInfo{
-			Id:       key.Id(),
-			Type:     key.Type,
-			FpSHA256: key.FingerprintSHA256(),
-			FpMD5:    key.FingerprintMD5(),
-			Comment:  key.Comment,
-			Pubkey:   key.AuthorizedKey(),
-		}
-
-		_, info.Enabled = set.enabled[info.Id]
-
-		keys = append(keys, info)
+	infos := []KeyInfo{}
+	for _, info := range set.infos {
+		infos = append(infos, *info)
 	}
 
-	return keys
+	return infos
 }
 
 //
 // Modify the key
 //
-func (set *KeySet) KeyMod(id string, info *KeyInfo) error {
+func (set *KeySet) KeyMod(id string, newinfo *KeyInfo) error {
 	// Acquire the lock
 	set.lock.Lock()
 	defer set.lock.Unlock()
@@ -102,27 +113,29 @@ func (set *KeySet) KeyMod(id string, info *KeyInfo) error {
 		return ErrNoSuchKey
 	}
 
+	info := set.infos[id]
+	if info == nil {
+		panic("internal error")
+	}
+
 	// See what changed and update in-memory copy
 	updateKey := false
 	updateEnabled := false
 
-	if key.Comment != info.Comment {
-		key.Comment = info.Comment
+	if key.Comment != newinfo.Comment {
+		key.Comment = newinfo.Comment
+		info.Comment = newinfo.Comment
 		updateKey = true
 	}
 
-	if _, enabled := set.enabled[id]; enabled != info.Enabled {
-		if info.Enabled {
-			set.enabled[id] = struct{}{}
-		} else {
-			delete(set.enabled, id)
-		}
+	if info.Enabled != newinfo.Enabled {
 		updateEnabled = true
+		info.Enabled = newinfo.Enabled
 	}
 
 	// Update on-disk copy
 	if updateKey || updateEnabled {
-		return set.updateKey(key, updateKey, updateEnabled, info.Enabled)
+		return set.updateKey(key, info, updateKey, updateEnabled)
 	}
 
 	return nil
@@ -144,7 +157,7 @@ func (set *KeySet) KeyDel(id string) error {
 
 	// Delete the key
 	delete(set.keys, id)
-	delete(set.enabled, id)
+	delete(set.infos, id)
 
 	return set.deleteKey(key)
 }
@@ -153,16 +166,24 @@ func (set *KeySet) KeyDel(id string) error {
 // Generate new key
 //
 func (set *KeySet) KeyGen(info *KeyInfo) (*KeyInfo, error) {
+	// Save relevant parts of info
+	enabled := info.Enabled
+
 	// Generate a key
 	key := keys.KeyGen(info.Type)
 	key.Comment = info.Comment
+
+	// Update info
+	info = NewKeyInfo(key)
+	info.Enabled = enabled
+	info.Date = time.Now()
 
 	// Acquire the lock
 	set.lock.Lock()
 	defer set.lock.Unlock()
 
 	// Save to disk
-	err := set.updateKey(key, true, true, info.Enabled)
+	err := set.updateKey(key, info, true, true)
 	if err != nil {
 		return nil, err
 	}
@@ -170,16 +191,9 @@ func (set *KeySet) KeyGen(info *KeyInfo) (*KeyInfo, error) {
 	// Save the key to memory
 	id := key.Id()
 	set.keys[id] = key
-	if info.Enabled {
-		set.enabled[id] = struct{}{}
-	}
+	set.infos[id] = info
 
-	// Update info
-	newinfo := *info
-	newinfo.FpSHA256 = key.FingerprintSHA256()
-	newinfo.FpMD5 = key.FingerprintMD5()
-
-	return &newinfo, nil
+	return info, nil
 }
 
 // ----- On-disk key storage -----
@@ -235,6 +249,7 @@ func (set *KeySet) load() {
 
 	// Load all keys
 	loadedKeys := make(map[string]*keys.Key)
+	loadedInfos := make(map[string]*KeyInfo)
 	enabled := make(map[string]struct{})
 
 	for _, file := range dir {
@@ -276,6 +291,10 @@ func (set *KeySet) load() {
 
 			loadedKeys[name] = key
 
+			info := NewKeyInfo(key)
+			info.Date = file.ModTime()
+			loadedInfos[name] = info
+
 		case pathExtEnabled:
 			enabled[name] = struct{}{}
 		}
@@ -283,19 +302,19 @@ func (set *KeySet) load() {
 
 	// Update keyset
 	for id, _ := range enabled {
-		if _, ok := loadedKeys[id]; !ok {
-			delete(enabled, id)
+		if info, ok := loadedInfos[id]; ok {
+			info.Enabled = true
 		}
 	}
 
 	set.keys = loadedKeys
-	set.enabled = enabled
+	set.infos = loadedInfos
 
 	// Print debug messages
 	set.env.Debug("Loaded keys:")
 	for id, key := range set.keys {
 		s := id
-		switch _, enabled := set.enabled[id]; {
+		switch enabled := set.infos[id].Enabled; {
 		case !enabled && key.Comment == "":
 		case !enabled && key.Comment != "":
 			s += "   " + key.Comment
@@ -312,7 +331,9 @@ func (set *KeySet) load() {
 //
 // Update key at disk
 //
-func (set *KeySet) updateKey(key *keys.Key, updateKey, updateEnabled, enabled bool) error {
+func (set *KeySet) updateKey(key *keys.Key, info *KeyInfo,
+	updateKey, updateEnabled bool) error {
+
 	// Acquire keys lock
 	err := set.env.LockWait(EnvLockKeys)
 	if err != nil {
@@ -326,11 +347,14 @@ func (set *KeySet) updateKey(key *keys.Key, updateKey, updateEnabled, enabled bo
 	if updateKey {
 		data := key.EncodePEM()
 		err = ioutil.WriteFile(path, data, 0600)
+		if err == nil {
+			os.Chtimes(path, info.Date, info.Date)
+		}
 	}
 
 	if err == nil && updateEnabled {
 		path += "." + pathExtEnabled
-		if enabled {
+		if info.Enabled {
 			err = ioutil.WriteFile(path, []byte{}, 0600)
 		} else {
 			os.Remove(path) // Ignore an error, if any
