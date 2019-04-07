@@ -232,10 +232,7 @@ func (proxy *Tproxy) handleConnect(
 // ResponseWriter.OnError hook
 //
 func (proxy *Tproxy) httpOnError(w http.ResponseWriter, status int) []byte {
-	if status != 404 {
-		return nil
-	}
-	file, err := pages.AssetFS.Open("404/index.html")
+	file, err := pages.AssetFS.Open("error/index.html")
 	if err != nil {
 		return nil
 	}
@@ -247,6 +244,16 @@ func (proxy *Tproxy) httpOnError(w http.ResponseWriter, status int) []byte {
 	}
 
 	w.Header().Set("Content-Type", "text/html; charset=utf-8")
+
+	data = []byte(os.Expand(string(data), func(name string) string {
+		switch name {
+		case "ERROR":
+			return http.StatusText(status)
+		case "STATUS":
+			return fmt.Sprintf("%d", status)
+		}
+		return ""
+	}))
 	return data
 }
 
@@ -261,14 +268,14 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	// Check for request to TProxy itself
 	_, local := proxy.localhosts[r.Host]
 	if local {
-		w = &ResponseWriter{
-			ResponseWriter: w,
-			OnError:        proxy.httpOnError,
-		}
-
 		if strings.HasPrefix(r.URL.Path, "/api/") {
 			proxy.webapi.ServeHTTP(w, r)
 		} else {
+			w = &ResponseWriter{
+				ResponseWriter: w,
+				OnError:        proxy.httpOnError,
+			}
+
 			pages.FileServer.ServeHTTP(w, r)
 		}
 		return
