@@ -72,7 +72,7 @@ func httpRemoveHopByHopHeaders(hdr http.Header) bool {
 }
 
 //
-// Fail HTTP request with an formatted error message
+// Fail HTTP request with formatted error message
 //
 func httpErrorf(w http.ResponseWriter, status int,
 	format string, args ...interface{}) {
