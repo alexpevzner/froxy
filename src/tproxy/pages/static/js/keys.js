@@ -65,8 +65,25 @@ function PubKeyCopy (row) {
 //
 // Save public key to file
 //
-function PubKeySave (elm) {
-    alert("Not implemented");
+function PubKeySave (row) {
+    var pubkey = tproxy.UiGetInput(row + ".pubkey");
+    var keytype = tproxy.UiGetInput(row + ".type");
+
+    if (pubkey) {
+        var a = document.createElement("a");
+        var type = keytype ? keytype.split("-")[0] : "";
+        var filename = type ? "id_" + type + ".pub": "id.pub";
+
+        a.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(pubkey));
+        a.setAttribute("download", filename);
+
+        a.style.display = "none";
+        document.body.appendChild(a);
+
+        a.click();
+
+        document.body.removeChild(a);
+    }
 }
 
 //
@@ -99,7 +116,7 @@ function TableInputAction (input, elm, row) {
         break;
 
     case "pub-save":
-        PubKeySave(elm);
+        PubKeySave(row);
         break;
     }
 }
@@ -198,7 +215,7 @@ function UpdateKeys (keys) {
 
         tproxy.UiSetInput(n + ".ctime", stddate);
 
-        var elm = document.getElementById(n + ".hr");
+        elm = document.getElementById(n + ".hr");
         if (elm) {
             elm.hidden = n == (table.length - 1);
         }

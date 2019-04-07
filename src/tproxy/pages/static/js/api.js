@@ -351,6 +351,9 @@ tproxy.UiGetInput = function(id) {
     }
 
     switch (obj.tagName) {
+    case "DIV":
+        return obj.innerText;
+
     case "INPUT":
         switch (obj.type) {
         case "text":
@@ -362,6 +365,7 @@ tproxy.UiGetInput = function(id) {
         break;
 
     case "SELECT":
+    case "TEXTAREA":
         return obj.value;
     }
 
@@ -384,14 +388,13 @@ tproxy.UiSetInput = function(id, value) {
 
     switch (obj.tagName) {
     case "DIV":
-    case "TEXTAREA":
         obj.innerText = value;
         break;
 
     case "INPUT":
         switch (obj.type) {
         case "text":
-            obj.value = value ? value : "";
+            obj.value = value;
             break;
 
         case "checkbox":
@@ -401,6 +404,7 @@ tproxy.UiSetInput = function(id, value) {
         break;
 
     case "SELECT":
+    case "TEXTAREA":
         obj.value = value;
         break;
     }
