@@ -47,7 +47,7 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 
 	//
 	// Note, official MSDN specification of the LockFileEx()
-	// lacks information what error code is returner, when
+	// lacks information what error code is returned, when
 	// LockFileEx() called with LOCKFILE_FAIL_IMMEDIATELY
 	// flag, the lock is held by another process and file is
 	// opened in synchronous mode
