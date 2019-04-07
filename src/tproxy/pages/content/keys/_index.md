@@ -80,6 +80,9 @@ title = "SSH Keys Management"
                             <input id="add.pub-save" type="button" value="Download As a File"/>
                         </td>
                     </tr>
+		    <tr id="add.hr" hidden>
+		        <td colspan=2><hr></td>
+		    </tr>
                 </tbody>
             </table>
         </td></tr>

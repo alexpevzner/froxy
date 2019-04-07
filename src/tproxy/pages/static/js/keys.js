@@ -184,6 +184,11 @@ function UpdateKeys (keys) {
         tproxy.UiSetInput(n + ".md5", keys[n].fp_md5);
         tproxy.UiSetInput(n + ".pubkey", keys[n].pubkey);
         table[n].setAttribute("keyid", keys[n].id);
+
+        var elm = document.getElementById(n + ".hr");
+        if (elm) {
+            elm.hidden = n == (table.length - 1);
+        }
     }
 }
 
