@@ -7,6 +7,7 @@ package main
 /*
 #define NTDDI_VERSION NTDDI_WIN7
 #include <fileapi.h>
+#include <windows.h>
 */
 import "C"
 
@@ -44,8 +45,27 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 		return nil
 	}
 
+	//
+	// Note, official MSDN specification of the LockFileEx()
+	// lacks information what error code is returner, when
+	// LockFileEx() called with LOCKFILE_FAIL_IMMEDIATELY
+	// flag, the lock is held by another process and file is
+	// opened in synchronous mode
+	//
+	// Experimentally I've found that at this case
+	// LockFileEx() returns FALSE and GetLastError()
+	// returns 0
+	//
+	// However this blog post:
+	//    https://devblogs.microsoft.com/oldnewthing/20140905-00/?p=63
+	// states that LockFileEx() may return ERROR_LOCK_VIOLATION error
+	// at this case
+	//
+	// Just in case, I check for both variants
+	//
 	err := syscall.GetLastError()
-	if err == nil {
+	switch err {
+	case nil, syscall.Errno(C.ERROR_LOCK_VIOLATION):
 		err = ErrLockIsBusy
 	}
 
