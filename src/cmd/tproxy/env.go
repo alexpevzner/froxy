@@ -170,6 +170,7 @@ func (env *Env) LockRelease(lock EnvLock) {
 		panic("internal error")
 	}
 	file.Close()
+	delete(env.locksFiles, lock)
 	env.locksCond.Signal()
 	env.locksCond.L.Unlock()
 }
