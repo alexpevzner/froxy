@@ -5,6 +5,7 @@
 package main
 
 import (
+	"errors"
 	"fmt"
 	"io"
 	"io/ioutil"
@@ -160,14 +161,14 @@ func (proxy *Tproxy) handleRegularHttp(
 		// Actually it's not a big problem, because browsers
 		// implement websockets by calling proxy's CONNECT method
 		// rather that GET with upgrade
-		httpErrorf(w, http.StatusServiceUnavailable,
-			"Protocol upgrade is not implemented")
+		httpError(w, http.StatusServiceUnavailable,
+			errors.New("Protocol upgrade is not implemented"))
 	}
 
 	// Perform round-trip
 	resp, err := transport.RoundTrip(r)
 	if err != nil {
-		httpErrorf(w, http.StatusServiceUnavailable, "%s", err)
+		httpError(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
@@ -209,20 +210,21 @@ func (proxy *Tproxy) handleConnect(
 
 	dest_conn, err := transport.Dial("tcp", r.Host)
 	if err != nil {
-		httpErrorf(w, http.StatusServiceUnavailable, "%s", err)
+		httpError(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		httpErrorf(w, http.StatusInternalServerError, "Hijacking not supported")
+		httpError(w, http.StatusInternalServerError,
+			errors.New("Hijacking not supported"))
 		return
 	}
 
 	w.WriteHeader(http.StatusOK)
 	client_conn, _, err := hijacker.Hijack()
 	if err != nil {
-		httpErrorf(w, http.StatusServiceUnavailable, "%s", err)
+		httpError(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
@@ -303,7 +305,7 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 		transport = proxy.sshTransport
 	case RouterBlock:
 		proxy.IncCounter(&proxy.Counters.HTTPRqBlocked)
-		httpErrorf(w, http.StatusForbidden, "Site blocked")
+		httpError(w, http.StatusForbidden, ErrSiteBlocked)
 		return
 	default:
 		panic("internal error")

@@ -80,10 +80,10 @@ func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 		return
 
 	FAIL:
-		httpErrorf(w, http.StatusInternalServerError, "%s", err)
+		httpError(w, http.StatusInternalServerError, err)
 
 	default:
-		httpError(w, http.StatusMethodNotAllowed)
+		httpError(w, http.StatusMethodNotAllowed, nil)
 	}
 }
 
@@ -114,7 +114,7 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err != nil {
-			httpErrorf(w, http.StatusInternalServerError, "%s", err)
+			httpError(w, http.StatusInternalServerError, err)
 			return
 		}
 
@@ -146,13 +146,13 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 		return
 
 	FAIL:
-		httpErrorf(w, http.StatusInternalServerError, "%s", err)
+		httpError(w, http.StatusInternalServerError, err)
 
 	case "DEL":
 		webapi.tproxy.DelSite(host)
 
 	default:
-		httpError(w, http.StatusMethodNotAllowed)
+		httpError(w, http.StatusMethodNotAllowed, nil)
 	}
 }
 
@@ -172,7 +172,7 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 //
 func (webapi *WebAPI) handleState(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		httpError(w, http.StatusMethodNotAllowed)
+		httpError(w, http.StatusMethodNotAllowed, nil)
 		return
 	}
 
@@ -223,7 +223,7 @@ func (webapi *WebAPI) handleKeys(w http.ResponseWriter, r *http.Request) {
 	if r.Method == "PUT" || r.Method == "DEL" {
 		id = r.URL.RawQuery
 		if id == "" {
-			httpErrorf(w, http.StatusInternalServerError, "%s", ErrKeyIdMissed)
+			httpError(w, http.StatusInternalServerError, ErrKeyIdMissed)
 			return
 		}
 	}
@@ -238,7 +238,7 @@ func (webapi *WebAPI) handleKeys(w http.ResponseWriter, r *http.Request) {
 		}
 
 		if err != nil {
-			httpErrorf(w, http.StatusInternalServerError, "%s", err)
+			httpError(w, http.StatusInternalServerError, err)
 			return
 		}
 	}
@@ -261,7 +261,7 @@ func (webapi *WebAPI) handleKeys(w http.ResponseWriter, r *http.Request) {
 	}
 
 	if err != nil {
-		httpErrorf(w, http.StatusInternalServerError, "%s", err)
+		httpError(w, http.StatusInternalServerError, err)
 	}
 }
 
@@ -276,7 +276,7 @@ func (webapi *WebAPI) handleKeys(w http.ResponseWriter, r *http.Request) {
 //
 func (webapi *WebAPI) handleCounters(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
-		httpError(w, http.StatusMethodNotAllowed)
+		httpError(w, http.StatusMethodNotAllowed, nil)
 		return
 	}
 
@@ -309,7 +309,7 @@ AGAIN:
 //
 func (webapi *WebAPI) handleShutdown(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "TPROXY" {
-		httpError(w, http.StatusMethodNotAllowed)
+		httpError(w, http.StatusMethodNotAllowed, nil)
 		return
 	}
 

@@ -17,4 +17,5 @@ var (
 	ErrKeyIdMissed         = errors.New("invalid query: key ID missed")
 	ErrNoSuchKey           = errors.New("Now suck key")
 	ErrLockIsBusy          = errors.New("Lock is busy")
+	ErrSiteBlocked         = errors.New("Site blocked")
 )

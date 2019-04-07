@@ -72,20 +72,13 @@ func httpRemoveHopByHopHeaders(hdr http.Header) bool {
 }
 
 //
-// Fail HTTP request with formatted error message
-//
-func httpErrorf(w http.ResponseWriter, status int,
-	format string, args ...interface{}) {
-	msg := fmt.Sprintf("%d ", status)
-	msg += fmt.Sprintf(format, args...)
-
-	http.Error(w, msg, status)
-
-}
-
-//
 // Fail HTTP request
 //
-func httpError(w http.ResponseWriter, status int) {
-	httpErrorf(w, status, fmt.Sprintf("%s", http.StatusText(status)))
+func httpError(w http.ResponseWriter, status int, err error) {
+	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	w.WriteHeader(status)
+	fmt.Fprintf(w, "%d %s\n", status, http.StatusText(status))
+	if err != nil {
+		fmt.Fprintf(w, "%s\n", err)
+	}
 }
