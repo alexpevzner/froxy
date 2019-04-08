@@ -463,6 +463,7 @@ func (proxy *Tproxy) eventGoroutine() {
 		e := <-events
 		switch e {
 		case EventShutdownRequested:
+			proxy.Debug("Shutdown requested. Exiting...")
 			os.Exit(0)
 		}
 	}
