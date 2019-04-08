@@ -245,6 +245,7 @@ func (proxy *Tproxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) 
 
 	// Handle requests to TProxy static pages
 	proxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
+	httpNoCache(w)
 
 	if r.URL.Path == "/" {
 		//
@@ -258,7 +259,6 @@ func (proxy *Tproxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) 
 			url = c.Value
 		}
 
-		httpNoCache(w)
 		http.Redirect(w, r, url, http.StatusFound)
 		return
 	}
@@ -500,7 +500,7 @@ func NewTproxy(env *Env, port int) (*Tproxy, error) {
 
 	// Create HTTP server
 	proxy.httpSrv = &http.Server{
-		Addr:    fmt.Sprintf("127.0.0.1:%d", port),
+		Addr:    fmt.Sprintf("localhost:%d", port),
 		Handler: http.HandlerFunc(proxy.httpHandler),
 	}
 
