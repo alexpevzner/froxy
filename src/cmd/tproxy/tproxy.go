@@ -36,12 +36,13 @@ type Tproxy struct {
 	Counters Counters // Collection of statistic counters
 
 	// Tproxy parts
-	router     *Router             // Request router
-	webapi     *WebAPI             // JS API handler
-	localhosts map[string]struct{} // Hosts considered local
-	localport  string              // Local port as string
-	listener   net.Listener        // TCP listener
-	httpSrv    *http.Server        // Local HTTP server instance
+	router      *Router             // Request router
+	webapi      *WebAPI             // JS API handler
+	sysNotifier *SysNotifier        // System events notifier
+	localhosts  map[string]struct{} // Hosts considered local
+	localport   string              // Local port as string
+	listener    net.Listener        // TCP listener
+	httpSrv     *http.Server        // Local HTTP server instance
 
 	// Transports
 	sshTransport    *SSHTransport    // SSH transport
@@ -481,6 +482,7 @@ func NewTproxy(env *Env, port int) (*Tproxy, error) {
 
 	proxy.webapi = NewWebAPI(proxy)
 	proxy.router = NewRouter(proxy)
+	proxy.sysNotifier = NewSysNotifier(proxy)
 
 	// Populate table of local host names
 	for _, h := range []string{
