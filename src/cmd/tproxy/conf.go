@@ -27,4 +27,10 @@ const (
 	// Max count of backup log files
 	//
 	LOG_MAX_BACKUP_FILES = 3
+
+	// ----- Cookie names used by TProxy -----
+	//
+	// Last visited TProxy configuration page
+	//
+	COOKIE_LAST_VISITED_PAGE = "tproxy-lvp"
 )

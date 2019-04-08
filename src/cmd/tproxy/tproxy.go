@@ -232,7 +232,58 @@ func (proxy *Tproxy) handleConnect(
 	ioTransferData(proxy.Env, client_conn, dest_conn)
 }
 
-// ----- HTTP requests handling -----
+// ----- Handling requests to TProxy itself -----
+//
+// Handle local request
+//
+func (proxy *Tproxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) {
+	// Handle webapi requests
+	if strings.HasPrefix(r.URL.Path, "/api/") {
+		proxy.webapi.ServeHTTP(w, r)
+		return
+	}
+
+	// Handle requests to TProxy static pages
+	proxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
+
+	if r.URL.Path == "/" {
+		//
+		// TProxy home page is not very informative, so
+		// it's better to redirect user to the last visited
+		// page, if it is known, or to the configuration page
+		// otherwise
+		//
+		url := "/conf/"
+		if c, err := r.Cookie(COOKIE_LAST_VISITED_PAGE); err == nil {
+			url = c.Value
+		}
+
+		httpNoCache(w)
+		http.Redirect(w, r, url, http.StatusFound)
+		return
+	}
+
+	onsuccess := func(w http.ResponseWriter,
+		status int) {
+		proxy.httpOnSuccess(w, r, status)
+	}
+
+	w = &ResponseWriter{
+		ResponseWriter: w,
+		OnError:        proxy.httpOnError,
+		OnSuccess:      onsuccess,
+	}
+
+	// This allows CSS to be loaded when we
+	// substitute a normal response with the
+	// error page
+	w.Header().Set(
+		"Access-Control-Allow-Origin", "*")
+
+	pages.FileServer.ServeHTTP(w, r)
+}
+
+// ----- HTTP response generation helpers -----
 //
 // Format body of error response
 //
@@ -321,6 +372,24 @@ func (proxy *Tproxy) httpOnError(w http.ResponseWriter, status int) []byte {
 }
 
 //
+// ResponseWriter.OnSuccess hook
+//
+func (proxy *Tproxy) httpOnSuccess(w http.ResponseWriter,
+	r *http.Request, status int) {
+
+	path := r.URL.Path
+	if path != "/" && strings.HasSuffix(path, "/") {
+		http.SetCookie(w, &http.Cookie{
+			Name:   COOKIE_LAST_VISITED_PAGE,
+			Value:  r.URL.Path,
+			Path:   "/",
+			MaxAge: 365 * 24 * 60 * 60,
+		})
+	}
+}
+
+// ----- HTTP requests handling -----
+//
 // handle HTTP request. Provides multiplexing between regular request
 // and CONNECT request handlers
 //
@@ -332,24 +401,7 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	if port == proxy.localport {
 		_, local := proxy.localhosts[host]
 		if local {
-			if strings.HasPrefix(r.URL.Path, "/api/") {
-				proxy.webapi.ServeHTTP(w, r)
-			} else {
-				w = &ResponseWriter{
-					ResponseWriter: w,
-					OnError:        proxy.httpOnError,
-				}
-
-				// This allows CSS to be loaded when we
-				// substitute a normal response with the
-				// error page
-				w.Header().Set(
-					"Access-Control-Allow-Origin", "*")
-
-				proxy.Debug("%s %s %s",
-					r.Method, r.URL, r.Proto)
-				pages.FileServer.ServeHTTP(w, r)
-			}
+			proxy.handleLocalRequest(w, r)
 			return
 		}
 	}
