@@ -5,6 +5,7 @@
 package main
 
 import (
+	"bytes"
 	"errors"
 	"fmt"
 	"io"
@@ -283,27 +284,30 @@ func (proxy *Tproxy) httpFormatError(status int, err error) (
 }
 
 //
+// Canonicalize URLs, embedded into HTML document, by replacing
+// relative links with absolute
+//
+func (proxy *Tproxy) httpCanonicalizeURLs(input []byte) []byte {
+	return bytes.Replace(
+		input,
+		[]byte(`href="/`),
+		[]byte(`href="http://`+proxy.httpSrv.Addr+"/"),
+		-1,
+	)
+}
+
+//
 // Reply with HTTP error
 //
 func (proxy *Tproxy) httpError(w http.ResponseWriter, status int, err error) {
-	/*
-		FIXME - doesn't work due to relative links
-		in the HTML document
+	contentType, content := proxy.httpFormatError(status, err)
+	w.Header().Set("Content-Type", contentType)
+	httpNoCache(w)
 
-		contentType, content := proxy.httpFormatError(status, err)
-		w.Header().Set("Content-Type", contentType)
-		w.WriteHeader(status)
+	w.WriteHeader(status)
 
-		w.Write(content)
-	*/
-
-	s := fmt.Sprintf("%d %s\n", status, http.StatusText(status))
-	if err != nil {
-		s += fmt.Sprintf("%s\n", err)
-	}
-
-	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
-	w.Write([]byte(s))
+	content = proxy.httpCanonicalizeURLs(content)
+	w.Write(content)
 }
 
 //
@@ -312,6 +316,7 @@ func (proxy *Tproxy) httpError(w http.ResponseWriter, status int, err error) {
 func (proxy *Tproxy) httpOnError(w http.ResponseWriter, status int) []byte {
 	contentType, content := proxy.httpFormatError(status, nil)
 	w.Header().Set("Content-Type", contentType)
+	httpNoCache(w)
 	return content
 }
 
@@ -335,6 +340,14 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 					OnError:        proxy.httpOnError,
 				}
 
+				// This allows CSS to be loaded when we
+				// substitute a normal response with the
+				// error page
+				w.Header().Set(
+					"Access-Control-Allow-Origin", "*")
+
+				proxy.Debug("%s %s %s",
+					r.Method, r.URL, r.Proto)
 				pages.FileServer.ServeHTTP(w, r)
 			}
 			return

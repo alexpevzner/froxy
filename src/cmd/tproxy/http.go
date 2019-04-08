@@ -69,3 +69,12 @@ func httpRemoveHopByHopHeaders(hdr http.Header) bool {
 
 	return upgraded
 }
+
+//
+// Set response headers to disable cacheing
+//
+func httpNoCache(w http.ResponseWriter) {
+	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
+	w.Header().Set("Pragma", "no-cache")
+	w.Header().Set("Expires", "0")
+}

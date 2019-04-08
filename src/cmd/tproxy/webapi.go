@@ -359,10 +359,7 @@ func (webapi *WebAPI) replyJSON(w http.ResponseWriter, data interface{}) {
 	}
 
 	w.Header().Set("Content-Type", "application/json")
-
-	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
-	w.Header().Set("Pragma", "no-cache")
-	w.Header().Set("Expires", "0")
+	httpNoCache(w)
 
 	w.Write(body)
 	w.Write([]byte("\n"))
@@ -376,6 +373,8 @@ func (webapi *WebAPI) replyError(w http.ResponseWriter, r *http.Request,
 
 	// FIXME - send JSON error object instead
 	w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+	httpNoCache(w)
+
 	w.WriteHeader(status)
 
 	if err != nil {

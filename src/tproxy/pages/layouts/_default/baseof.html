@@ -1,0 +1,40 @@
+{{ block "preload" . }}
+{{ with .Content }}{{ end }}
+{{ end }}
+<!DOCTYPE html>
+<html lang="{{ site.LanguageCode }}">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>
+    {{ if eq .Title site.Title }}
+    {{ site.Title }}
+    {{ else }}
+    {{ with .Title }}{{ . }} | {{ end }}{{ site.Title }}
+    {{ end }}
+  </title>
+  {{ range .AlternativeOutputFormats }}
+  {{ printf "<link rel=%q type=%q href=%q title=%q>" .Rel .MediaType.Type .RelPermalink site.Title | safeHTML }}
+  {{ end }}
+  {{ $baseCSS := resources.Get "css/base.css" | resources.ExecuteAsTemplate "css/base.css" . | minify | fingerprint }}
+  {{ $extraCSS := .Scratch.Get "css" | uniq }}
+  {{ range ($baseCSS | slice | append $extraCSS) }}
+  <link rel="stylesheet" href="{{ .RelPermalink }}" integrity="{{ .Data.Integrity }}" crossorigin="anonymous">
+  {{ end }}
+  {{ hugo.Generator }}
+</head>
+<body>
+  {{ partial "banner.html" .}}
+  <main>
+    <div class="u-wrapper">
+      <div class="u-padding">
+        {{ block "main" . }}{{ end }}
+      </div>
+    </div>
+  </main>
+  {{ partial "footer.html" . }}
+  {{ range (.Scratch.Get "js" | uniq) }}
+  <script type="text/javascript" src="{{ .Permalink }}" integrity="{{ .Data.Integrity }}"></script>
+  {{ end }}
+</body>
+</html>
