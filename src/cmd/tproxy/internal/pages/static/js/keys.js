@@ -38,6 +38,7 @@ function GenKey () {
 // Delete the key
 //
 function DeleteKey (keyid) {
+    /*
     var ok = confirm(
         "Deleted keys cannot be recovered\n" +
         "Are you sure you want to continue?"
@@ -45,6 +46,7 @@ function DeleteKey (keyid) {
     if (!ok) {
         return;
     }
+    */
 
     var rq = tproxy.DeleteKey(keyid);
     rq.OnSuccess = ReloadTable; 
@@ -99,6 +101,11 @@ function TableInputAction (input, elm, row) {
 
     switch (input) {
     case "delete":
+        var confirm = document.getElementById(row + ".confirm-delete");
+        confirm.hidden = !tproxy.UiGetInput(row + ".delete");
+        break;
+
+    case "confirm-delete":
         DeleteKey(keyid);
         break;
 
@@ -188,11 +195,14 @@ function UpdateKeys (keys) {
     // Update rows
     for (var n = 0; n < table.length; n ++) {
         tproxy.UiSetInput(n + ".enable", keys[n].enabled);
+        tproxy.UiSetInput(n + ".delete", false);
+        document.getElementById(n + ".confirm-delete").hidden = true;
         tproxy.UiSetInput(n + ".comment", keys[n].comment);
         tproxy.UiSetInput(n + ".type", keys[n].type);
         tproxy.UiSetInput(n + ".sha256", keys[n].fp_sha256);
         tproxy.UiSetInput(n + ".md5", keys[n].fp_md5);
         tproxy.UiSetInput(n + ".pubkey", keys[n].pubkey);
+
         table[n].setAttribute("keyid", keys[n].id);
 
         var months = [
