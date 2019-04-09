@@ -68,10 +68,20 @@ title = "SSH Keys Management"
                         <td colspan=3>
 			    <details>
 			        <summary>**Public Key**</summary>
-				Add it into the the **authorized_keys** file at the server<br>
-				<textarea id="add.pubkey" style="overflow:auto;resize:none" rows=3 cols=70 readonly></textarea>
-				<input id="add.pub-copy" type="button" value="Copy to Clipboard"/>
-				<input id="add.pub-save" type="button" value="Download As a File"/>
+				<table>
+				    <tbody>
+					<tr><td>
+					    Add it into the the **$HOME/.ssh/authorized_keys** file at the server:
+					</td></tr>
+					<tr><td>
+					    <textarea id="add.pubkey" style="overflow:auto;resize:none" rows=5 cols=70 readonly></textarea>
+					</td></tr>
+					<tr><td>
+					    <input id="add.pub-copy" type="button" value="Copy to Clipboard"/>
+					    <input id="add.pub-save" type="button" value="Download As a File"/>
+					</td></tr>
+				    </tbody>
+				</table>
 			    </details>
 			</td>
                     </tr>
