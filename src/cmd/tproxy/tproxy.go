@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"cmd/tproxy/internal/pages"
 	"errors"
 	"fmt"
 	"io"
@@ -16,7 +17,6 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
-	"tproxy/pages"
 )
 
 //

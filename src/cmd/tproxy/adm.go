@@ -6,6 +6,7 @@ package main
 
 import (
 	"bytes"
+	"cmd/tproxy/internal/pages"
 	"errors"
 	"fmt"
 	"io"
@@ -15,7 +16,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-	"tproxy/pages"
 	"unicode"
 )
 

@@ -2,7 +2,7 @@ baseURL = "http://tproxy/"
 languageCode = "en-us"
 title = "TProxy"
 theme = "hugo-flex"
-themesDir = "../../vendor/themes"
+themesDir = "../../../../vendor/themes"
 
 [params]
 footer = "Copyright (c) by Alexander Pevzner, 2019"

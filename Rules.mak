@@ -37,15 +37,10 @@ GO_VET		= LD_LIBRARY_PATH=$(TOPDIR)/bin/$(GO_HOST) $(GO_CMD) vet
 .PHONY:	tags
 .PHONY:	tools
 
-all:	do_all
-test:	do_test
-vet:	do_vet
-clean:	do_clean
-
-all test vet clean:
-	@for i in $(SUBDIRS); do \
-		$(MAKE) -C $$i $@ || exit 1; \
-	done
+all:	subdirs_all do_all
+test:	subdirs_test do_test
+vet:	subdirs_vet do_vet
+clean:	subdirs_clean do_clean
 
 ifneq	($(BOOTSTRAP),y)
 do_all:
@@ -86,3 +81,8 @@ ifeq	($(MAKELEVEL),0)
 do_all do_test do_vet:    tags tools
 endif
 
+# Subdirs handling
+subdirs_all subdirs_test subdirs_vet subdirs_clean:
+	@for i in $(SUBDIRS); do \
+		$(MAKE) -C $$i $(subst subdirs_,,$@) || exit 1; \
+	done
