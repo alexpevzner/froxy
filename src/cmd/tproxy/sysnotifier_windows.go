@@ -25,6 +25,7 @@ import (
 //
 type SysNotifier struct {
 	tproxy *Tproxy // Back link to Tproxy
+	hWnd   C.HWND  // Handle of hidden window for receiving system messages
 }
 
 //
@@ -32,8 +33,10 @@ type SysNotifier struct {
 //
 func NewSysNotifier(tproxy *Tproxy) *SysNotifier {
 	sn := &SysNotifier{tproxy: tproxy}
+	hWndChan := make(chan C.HWND)
+	go sn.winGoroutine(hWndChan)
+	sn.hWnd = <-hWndChan
 	go sn.conGoroutine()
-	go sn.winGoroutine()
 	return sn
 }
 
@@ -45,13 +48,13 @@ func (sn *SysNotifier) conGoroutine() {
 	signal.Notify(c, os.Interrupt)
 
 	<-c
-	sn.tproxy.Raise(EventShutdownRequested)
+	C.PostMessage(sn.hWnd, C.WM_CLOSE, 0, 0)
 }
 
 //
 // This goroutine creates invisible window and waits for system messages
 //
-func (sn *SysNotifier) winGoroutine() {
+func (sn *SysNotifier) winGoroutine(hWndChan chan C.HWND) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -75,7 +78,7 @@ func (sn *SysNotifier) winGoroutine() {
 	C.RegisterClassA(&wndclass)
 
 	// Create invisible window for notifications
-	C.CreateWindowExA(
+	hwnd := C.CreateWindowExA(
 		0,
 		name,
 		name,
@@ -87,6 +90,8 @@ func (sn *SysNotifier) winGoroutine() {
 		hInstance,
 		nil,
 	)
+
+	hWndChan <- hwnd
 
 	// Run message loop
 	for {
@@ -107,9 +112,7 @@ func (sn *SysNotifier) wndProc(hWnd C.HWND, msg C.UINT, wParam C.WPARAM, lParam 
 	switch msg {
 	case C.WM_CLOSE:
 		C.DestroyWindow(hWnd)
-	case C.WM_DESTROY:
-		sn.tproxy.Raise(EventShutdownRequested)
-	case C.WM_ENDSESSION:
+	case C.WM_DESTROY, C.WM_QUIT, C.WM_ENDSESSION:
 		sn.tproxy.Raise(EventShutdownRequested)
 	default:
 		return C.DefWindowProc(hWnd, C.UINT(msg), wParam, lParam)
