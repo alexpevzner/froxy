@@ -1,5 +1,5 @@
 //
-// http.ResponseWriter wrapper with various hooks
+// A collection of useful http.ResponseWriter implementations
 //
 
 package main
@@ -11,10 +11,11 @@ import (
 	"net/http"
 )
 
+// ----- ResponseWriterWithHooks -----
 //
-// http.ResponseWriter wrapper
+// http.ResponseWriter wrapper with hooks on request completion
 //
-type ResponseWriter struct {
+type ResponseWriterWithHooks struct {
 	http.ResponseWriter // Underlying http.ResponseWriter
 
 	//
@@ -45,14 +46,14 @@ type ResponseWriter struct {
 	skipBody    bool // Skip the body
 }
 
-var _ = http.ResponseWriter(&ResponseWriter{})
-var _ = http.Hijacker(&ResponseWriter{})
-var _ = http.Flusher(&ResponseWriter{})
+var _ = http.ResponseWriter(&ResponseWriterWithHooks{})
+var _ = http.Hijacker(&ResponseWriterWithHooks{})
+var _ = http.Flusher(&ResponseWriterWithHooks{})
 
 //
 // Hijack a connection
 //
-func (w *ResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
+func (w *ResponseWriterWithHooks) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if h, ok := w.ResponseWriter.(http.Hijacker); ok {
 		return h.Hijack()
 	} else {
@@ -63,7 +64,7 @@ func (w *ResponseWriter) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 //
 // Send any buffered data to the client
 //
-func (w *ResponseWriter) Flush() {
+func (w *ResponseWriterWithHooks) Flush() {
 	if f, ok := w.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}
@@ -72,7 +73,7 @@ func (w *ResponseWriter) Flush() {
 //
 // Write response header
 //
-func (w *ResponseWriter) WriteHeader(status int) {
+func (w *ResponseWriterWithHooks) WriteHeader(status int) {
 	w.wroteHeader = true
 
 	var data []byte
@@ -97,7 +98,7 @@ func (w *ResponseWriter) WriteHeader(status int) {
 //
 // Write response data
 //
-func (w *ResponseWriter) Write(data []byte) (int, error) {
+func (w *ResponseWriterWithHooks) Write(data []byte) (int, error) {
 	if !w.wroteHeader {
 		w.WriteHeader(http.StatusOK)
 	}

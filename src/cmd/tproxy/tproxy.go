@@ -269,7 +269,7 @@ func (proxy *Tproxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) 
 		proxy.httpOnSuccess(w, r, status)
 	}
 
-	w = &ResponseWriter{
+	w = &ResponseWriterWithHooks{
 		ResponseWriter: w,
 		OnError:        proxy.httpOnError,
 		OnSuccess:      onsuccess,
@@ -363,7 +363,7 @@ func (proxy *Tproxy) httpError(w http.ResponseWriter, status int, err error) {
 }
 
 //
-// ResponseWriter.OnError hook
+// ResponseWriterWithHooks.OnError hook
 //
 func (proxy *Tproxy) httpOnError(w http.ResponseWriter, status int) []byte {
 	contentType, content := proxy.httpFormatError(status, nil)
@@ -373,7 +373,7 @@ func (proxy *Tproxy) httpOnError(w http.ResponseWriter, status int) []byte {
 }
 
 //
-// ResponseWriter.OnSuccess hook
+// ResponseWriterWithHooks.OnSuccess hook
 //
 func (proxy *Tproxy) httpOnSuccess(w http.ResponseWriter,
 	r *http.Request, status int) {
