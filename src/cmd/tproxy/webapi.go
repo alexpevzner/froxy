@@ -32,11 +32,22 @@ func NewWebAPI(tproxy *Tproxy) *WebAPI {
 		mux:    http.NewServeMux(),
 	}
 
-	webapi.mux.HandleFunc("/api/server", webapi.handleServer)
-	webapi.mux.HandleFunc("/api/sites", webapi.handleSites)
-	webapi.mux.HandleFunc("/api/state", webapi.handleState)
-	webapi.mux.HandleFunc("/api/counters", webapi.handleCounters)
-	webapi.mux.HandleFunc("/api/keys", webapi.handleKeys)
+	handlers := []struct {
+		path    string
+		handler func(w http.ResponseWriter, r *http.Request)
+		event   Event
+	}{
+		{"/api/server", webapi.handleServer, EventServerParamsChanged},
+		{"/api/sites", webapi.handleSites, EventSitesChanged},
+		{"/api/state", webapi.handleState, EventConnStateChanged},
+		{"/api/counters", webapi.handleCounters, EventCountersChanged},
+		{"/api/keys", webapi.handleKeys, EventKeysChanged},
+	}
+
+	for _, h := range handlers {
+		webapi.mux.Handle(h.path, webapi.handleWithPoll(h.handler, h.event))
+	}
+
 	webapi.mux.HandleFunc("/api/shutdown", webapi.handleShutdown)
 
 	return webapi
@@ -121,9 +132,7 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 
-		webapi.tproxy.Debug("host=%s", host)
 		host = IDNEncode(host)
-		webapi.tproxy.Debug("host decoded=%s", host)
 	}
 
 	// Handle request
@@ -159,7 +168,7 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 //
 // Handle /api/state requests
 //
-// GET /api/state[?prev] - get connectivity state
+// GET /api/state - get connectivity state
 //
 // Returns the following JSON object:
 //     {
@@ -237,6 +246,7 @@ func (webapi *WebAPI) handleKeys(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
 		webapi.replyJSON(w, webapi.tproxy.GetKeys())
+		return
 
 	case "PUT":
 		err = webapi.tproxy.KeyMod(id, &info)
@@ -245,7 +255,6 @@ func (webapi *WebAPI) handleKeys(w http.ResponseWriter, r *http.Request) {
 		err = webapi.tproxy.KeyDel(id)
 
 	case "POST":
-		webapi.tproxy.Debug("rq=%#v", info)
 		_, err = webapi.tproxy.KeyGen(&info)
 	}
 
@@ -312,6 +321,60 @@ func (webapi *WebAPI) handleShutdown(w http.ResponseWriter, r *http.Request) {
 }
 
 //
+// handleWithPoll() converts a handler function into http.HandlerFunc
+// with added long-poll for data change:
+//   1) For the returned data, a crypto hash of its content is
+//      calculated and returned as "Tproxy-Tag" header
+//   2) If request contains a "Tproxy-Tag" header, the handler
+//      waits until calculated hash of response content becomes
+//      different from hash in request
+//
+func (webapi *WebAPI) handleWithPoll(
+	handler func(w http.ResponseWriter, r *http.Request),
+	event Event) http.HandlerFunc {
+
+	wrapper := func(w http.ResponseWriter, r *http.Request) {
+		if r.Method != "GET" {
+			handler(w, r)
+			return
+		}
+
+		// Prepare to polling for data change
+		rqTag := r.Header.Get("Tproxy-Tag")
+		var events <-chan Event
+		if rqTag != "" {
+			events = webapi.tproxy.Sub(event)
+			defer webapi.tproxy.Unsub(events)
+		}
+
+		// Serve the request
+	AGAIN:
+		w2 := &ResponseWriterWithBuffer{}
+		handler(w2, r)
+
+		if w2.Status/100 == 2 {
+			rspTag := fmt.Sprintf("%x", md5.Sum(w2.Bytes()))
+
+			if events != nil && rqTag == rspTag {
+				select {
+				case <-events:
+					goto AGAIN
+				case <-r.Context().Done():
+					return
+				}
+			}
+
+			w2.Header().Set("Tproxy-Tag", rspTag)
+		}
+
+		w2.Send(w)
+
+	}
+
+	return http.HandlerFunc(wrapper)
+}
+
+//
 // Handle HTTP request
 //
 // For the GET requests it automatically implements a long polling
@@ -323,43 +386,7 @@ func (webapi *WebAPI) handleShutdown(w http.ResponseWriter, r *http.Request) {
 //      different from hash in request
 //
 func (webapi *WebAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	if r.Method != "GET" {
-		webapi.mux.ServeHTTP(w, r)
-	}
-
-	// Prepare to polling for data change
-	rqTag := r.Header.Get("Tproxy-Tag")
-	var events <-chan Event
-	if rqTag != "" {
-		//
-		// FIXME - be more specific on events subscription,
-		// depending on requested resource
-		//
-		events = webapi.tproxy.Sub()
-		defer webapi.tproxy.Unsub(events)
-	}
-
-	// Serve the request
-AGAIN:
-	w2 := &ResponseWriterWithBuffer{}
-	webapi.mux.ServeHTTP(w2, r)
-
-	if w2.Status/100 == 2 {
-		rspTag := fmt.Sprintf("%x", md5.Sum(w2.Bytes()))
-
-		if events != nil && rqTag == rspTag {
-			select {
-			case <-events:
-				goto AGAIN
-			case <-r.Context().Done():
-				return
-			}
-		}
-
-		w2.Header().Set("Tproxy-Tag", rspTag)
-	}
-
-	w2.Send(w)
+	webapi.mux.ServeHTTP(w, r)
 }
 
 //

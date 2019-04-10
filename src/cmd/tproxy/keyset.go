@@ -105,10 +105,6 @@ func (set *KeySet) GetKeys() []KeyInfo {
 			(i1.Date.Equal(i2.Date) && i1.Id < i2.Id)
 	})
 
-	for _, info := range infos {
-		set.env.Debug(" > %s", info.Id)
-	}
-
 	return infos
 }
 
