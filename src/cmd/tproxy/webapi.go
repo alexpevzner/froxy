@@ -178,23 +178,10 @@ func (webapi *WebAPI) handleState(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	events := webapi.tproxy.Sub(EventConnStateChanged)
-	defer webapi.tproxy.Unsub(events)
-
-AGAIN:
 	state, info := webapi.tproxy.GetConnState()
 	stateName, stateInfo := state.Strings()
 	if info == "" {
 		info = stateInfo
-	}
-
-	if stateName == r.URL.RawQuery {
-		select {
-		case <-events:
-			goto AGAIN
-		case <-r.Context().Done():
-			return
-		}
 	}
 
 	data := struct {
@@ -282,22 +269,6 @@ func (webapi *WebAPI) handleCounters(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		webapi.replyError(w, r, http.StatusMethodNotAllowed, nil)
 		return
-	}
-
-	events := webapi.tproxy.Sub(EventCountersChanged)
-	defer webapi.tproxy.Unsub(events)
-
-AGAIN:
-	counters := webapi.tproxy.Counters
-	tag := fmt.Sprintf("%d", counters.Tag)
-
-	if tag == r.URL.RawQuery {
-		select {
-		case <-events:
-			goto AGAIN
-		case <-r.Context().Done():
-			return
-		}
 	}
 
 	webapi.replyJSON(w, &webapi.tproxy.Counters)

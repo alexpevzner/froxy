@@ -120,7 +120,6 @@ func (proxy *Tproxy) SetServerParams(s ServerParams) {
 //
 func (proxy *Tproxy) AddCounter(cnt *int32, val int32) {
 	atomic.AddInt32(cnt, val)
-	atomic.AddUint64(&proxy.Counters.Tag, 1)
 	proxy.Raise(EventCountersChanged)
 }
 
