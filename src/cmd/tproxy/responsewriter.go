@@ -6,6 +6,7 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"errors"
 	"net"
 	"net/http"
@@ -108,4 +109,58 @@ func (w *ResponseWriterWithHooks) Write(data []byte) (int, error) {
 	}
 
 	return w.ResponseWriter.Write(data)
+}
+
+// ----- ResponseWriterWithBuffer -----
+//
+// This ResponseWriter saves response bytes into its own
+// buffer instead of sending them to client
+//
+type ResponseWriterWithBuffer struct {
+	bytes.Buffer             // Underlying buffer
+	Status       int         // Response HTTP status
+	header       http.Header // Response header
+	wroteHeader  bool        // Header was written
+}
+
+var _ = http.ResponseWriter(&ResponseWriterWithBuffer{})
+
+//
+// Get response header
+//
+func (w *ResponseWriterWithBuffer) Header() http.Header {
+	if w.header == nil {
+		w.header = make(http.Header)
+	}
+	return w.header
+}
+
+//
+// Write response header
+//
+func (w *ResponseWriterWithBuffer) WriteHeader(status int) {
+	if !w.wroteHeader {
+		w.wroteHeader = true
+		w.Status = status
+	}
+}
+
+//
+// Write response data
+//
+func (w *ResponseWriterWithBuffer) Write(data []byte) (int, error) {
+	if !w.wroteHeader {
+		w.WriteHeader(http.StatusOK)
+	}
+
+	return w.Buffer.Write(data)
+}
+
+//
+// Send collected response to http.ResponseWriter
+//
+func (w *ResponseWriterWithBuffer) Send(to http.ResponseWriter) {
+	httpCopyHeaders(to.Header(), w.Header())
+	to.WriteHeader(w.Status)
+	to.Write(w.Bytes())
 }

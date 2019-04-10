@@ -5,6 +5,7 @@
 package main
 
 import (
+	"crypto/md5"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
@@ -342,8 +343,48 @@ func (webapi *WebAPI) handleShutdown(w http.ResponseWriter, r *http.Request) {
 //
 // Handle HTTP request
 //
+// For the GET requests it automatically implements a long polling
+// for data change:
+//   1) For the returned data, a crypto hash of its content is
+//      calculated and returned as "Tproxy-Tag" header
+//   2) If request contains a "Tproxy-Tag" header, the handler
+//      waits until calculated hash of response content becomes
+//      different from hash in request
+//
 func (webapi *WebAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	webapi.mux.ServeHTTP(w, r)
+	if r.Method != "GET" {
+		webapi.mux.ServeHTTP(w, r)
+	}
+
+	// Prepare to polling for data change
+	rqTag := r.Header.Get("Tproxy-Tag")
+	var events <-chan Event
+	if rqTag != "" {
+		events = webapi.tproxy.Sub(EventConnStateChanged)
+		defer webapi.tproxy.Unsub(events)
+	}
+
+	// Serve the request
+AGAIN:
+	w2 := &ResponseWriterWithBuffer{}
+	webapi.mux.ServeHTTP(w2, r)
+
+	if w2.Status/100 == 2 {
+		rspTag := fmt.Sprintf("%x", md5.Sum(w2.Bytes()))
+
+		if events != nil && rqTag == rspTag {
+			select {
+			case <-events:
+				goto AGAIN
+			case <-r.Context().Done():
+				return
+			}
+		}
+
+		w2.Header().Set("Tproxy-Tag", rspTag)
+	}
+
+	w2.Send(w)
 }
 
 //

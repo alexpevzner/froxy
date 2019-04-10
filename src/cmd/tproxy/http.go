@@ -28,10 +28,8 @@ var httpHopByHopHeaders = []string{
 // Copy HTTP headers
 //
 func httpCopyHeaders(dst, src http.Header) {
-	for k, vv := range src {
-		for _, v := range vv {
-			dst.Add(k, v)
-		}
+	for k, v := range src {
+		dst[k] = v
 	}
 }
 
