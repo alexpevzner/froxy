@@ -30,7 +30,6 @@ function GenKey () {
 
     rq.OnSuccess = function () {
         ResetGenKeyParameters();
-        ReloadTable();
     };
 }
 
@@ -48,8 +47,7 @@ function DeleteKey (keyid) {
     }
     */
 
-    var rq = tproxy.DeleteKey(keyid);
-    rq.OnSuccess = ReloadTable; 
+    tproxy.DeleteKey(keyid);
 }
 
 //
@@ -232,21 +230,13 @@ function UpdateKeys (keys) {
     }
 }
 
-//
-// Reload table of keys
-//
-function ReloadTable () {
-    var rq = tproxy.GetKeys();
-    rq.OnSuccess = UpdateKeys;
-}
-
 // ----- Initialization -----
 //
 // Page initialization
 //
 function init() {
     ResetGenKeyParameters();
-    ReloadTable();
+    tproxy.BgPoll("/api/keys", UpdateKeys);
 }
 
 

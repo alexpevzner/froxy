@@ -21,9 +21,8 @@ function AddSite () {
     };
 
     if (params.host) {
-        var rq = tproxy.SetSite(params.host, params);
+        tproxy.SetSite(params.host, params);
 
-        rq.OnSuccess = ReloadTable;
         tproxy.UiSetInput("add.host", "");
         tproxy.UiSetInput("add.rec", true);
         tproxy.UiSetInput("add.block", false);
@@ -37,7 +36,6 @@ function TableButtonClicked (button, rownum) {
     console.log("click", button, rownum);
     var row = table[rownum];
     var oldhost = row.getAttribute("host");
-    var rq;
 
     switch (button) {
     case "update":
@@ -47,15 +45,13 @@ function TableButtonClicked (button, rownum) {
             block: tproxy.UiGetInput(rownum + "." + "block")
         };
 
-        rq = tproxy.SetSite(oldhost, params);
+        tproxy.SetSite(oldhost, params);
         break;
 
     case "del":
-        rq = tproxy.DelSite(oldhost);
+        tproxy.DelSite(oldhost);
         break;
     }
-
-    rq.OnSuccess = ReloadTable;
 }
 
 //
@@ -111,18 +107,10 @@ function UpdateTable (sites) {
 }
 
 //
-// Reload table of sites
-//
-function ReloadTable () {
-    var rq = tproxy.GetSites();
-    rq.OnSuccess = UpdateTable;
-}
-
-//
 // Page initialization
 //
 function init () {
-    ReloadTable();
+    tproxy.BgPoll("/api/sites", UpdateTable);
 }
 
 init();
