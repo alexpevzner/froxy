@@ -9,6 +9,7 @@
 // Saved server parameters
 //
 var server_params = {};
+var haskeys = false;
 
 // ----- Server parameters -----
 //
@@ -27,34 +28,53 @@ function SubmitServerParams () {
 // Called when "Use SSH keys" clicked
 //
 function UseKeysClicked () {
-    var password = document.getElementById("password");
-    password.disabled = server_params.haskeys && tproxy.UiGetInput("usekey");
+    UpdateConditionallyDisabled();
 }
+
+//
+// Poll callback for server parameters
+//
+function PollServerParams (data) {
+    server_params = data;
+
+    tproxy.UiSetInput("addr", server_params.addr);
+    tproxy.UiSetInput("login", server_params.login);
+    tproxy.UiSetInput("password", server_params.password);
+    tproxy.UiSetInput("usekey", server_params.usekey);
+
+    UpdateConditionallyDisabled();
+}
+
+//
+// Poll callbacks for keys
+//
+function PollKeys (data) {
+    haskeys = data.length > 0;
+    UpdateConditionallyDisabled();
+}
+
+//
+// Update conditionally disabled fields
+//
+function UpdateConditionallyDisabled () {
+    var password = document.getElementById("password");
+    var usekey = document.getElementById("usekey");
+    var usekey_comment = document.getElementById("usekey.comment");
+
+    password.disabled = haskeys && tproxy.UiGetInput("usekey");
+    usekey.disabled = !haskeys;
+    usekey_comment.hidden = haskeys;
+}
+
 
 // ----- Initialization -----
 //
 // Page initialization
 //
 function init() {
-    var rq = tproxy.GetServerParams();
-    rq.OnSuccess = function (data) {
-        server_params = data;
-
-        tproxy.UiSetInput("addr", data.addr);
-        tproxy.UiSetInput("login", data.login);
-        tproxy.UiSetInput("password", data.password);
-        tproxy.UiSetInput("usekey", data.usekey);
-
-        var password = document.getElementById("password");
-        var usekey = document.getElementById("usekey");
-        var usekey_comment = document.getElementById("usekey.comment");
-
-        password.disabled = data.haskeys && data.usekey;
-        usekey.disabled = !data.haskeys;
-        usekey_comment.hidden = data.haskeys;
-    };
+    tproxy.BgPoll("/api/server", PollServerParams);
+    tproxy.BgPoll("/api/keys", PollKeys);
 }
-
 
 init();
 
