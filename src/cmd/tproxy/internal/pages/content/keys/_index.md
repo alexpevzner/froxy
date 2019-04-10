@@ -51,8 +51,10 @@ title = "SSH Keys Management"
 			</tr>
 			<tr>
 			    <td>Comment:</td>
-			    <td><input id="add.comment" type="text"/></td>
-			    <td><input id="add.sendcomment" type="button" value="Update"/></td>
+			    <td>
+			        <input id="add.comment" type="text"/>
+				<input id="add.sendcomment" type="button" value="Update"/>
+			    </td>
 			</tr>
 			<tr>
 			    <td>Key Type:</td>
