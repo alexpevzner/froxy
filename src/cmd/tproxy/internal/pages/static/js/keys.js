@@ -187,6 +187,7 @@ function UpdateKeys (keys) {
 
     // Update rows
     for (var n = 0; n < table.length; n ++) {
+        tproxy.UiSetInput(n + ".keytag", "Key " + (n + 1));
         tproxy.UiSetInput(n + ".enable", keys[n].enabled);
         tproxy.UiSetInput(n + ".delete", false);
         document.getElementById(n + ".confirm-delete").hidden = true;
@@ -217,11 +218,6 @@ function UpdateKeys (keys) {
             fmtNum(date.getSeconds());
 
         tproxy.UiSetInput(n + ".ctime", stddate);
-
-        elm = document.getElementById(n + ".hr");
-        if (elm) {
-            elm.hidden = n == 0;
-        }
     }
 }
 

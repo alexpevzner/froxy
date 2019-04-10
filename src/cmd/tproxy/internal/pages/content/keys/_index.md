@@ -35,79 +35,78 @@ title = "SSH Keys Management"
 <table>
     <tbody id="tbody">
         <tr id="template" hidden><td>
-            <table>
-                <tbody>
-		    <tr id="add.hr" hidden>
-		        <td colspan=2><hr></td>
-		    </tr>
-                    <tr>
-                        <td><div style="padding-right:3em">Created:</div></td>
-                        <td><div id="add.ctime"/></td>
-                    </tr>
-                    <tr>
-                        <td>Comment:</td>
-			<td><input id="add.comment" type="text"/></td>
-                        <td><input id="add.sendcomment" type="button" value="Update"/></td>
-                    </tr>
-                    <tr>
-                        <td>Key Type:</td>
-			<td><div id="add.type"/></td>
-                    </tr>
-		</tbody>
-	    </table>
+	    <fieldset><legend><div id="add.keytag"></div></legend>
 		<table>
 		    <tbody>
-		    <tr>
-		        <td>
-			    <details>
-			    	<summary>**Fingerprints**</summary>
+			<tr>
+			    <td><div style="padding-right:3em">Created:</div></td>
+			    <td><div id="add.ctime"/></td>
+			</tr>
+			<tr>
+			    <td>Comment:</td>
+			    <td><input id="add.comment" type="text"/></td>
+			    <td><input id="add.sendcomment" type="button" value="Update"/></td>
+			</tr>
+			<tr>
+			    <td>Key Type:</td>
+			    <td><div id="add.type"/></td>
+			</tr>
+		    </tbody>
+		</table>
+		    <table>
+			<tbody>
+			<tr>
+			    <td>
+				<details>
+				    <summary>**Fingerprints**</summary>
+					<table>
+					    <tbody>
+						<tr>
+						    <td>SHA-256</td><td>
+						    <div id="add.sha256"/></td>
+						</tr>
+						<tr>
+						    <td>MD5</td><td>
+						    <div id="add.md5"/></td>
+						</tr>
+					    </tbody>
+					</table>
+				</details>
+			    </td>
+			</tr>
+			<tr>
+			    <td>
+				<details>
+				    <summary>**Public Key**</summary>
 				    <table>
-				        <tbody>
-					    <tr>
-					        <td>SHA-256</td><td>
-						<div id="add.sha256"/></td>
-					    </tr>
-					    <tr>
-					        <td>MD5</td><td>
-						<div id="add.md5"/></td>
-					    </tr>
+					<tbody>
+					    <tr><td>
+						Add it into the the **$HOME/.ssh/authorized_keys** file at the server:
+					    </td></tr>
+					    <tr><td>
+						<textarea id="add.pubkey" style="overflow:auto;resize:none" rows=3 cols=70 readonly></textarea>
+					    </td></tr>
+					    <tr><td>
+						<input id="add.pub-copy" type="button" value="Copy to Clipboard"/>
+						<input id="add.pub-save" type="button" value="Download As a File"/>
+					    </td></tr>
 					</tbody>
 				    </table>
-			    </details>
-			</td>
-		    </tr>
-                    <tr>
-                        <td>
-			    <details>
-			        <summary>**Public Key**</summary>
-				<table>
-				    <tbody>
-					<tr><td>
-					    Add it into the the **$HOME/.ssh/authorized_keys** file at the server:
-					</td></tr>
-					<tr><td>
-					    <textarea id="add.pubkey" style="overflow:auto;resize:none" rows=3 cols=70 readonly></textarea>
-					</td></tr>
-					<tr><td>
-					    <input id="add.pub-copy" type="button" value="Copy to Clipboard"/>
-					    <input id="add.pub-save" type="button" value="Download As a File"/>
-					</td></tr>
-				    </tbody>
-				</table>
-			    </details>
-			</td>
-                    </tr>
-                    <tr>
-                        <td>
-                            <input id="add.enable" type="checkbox"/>
-                            Enable this key
-                            <input id="add.delete" type="checkbox"/>
-			    Delete this Key
-                            <input id="add.confirm-delete" type="button" value="Confirm Delete" hidden/>
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
+				</details>
+			    </td>
+			</tr>
+			<tr>
+			    <td>
+				<input id="add.enable" type="checkbox"/>
+				Enable this key
+				<input id="add.delete" type="checkbox"/>
+				Delete this Key
+				<input id="add.confirm-delete" type="button" value="Confirm Delete" hidden/>
+			    </td>
+			</tr>
+		    </tbody>
+		</table>
+	    </fieldset>
         </td></tr>
     </tbody>
 </table>
