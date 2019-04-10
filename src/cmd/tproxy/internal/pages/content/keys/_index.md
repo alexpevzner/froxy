@@ -39,6 +39,13 @@ title = "SSH Keys Management"
 		<table>
 		    <tbody>
 			<tr>
+			    <td colspan=3>
+				<div style="overflow:hidden;height:0em">
+				    <textarea style="height:0;border:none;border-spacing:0" rows=1 cols=72 readonly></textarea>
+				</div>
+			    </td>
+			</tr>
+			<tr>
 			    <td><div style="padding-right:3em">Created:</div></td>
 			    <td><div id="add.ctime"/></td>
 			</tr>
