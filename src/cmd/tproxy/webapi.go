@@ -78,6 +78,7 @@ func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 		}
 
 		webapi.tproxy.SetServerParams((ServerParams)(data))
+		webapi.tproxy.Raise(EventServerParamsChanged)
 		return
 
 	FAIL:
@@ -135,23 +136,20 @@ func (webapi *WebAPI) handleSites(w http.ResponseWriter, r *http.Request) {
 		body, err := ioutil.ReadAll(r.Body)
 		var data IDNSiteParams
 
-		if err != nil {
-			goto FAIL
+		if err == nil {
+			err = json.Unmarshal(body, &data)
 		}
 
-		err = json.Unmarshal(body, &data)
-		if err != nil {
-			goto FAIL
+		if err == nil {
+			webapi.tproxy.SetSite(host, SiteParams(data))
+			webapi.tproxy.Raise(EventSitesChanged)
+		} else {
+			webapi.replyError(w, r, http.StatusInternalServerError, err)
 		}
-
-		webapi.tproxy.SetSite(host, SiteParams(data))
-		return
-
-	FAIL:
-		webapi.replyError(w, r, http.StatusInternalServerError, err)
 
 	case "DEL":
 		webapi.tproxy.DelSite(host)
+		webapi.tproxy.Raise(EventSitesChanged)
 
 	default:
 		webapi.replyError(w, r, http.StatusMethodNotAllowed, nil)
@@ -253,6 +251,8 @@ func (webapi *WebAPI) handleKeys(w http.ResponseWriter, r *http.Request) {
 
 	if err != nil {
 		webapi.replyError(w, r, http.StatusInternalServerError, err)
+	} else {
+		webapi.tproxy.Raise(EventKeysChanged)
 	}
 }
 
@@ -331,7 +331,11 @@ func (webapi *WebAPI) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	rqTag := r.Header.Get("Tproxy-Tag")
 	var events <-chan Event
 	if rqTag != "" {
-		events = webapi.tproxy.Sub(EventConnStateChanged)
+		//
+		// FIXME - be more specific on events subscription,
+		// depending on requested resource
+		//
+		events = webapi.tproxy.Sub()
 		defer webapi.tproxy.Unsub(events)
 	}
 

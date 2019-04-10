@@ -10,6 +10,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"sort"
 	"sync"
 	"time"
 
@@ -94,6 +95,18 @@ func (set *KeySet) GetKeys() []KeyInfo {
 	infos := []KeyInfo{}
 	for _, info := range set.infos {
 		infos = append(infos, *info)
+	}
+
+	sort.Slice(infos, func(i, j int) bool {
+		i1 := infos[i]
+		i2 := infos[j]
+
+		return i1.Date.Before(i2.Date) ||
+			(i1.Date.Equal(i2.Date) && i1.Id < i2.Id)
+	})
+
+	for _, info := range infos {
+		set.env.Debug(" > %s", info.Id)
 	}
 
 	return infos

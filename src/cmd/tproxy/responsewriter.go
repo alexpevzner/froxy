@@ -160,6 +160,10 @@ func (w *ResponseWriterWithBuffer) Write(data []byte) (int, error) {
 // Send collected response to http.ResponseWriter
 //
 func (w *ResponseWriterWithBuffer) Send(to http.ResponseWriter) {
+	if w.Status == 0 {
+		w.WriteHeader(http.StatusOK)
+	}
+
 	httpCopyHeaders(to.Header(), w.Header())
 	to.WriteHeader(w.Status)
 	to.Write(w.Bytes())

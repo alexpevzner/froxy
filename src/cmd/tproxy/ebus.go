@@ -19,6 +19,9 @@ const (
 	EventStartup = Event(iota)
 	EventConnStateChanged
 	EventCountersChanged
+	EventServerParamsChanged
+	EventSitesChanged
+	EventKeysChanged
 	EventShutdownRequested
 )
 
@@ -33,6 +36,12 @@ func (e Event) String() string {
 		return "EventConnStateChanged"
 	case EventCountersChanged:
 		return "EventCountersChanged"
+	case EventServerParamsChanged:
+		return "EventServerParamsChanged"
+	case EventSitesChanged:
+		return "EventSitesChanged"
+	case EventKeysChanged:
+		return "EventKeysChanged"
 	case EventShutdownRequested:
 		return "EventShutdownRequested"
 	}
