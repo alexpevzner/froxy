@@ -27,8 +27,7 @@ function GetCountersCallback (data) {
 // Page initialization
 //
 function init() {
-    var rq = tproxy.GetCounters();
-    rq.OnSuccess = GetCountersCallback;
+    tproxy.BgPoll("/api/counters", GetCountersCallback);
 }
 
 init();

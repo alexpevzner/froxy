@@ -77,6 +77,14 @@ tproxy._.http_request = function(method, query, data) {
 
     rq._xrq.open(method, query, true);
 
+    // Add a couple of methods
+    rq.SetRequestHeader = function (name, value) {
+        rq._xrq.setRequestHeader(name, value);
+    };
+    rq.GetResponseHeader = function (name) {
+        return rq._xrq.getResponseHeader(name);
+    };
+
     // Setup event handling
     rq._xrq.onreadystatechange = function () {
         if (rq._xrq.readyState == 4) {
@@ -136,10 +144,10 @@ tproxy._.http_request = function(method, query, data) {
 
     // Submit the request
     if (data) {
-        rq._xrq.send(JSON.stringify(data));
-    } else {
-        rq._xrq.send();
+        data = JSON.stringify(data);
     }
+
+    setTimeout(function() { rq._xrq.send(data); }, 0);
 
     return rq;
 };
@@ -251,12 +259,8 @@ tproxy.DelSite  = function(host) {
 // tag, if defined, is a last known counters tag. If it is provided,
 // request will block until counters change
 //
-tproxy.GetCounters = function (tag) {
+tproxy.GetCounters = function () {
     var q = "/api/counters";
-
-    if (tag) {
-        q += "?" + tag;
-    }
 
     return tproxy._.http_request("GET", q);
 };
@@ -425,16 +429,12 @@ tproxy.UiSetStatus = function(color, text) {
 
 // ----- Background activities -----
 //
-// Start status monitoring
+// Update status
 //
-tproxy.BgStartStatus = function(laststate) {
-    var q = "/api/state";
-    if (laststate) {
-        q += "?" + laststate;
-    }
-
-    var rq = tproxy._.http_request("GET", q);
-    rq.OnSuccess = function (state) {
+// THIS IS INTERNAL FUNCTION, DON'T CALL IT DIRECTLY
+//
+tproxy._.BgStartStatus = function () {
+    var OnSuccess = function (state) {
         var color = "black";
         switch (state.state) {
         case "noconfig":    color = "olive"; break;
@@ -443,26 +443,99 @@ tproxy.BgStartStatus = function(laststate) {
         }
 
         tproxy.UiSetStatus(color, state.info);
-        tproxy.BgStartStatus(state.state);
     };
 
-    rq.OnError = function () {
+    var OnError = function () {
         tproxy.UiSetStatus("red", "TProxy not responding");
-        tproxy.BgReloadWhenReady();
+        tproxy._.BgReloadWhenReady();
     };
+
+    tproxy.BgPoll("/api/state", OnSuccess, OnError);
 };
 
 //
 // Monitor TProxy state and reload current page when it becomes ready
 //
-tproxy.BgReloadWhenReady = function() {
+// THIS IS INTERNAL FUNCTION, DON'T CALL IT DIRECTLY
+//
+tproxy._.BgReloadWhenReady = function() {
     var rq = tproxy._.http_request("GET", "/api/state");
     rq.OnSuccess = function () {
         location.reload();
     };
     rq.OnError = function () {
-        setTimeout(tproxy.BgReloadWhenReady, 1000);
+        setTimeout(tproxy._.BgReloadWhenReady, 1000);
     };
+};
+
+//
+// Poll particular WebApi resource for change
+//
+tproxy.BgPoll = function (url, OnSuccess, OnError) {
+    // Create poller on demand
+    if (!tproxy._.poll) {
+        tproxy._.poll = {};
+    }
+
+    var poll = tproxy._.poll[url];
+    if (!poll) {
+        poll = tproxy._.poll[url] = {
+            tag:"",
+            OnSuccess: [],
+            OnError: []
+        };
+
+        var rq = tproxy._.http_request("GET", url);
+        rq.OnSuccess = tproxy._.PollOnSuccess.bind(null, rq, url);
+        rq.OnError = tproxy._.PollOnError.bind(null, rq, url);
+    }
+
+    if (OnSuccess) {
+        poll.OnSuccess.push(OnSuccess);
+    }
+
+    if (OnError) {
+        poll.OnError.push(OnError);
+    }
+};
+
+//
+// Poll OnSuccess callback
+//
+// THIS IS INTERNAL FUNCTION, DON'T CALL IT DIRECTLY
+//
+tproxy._.PollOnSuccess = function (rq, url, data) {
+    var poll = tproxy._.poll[url];
+
+    // Reschedule request
+    poll.tag = rq.GetResponseHeader("Tproxy-Tag");
+    rq = tproxy._.http_request("GET", url);
+    if (poll.tag) {
+        rq.SetRequestHeader("Tproxy-Tag", poll.tag);
+    }
+    rq.OnSuccess = tproxy._.PollOnSuccess.bind(null, rq, url);
+    rq.OnError = tproxy._.PollOnError.bind(null, rq, url);
+
+    // Notify subscribers
+    var OnSuccess = poll.OnSuccess;
+    for (var i = 0; i < OnSuccess.length; i ++) {
+        OnSuccess[i](data);
+    }
+};
+
+//
+// Poll OnError callback
+//
+// THIS IS INTERNAL FUNCTION, DON'T CALL IT DIRECTLY
+//
+tproxy._.PollOnError = function (rq, url, data) {
+    var poll = tproxy._.poll[url];
+
+    // Notify subscribers
+    var OnError = poll.OnError;
+    for (var i = 0; i < OnError.length; i ++) {
+        OnError[i](data);
+    }
 };
 
 // ----- Initialization -----
@@ -479,7 +552,7 @@ tproxy._.init = function() {
     link.media = "all";
     head.appendChild(link);
 
-    tproxy.BgStartStatus();
+    tproxy._.BgStartStatus();
 };
 
 tproxy._.init();
