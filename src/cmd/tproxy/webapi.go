@@ -62,17 +62,7 @@ func NewWebAPI(tproxy *Tproxy) *WebAPI {
 func (webapi *WebAPI) handleServer(w http.ResponseWriter, r *http.Request) {
 	switch r.Method {
 	case "GET":
-		conf := struct {
-			// Server parameters
-			IDNServerParams
-
-			// Some additional info to simplify life of the
-			// Configuration page javascript
-			HasKeys bool `json:"haskeys"` // User has SSH keys
-		}{
-			IDNServerParams: (IDNServerParams)(webapi.tproxy.GetServerParams()),
-			HasKeys:         webapi.tproxy.HasKeys(),
-		}
+		conf := IDNServerParams(webapi.tproxy.GetServerParams())
 		webapi.replyJSON(w, conf)
 
 	case "PUT":
