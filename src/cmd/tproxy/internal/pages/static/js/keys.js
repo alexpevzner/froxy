@@ -220,7 +220,7 @@ function UpdateKeys (keys) {
 
         elm = document.getElementById(n + ".hr");
         if (elm) {
-            elm.hidden = n == (table.length - 1);
+            elm.hidden = n == 0;
         }
     }
 }

@@ -37,35 +37,47 @@ title = "SSH Keys Management"
         <tr id="template" hidden><td>
             <table>
                 <tbody>
+		    <tr id="add.hr" hidden>
+		        <td colspan=2><hr></td>
+		    </tr>
                     <tr>
-                        <td>
-			    Created:</td><td><div id="add.ctime"/>
-                        </td>
+                        <td><div style="padding-right:3em">Created:</div></td>
+                        <td><div id="add.ctime"/></td>
                     </tr>
                     <tr>
-                        <td>
-			    Comment:</td><td><input id="add.comment" type="text"/>
-                            <input id="add.sendcomment" type="button" value="Update"/>
-                        </td>
+                        <td>Comment:</td>
+			<td><input id="add.comment" type="text"/></td>
+                        <td><input id="add.sendcomment" type="button" value="Update"/></td>
                     </tr>
                     <tr>
-                        <td>Key Type:</td><td><div id="add.type"/></td>
+                        <td>Key Type:</td>
+			<td><div id="add.type"/></td>
                     </tr>
+		</tbody>
+	    </table>
+		<table>
+		    <tbody>
 		    <tr>
-		        <td colspan=3>
+		        <td>
 			    <details>
 			    	<summary>**Fingerprints**</summary>
 				    <table>
 				        <tbody>
-					    <tr><td>SHA-256</td><td><div id="add.sha256"/></td>
-					    <tr><td>MD5</td><td><div id="add.md5"/></td>
+					    <tr>
+					        <td>SHA-256</td><td>
+						<div id="add.sha256"/></td>
+					    </tr>
+					    <tr>
+					        <td>MD5</td><td>
+						<div id="add.md5"/></td>
+					    </tr>
 					</tbody>
 				    </table>
 			    </details>
 			</td>
 		    </tr>
                     <tr>
-                        <td colspan=3>
+                        <td>
 			    <details>
 			        <summary>**Public Key**</summary>
 				<table>
@@ -74,7 +86,7 @@ title = "SSH Keys Management"
 					    Add it into the the **$HOME/.ssh/authorized_keys** file at the server:
 					</td></tr>
 					<tr><td>
-					    <textarea id="add.pubkey" style="overflow:auto;resize:none" rows=5 cols=70 readonly></textarea>
+					    <textarea id="add.pubkey" style="overflow:auto;resize:none" rows=3 cols=70 readonly></textarea>
 					</td></tr>
 					<tr><td>
 					    <input id="add.pub-copy" type="button" value="Copy to Clipboard"/>
@@ -89,16 +101,11 @@ title = "SSH Keys Management"
                         <td>
                             <input id="add.enable" type="checkbox"/>
                             Enable this key
-                        </td>
-                        <td>
                             <input id="add.delete" type="checkbox"/>
 			    Delete this Key
                             <input id="add.confirm-delete" type="button" value="Confirm Delete" hidden/>
                         </td>
                     </tr>
-		    <tr id="add.hr" hidden>
-		        <td colspan=2><hr></td>
-		    </tr>
                 </tbody>
             </table>
         </td></tr>
