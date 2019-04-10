@@ -5,14 +5,9 @@
 "use strict";
 
 //
-// tproxy.GetCounters callback
+// Poll Counters callback
 //
 function GetCountersCallback (data) {
-    // Resubmit a request
-    var rq = tproxy.GetCounters(data.tag.toString());
-    rq.OnSuccess = GetCountersCallback;
-
-    // Update page
     for (var name in data) {
         if (data.hasOwnProperty(name)) {
             var c = document.getElementById(name);
