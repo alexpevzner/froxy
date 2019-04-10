@@ -139,11 +139,6 @@ function UpdateKeys (keys) {
         nokeys.hidden = !!sz;
     }
 
-    // Sort keys
-    keys.sort(function (a, b) {
-        return a.date.localeCompare(b.date);
-    });
-
     // Resize table
     if (table.length > sz) {
         while(table.length > sz) {
