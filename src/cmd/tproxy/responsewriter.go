@@ -168,3 +168,17 @@ func (w *ResponseWriterWithBuffer) Send(to http.ResponseWriter) {
 	to.WriteHeader(w.Status)
 	to.Write(w.Bytes())
 }
+
+//
+// Reset the ResponseWriterWithBuffer
+//
+func (w *ResponseWriterWithBuffer) Reset() {
+	// Reset all but Buffer and header
+	*w = ResponseWriterWithBuffer{Buffer: w.Buffer, header: w.header}
+
+	// Reset Buffer and header
+	w.Buffer.Reset()
+	for k := range w.header {
+		delete(w.header, k)
+	}
+}
