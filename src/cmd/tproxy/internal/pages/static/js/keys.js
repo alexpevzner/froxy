@@ -24,8 +24,7 @@ function ResetGenKeyParameters () {
 function GenKey () {
     var rq = tproxy.GenKey(
         tproxy.UiGetInput("key-type"),
-        tproxy.UiGetInput("key-comment"),
-        true
+        tproxy.UiGetInput("key-comment")
     );
 
     rq.OnSuccess = function () {
@@ -90,7 +89,7 @@ function PubKeySave (row) {
 // Handle user input from keys table controls
 //
 // Parameters:
-//   input  - input name ("enable", "delete" etc)
+//   input  - input name ("delete", "confirm-delete" etc)
 //   elm    - HTML element event related to
 //   row    - row number
 //
@@ -107,11 +106,9 @@ function TableInputAction (input, elm, row) {
         DeleteKey(keyid);
         break;
 
-    case "enable":
     case "sendcomment":
         tproxy.UpdateKey(
             keyid,
-            tproxy.UiGetInput(row + ".enable"),
             tproxy.UiGetInput(row + ".comment")
         );
         break;
@@ -188,7 +185,6 @@ function UpdateKeys (keys) {
     // Update rows
     for (var n = 0; n < table.length; n ++) {
         tproxy.UiSetInput(n + ".keytag", "Key " + (n + 1));
-        tproxy.UiSetInput(n + ".enable", keys[n].enabled);
         tproxy.UiSetInput(n + ".delete", false);
         document.getElementById(n + ".confirm-delete").hidden = true;
         tproxy.UiSetInput(n + ".comment", keys[n].comment);

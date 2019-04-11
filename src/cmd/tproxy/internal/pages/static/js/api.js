@@ -276,22 +276,22 @@ tproxy.GetKeys = function () {
 //
 // Generate key
 //
-tproxy.GenKey = function (type, comment, enabled) {
+tproxy.GenKey = function (type, comment) {
     return tproxy._.http_request(
         "POST",
         "/api/keys",
-        { type: type, comment: comment, enabled: enabled }
+        { type: type, comment: comment }
     );
 };
 
 //
 // Update key
 //
-tproxy.UpdateKey = function (id, enabled, comment) {
+tproxy.UpdateKey = function (id, comment) {
     return tproxy._.http_request(
         "PUT",
         "/api/keys?" + id,
-        { enabled: enabled, comment: comment }
+        { comment: comment }
     );
 };
 

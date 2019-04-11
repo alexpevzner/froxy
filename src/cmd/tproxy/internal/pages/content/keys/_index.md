@@ -106,8 +106,6 @@ title = "SSH Keys Management"
 			</tr>
 			<tr>
 			    <td>
-				<input id="add.enable" type="checkbox"/>
-				Enable this key
 				<input id="add.delete" type="checkbox"/>
 				Delete this Key
 				<input id="add.confirm-delete" type="button" value="Confirm Delete" hidden/>
