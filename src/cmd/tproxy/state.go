@@ -28,7 +28,7 @@ type ServerParams struct {
 	Addr     string `json:"addr,omitempty"`     // Server address
 	Login    string `json:"login,omitempty"`    // Server login
 	Password string `json:"password,omitempty"` // Server password
-	Usekey   bool   `json:"usekey,omitempty"`   // Use SSH key instead of password
+	Keyid    string `json:"keyid,omitempty"`    // Key ID
 }
 
 //

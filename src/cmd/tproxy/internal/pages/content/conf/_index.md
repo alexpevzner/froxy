@@ -18,14 +18,17 @@ title = "TProxy Configuration"
         <td><input id="login" type="text"/></td>
     </tr>
     <tr>
-        <td>Password:</td>
-        <td><input id="password" type="text" disabled/></td>
-        <td><div id="password.comment">Not used if SSH keys are enabled</div></td>
+        <td>Authentication method:</td>
+        <td>
+            <select id="auth" onchange="AuthMethodOnChange()">
+                <option value="auth.none">-- Please, choose --</option>
+                <option value="auth.password">Password</option>
+            </select>
+        </td>
     </tr>
     <tr>
-        <td>Use SSH keys</td>
-        <td><input id="usekey" type="checkbox" disabled onclick="tproxy.Ui(UseKeysClicked)"/>
-        <td><div id="usekey.comment">[Check your SSH keys configuration](/keys)</div>
+        <td>Password:</td>
+        <td><input id="password" type="text" disabled/></td>
     </tr>
     <tr>
         <td><input type="button" value="Ok" onclick="tproxy.Ui(SubmitServerParams)"/></td>

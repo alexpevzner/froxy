@@ -216,12 +216,12 @@ tproxy.GetServerParams = function() {
 //
 // Set server parameters - returns HTTP request
 //
-tproxy.SetServerParams = function(addr, login, password, usekey) {
+tproxy.SetServerParams = function(addr, login, password, keyid) {
     var d = {
         addr: addr,
         login: login,
         password: password,
-        usekey: usekey
+        keyid: keyid
     };
     return tproxy._.http_request("PUT", "/api/server", d);
 };
