@@ -24,6 +24,23 @@ type WebAPI struct {
 var _ = http.Handler(&WebAPI{})
 
 //
+// Table of handlers
+//
+var webapiHandlers = []struct {
+	path   string        // Request path
+	event  Event         // Event to poll for changes in GET response
+	method func(*WebAPI, // WebAPI method to call
+		http.ResponseWriter,
+		*http.Request)
+}{
+	{"/api/server", EventServerParamsChanged, (*WebAPI).handleServer},
+	{"/api/sites", EventSitesChanged, (*WebAPI).handleSites},
+	{"/api/state", EventConnStateChanged, (*WebAPI).handleState},
+	{"/api/counters", EventCountersChanged, (*WebAPI).handleCounters},
+	{"/api/keys", EventKeysChanged, (*WebAPI).handleKeys},
+}
+
+//
 // Create new JS API handler instance
 //
 func NewWebAPI(tproxy *Tproxy) *WebAPI {
@@ -32,20 +49,9 @@ func NewWebAPI(tproxy *Tproxy) *WebAPI {
 		mux:    http.NewServeMux(),
 	}
 
-	handlers := []struct {
-		path    string
-		handler func(w http.ResponseWriter, r *http.Request)
-		event   Event
-	}{
-		{"/api/server", webapi.handleServer, EventServerParamsChanged},
-		{"/api/sites", webapi.handleSites, EventSitesChanged},
-		{"/api/state", webapi.handleState, EventConnStateChanged},
-		{"/api/counters", webapi.handleCounters, EventCountersChanged},
-		{"/api/keys", webapi.handleKeys, EventKeysChanged},
-	}
-
-	for _, h := range handlers {
-		webapi.mux.Handle(h.path, webapi.handleWithPoll(h.handler, h.event))
+	// Install handleres
+	for _, h := range webapiHandlers {
+		webapi.mux.Handle(h.path, webapi.handleWithPoll(h.method, h.event))
 	}
 
 	webapi.mux.HandleFunc("/api/shutdown", webapi.handleShutdown)
@@ -320,12 +326,12 @@ func (webapi *WebAPI) handleShutdown(w http.ResponseWriter, r *http.Request) {
 //      different from hash in request
 //
 func (webapi *WebAPI) handleWithPoll(
-	handler func(w http.ResponseWriter, r *http.Request),
+	method func(webapi *WebAPI, w http.ResponseWriter, r *http.Request),
 	event Event) http.HandlerFunc {
 
 	wrapper := func(w http.ResponseWriter, r *http.Request) {
 		if r.Method != "GET" {
-			handler(w, r)
+			method(webapi, w, r)
 			return
 		}
 
@@ -340,7 +346,7 @@ func (webapi *WebAPI) handleWithPoll(
 		// Serve the request
 	AGAIN:
 		w2 := &ResponseWriterWithBuffer{}
-		handler(w2, r)
+		method(webapi, w2, r)
 
 		if w2.Status/100 == 2 {
 			rspTag := fmt.Sprintf("%x", md5.Sum(w2.Bytes()))
