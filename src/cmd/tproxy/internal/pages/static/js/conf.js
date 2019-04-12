@@ -22,7 +22,7 @@ function AuthMethodUpdate() {
     var keyid_ok = false;
     var auth = document.getElementById("auth");
     var method = auth.value;
-    var method_is_valid_keyid = false;
+    var method_ok = method == "auth.password";
     var i, elm, s, key;
 
     // Purge selection options.
@@ -52,16 +52,16 @@ function AuthMethodUpdate() {
         }
 
         if (method == key.id) {
-            method_is_valid_keyid = true;
+            method_ok = true;
         }
     }
 
     // Restore previous selection, if possible
-    if (method_is_valid_keyid) {
+    if (method_ok) {
         // Do nothing
     } else if (keyid_ok) {
         method = keyid;
-    } else if (saved_server_params.password) {
+    } else if (!keyid && saved_server_params.password) {
         method = "auth.password";
     } else {
         method = "auth.none";
