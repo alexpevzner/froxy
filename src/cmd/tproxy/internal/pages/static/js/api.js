@@ -23,7 +23,8 @@ tproxy._.debug = console.log;
 tproxy._.uiguard = 0;
 
 //
-// Count of active HTTP requests, associated with input tag callbacs
+// Count of active HTTP requests, generated as result of
+// user interaction
 //
 tproxy._.ui = 0;
 
@@ -256,9 +257,6 @@ tproxy.DelSite  = function(host) {
 //
 // Get statistics counters
 //
-// tag, if defined, is a last known counters tag. If it is provided,
-// request will block until counters change
-//
 tproxy.GetCounters = function () {
     var q = "/api/counters";
 
@@ -472,22 +470,12 @@ tproxy._.BgReloadWhenReady = function() {
 // Poll particular WebApi resource for change
 //
 tproxy.BgPoll = function (url, OnSuccess, OnError) {
-    // Create poller on demand
-    if (!tproxy._.poll) {
-        tproxy._.poll = {};
-    }
-
     var poll = tproxy._.poll[url];
     if (!poll) {
         poll = tproxy._.poll[url] = {
-            tag:"",
             OnSuccess: [],
             OnError: []
         };
-
-        var rq = tproxy._.http_request("GET", url);
-        rq.OnSuccess = tproxy._.PollOnSuccess.bind(null, rq, url);
-        rq.OnError = tproxy._.PollOnError.bind(null, rq, url);
     }
 
     if (OnSuccess) {
@@ -500,41 +488,93 @@ tproxy.BgPoll = function (url, OnSuccess, OnError) {
 };
 
 //
-// Poll OnSuccess callback
+// Initialize BgPoll
 //
 // THIS IS INTERNAL FUNCTION, DON'T CALL IT DIRECTLY
 //
-tproxy._.PollOnSuccess = function (rq, url, data) {
-    var poll = tproxy._.poll[url];
+tproxy._.BgPollInit = function () {
+    tproxy._.poll_url = "ws://" + location.host + "/api/poll";
+    tproxy._.poll_sock = new WebSocket(tproxy._.poll_url);
+    tproxy._.poll_sock.onopen = tproxy._.poll_sock_onopen;
+    tproxy._.poll_sock.onmessage = tproxy._.poll_sock_onmessage;
+    tproxy._.poll_sock.onerror = tproxy._.poll_sock_onerror;
+    tproxy._.poll_sock.onclose = tproxy._.poll_sock_onclose;
+    tproxy._.poll = {};
+};
 
-    // Reschedule request
-    poll.tag = rq.GetResponseHeader("Tproxy-Tag");
-    rq = tproxy._.http_request("GET", url);
-    if (poll.tag) {
-        rq.SetRequestHeader("Tproxy-Tag", poll.tag);
-    }
-    rq.OnSuccess = tproxy._.PollOnSuccess.bind(null, rq, url);
-    rq.OnError = tproxy._.PollOnError.bind(null, rq, url);
-
-    // Notify subscribers
-    var OnSuccess = poll.OnSuccess;
-    for (var i = 0; i < OnSuccess.length; i ++) {
-        OnSuccess[i](data);
+//
+// Poll websocket onopen callback
+//
+// THIS IS INTERNAL FUNCTION, DON'T CALL IT DIRECTLY
+//
+tproxy._.poll_sock_onopen = function () {
+    for (var path in tproxy._.poll) {
+        tproxy._.poll_sock.send(JSON.stringify({path: path}));
     }
 };
 
 //
-// Poll OnError callback
+// Poll websocket onmessage callback
 //
 // THIS IS INTERNAL FUNCTION, DON'T CALL IT DIRECTLY
 //
-tproxy._.PollOnError = function (rq, url, data) {
-    var poll = tproxy._.poll[url];
+tproxy._.poll_sock_onmessage = function (event) {
+    // Parse received message
+    var data;
+    try {
+        data = JSON.parse(event.data);
+    } catch (ex) {
+        tproxy._.poll_sock_onerror("JSON error: " + ex);
+        return;
+    }
+
+    var path = data.path;
+    var tag = data.tag;
+    var poll = tproxy._.poll[path];
+
+    if (!poll || !data.data.data) {
+        return; // FIXME -- raise an error
+    }
 
     // Notify subscribers
-    var OnError = poll.OnError;
-    for (var i = 0; i < OnError.length; i ++) {
-        OnError[i](data);
+    var OnSuccess = poll.OnSuccess;
+    for (var i = 0; i < OnSuccess.length; i ++) {
+        OnSuccess[i](data.data.data);
+    }
+
+    // Reschedule poll
+    tproxy._.poll_sock.send(JSON.stringify({path: path, tag: tag}));
+};
+
+//
+// Poll websocket onerror callback
+//
+// THIS IS INTERNAL FUNCTION, DON'T CALL IT DIRECTLY
+//
+tproxy._.poll_sock_onerror = function (event) {
+    tproxy._.poll_sock.close();
+
+    var err = tproxy._.http_interror(event, tproxy._.poll_url);
+
+    for (var path in tproxy._.poll) {
+        var poll = tproxy._.poll[path];
+        var OnError = poll.OnError;
+        for (var i = 0; i < OnError.length; i ++) {
+            OnError[i](err);
+        }
+    }
+};
+
+//
+// Poll websocket onclose callback
+//
+// THIS IS INTERNAL FUNCTION, DON'T CALL IT DIRECTLY
+//
+tproxy._.poll_sock_onclose = function (event) {
+    if (event.wasClean || !event.reason) {
+        tproxy._.poll_sock_onerror("websocked suddenly closed");
+    } else {
+        tproxy._.poll_sock_onerror(event.reason);
     }
 };
 
@@ -552,6 +592,7 @@ tproxy._.init = function() {
     link.media = "all";
     head.appendChild(link);
 
+    tproxy._.BgPollInit();
     tproxy._.BgStartStatus();
 };
 
