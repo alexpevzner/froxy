@@ -5,39 +5,36 @@
 package main
 
 import (
-	"crypto/md5"
+	"context"
 	"encoding/json"
 	"fmt"
 	"io/ioutil"
 	"net/http"
 	"net/url"
+	"sync"
+
+	"github.com/gorilla/websocket"
 )
 
 //
 // JS API handler
 //
 type WebAPI struct {
-	tproxy *Tproxy
-	mux    *http.ServeMux
+	tproxy   *Tproxy                 // Back link to the Tproxy
+	mux      *http.ServeMux          // Requests multiplexer
+	handlers map[string]http.Handler // Table of poll-capable handlers
 }
 
 var _ = http.Handler(&WebAPI{})
 
 //
-// Table of handlers
+// WebAPI handler
 //
-var webapiHandlers = []struct {
-	path   string        // Request path
+type webapiHandler struct {
 	event  Event         // Event to poll for changes in GET response
 	method func(*WebAPI, // WebAPI method to call
 		http.ResponseWriter,
 		*http.Request)
-}{
-	{"/api/server", EventServerParamsChanged, (*WebAPI).handleServer},
-	{"/api/sites", EventSitesChanged, (*WebAPI).handleSites},
-	{"/api/state", EventConnStateChanged, (*WebAPI).handleState},
-	{"/api/counters", EventCountersChanged, (*WebAPI).handleCounters},
-	{"/api/keys", EventKeysChanged, (*WebAPI).handleKeys},
 }
 
 //
@@ -49,11 +46,20 @@ func NewWebAPI(tproxy *Tproxy) *WebAPI {
 		mux:    http.NewServeMux(),
 	}
 
-	// Install handleres
-	for _, h := range webapiHandlers {
-		webapi.mux.Handle(h.path, webapi.handleWithPoll(h.method, h.event))
+	webapi.handlers = map[string]http.Handler{
+		"/api/server":   &HandlerWithPoll{tproxy, EventServerParamsChanged, webapi.handleServer},
+		"/api/sites":    &HandlerWithPoll{tproxy, EventSitesChanged, webapi.handleSites},
+		"/api/state":    &HandlerWithPoll{tproxy, EventConnStateChanged, webapi.handleState},
+		"/api/counters": &HandlerWithPoll{tproxy, EventCountersChanged, webapi.handleCounters},
+		"/api/keys":     &HandlerWithPoll{tproxy, EventKeysChanged, webapi.handleKeys},
 	}
 
+	// Install handlers
+	for path, handler := range webapi.handlers {
+		webapi.mux.Handle(path, handler)
+	}
+
+	webapi.mux.HandleFunc("/api/poll", webapi.handlePoll)
 	webapi.mux.HandleFunc("/api/shutdown", webapi.handleShutdown)
 
 	return webapi
@@ -280,6 +286,73 @@ func (webapi *WebAPI) handleCounters(w http.ResponseWriter, r *http.Request) {
 }
 
 //
+// Handle /api/poll requests
+//
+// Implements Websocket-based poll for changes
+//
+func (webapi *WebAPI) handlePoll(w http.ResponseWriter, r *http.Request) {
+	upgrader := &websocket.Upgrader{}
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		webapi.tproxy.Debug("poll %s", err)
+		webapi.replyError(w, r, http.StatusMethodNotAllowed, nil)
+		return
+	}
+
+	// Websocket message
+	type msg struct {
+		Path string          `json:"path"`           // Request path (i.e., "/api/counters"
+		Tag  string          `json:"tag,omitempty"`  // Data tag
+		Data json.RawMessage `json:"data,omitempty"` // Data (in responses only)
+	}
+
+	// Reader goroutine
+	go func() {
+		ctx, cancel := context.WithCancel(context.Background())
+		defer cancel()
+		defer conn.Close()
+
+		writeLock := &sync.Mutex{}
+		for {
+			// Receive next message
+			var in msg
+			err := conn.ReadJSON(&in)
+			if err != nil {
+				return
+			}
+
+			// Perform a request in background
+			go func() {
+				// Initialize response message
+				out := msg{
+					Path: in.Path,
+				}
+
+				// Execute a request
+				if h := webapi.handlers[in.Path]; h != nil {
+					r, _ = http.NewRequest("GET", in.Path, nil)
+					r.Header.Set(PollTag, in.Tag)
+					r = r.WithContext(ctx)
+					w := &ResponseWriterWithBuffer{}
+
+					h.ServeHTTP(w, r)
+
+					if w.Status/100 == 2 {
+						out.Tag = w.Header().Get(PollTag)
+						out.Data = json.RawMessage(w.Bytes())
+					}
+				}
+
+				// Send a response
+				writeLock.Lock()
+				conn.WriteJSON(out)
+				writeLock.Unlock()
+			}()
+		}
+	}()
+}
+
+//
 // Handle /api/shudtown requests
 //
 // TPROXY /api/shudtown - initiates TProxy shutdown. Connection
@@ -314,60 +387,6 @@ func (webapi *WebAPI) handleShutdown(w http.ResponseWriter, r *http.Request) {
 
 	// Raise shutdown event
 	webapi.tproxy.Raise(EventShutdownRequested)
-}
-
-//
-// handleWithPoll() converts a handler function into http.HandlerFunc
-// with added long-poll for data change:
-//   1) For the returned data, a crypto hash of its content is
-//      calculated and returned as "Tproxy-Tag" header
-//   2) If request contains a "Tproxy-Tag" header, the handler
-//      waits until calculated hash of response content becomes
-//      different from hash in request
-//
-func (webapi *WebAPI) handleWithPoll(
-	method func(webapi *WebAPI, w http.ResponseWriter, r *http.Request),
-	event Event) http.HandlerFunc {
-
-	wrapper := func(w http.ResponseWriter, r *http.Request) {
-		if r.Method != "GET" {
-			method(webapi, w, r)
-			return
-		}
-
-		// Prepare to polling for data change
-		rqTag := r.Header.Get("Tproxy-Tag")
-		var events <-chan Event
-		if rqTag != "" {
-			events = webapi.tproxy.Sub(event)
-			defer webapi.tproxy.Unsub(events)
-		}
-
-		// Serve the request
-	AGAIN:
-		w2 := &ResponseWriterWithBuffer{}
-		method(webapi, w2, r)
-
-		if w2.Status/100 == 2 {
-			rspTag := fmt.Sprintf("%x", md5.Sum(w2.Bytes()))
-
-			if events != nil && rqTag == rspTag {
-				select {
-				case <-events:
-					goto AGAIN
-				case <-r.Context().Done():
-					return
-				}
-			}
-
-			w2.Header().Set("Tproxy-Tag", rspTag)
-		}
-
-		w2.Send(w)
-
-	}
-
-	return http.HandlerFunc(wrapper)
 }
 
 //
