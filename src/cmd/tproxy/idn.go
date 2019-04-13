@@ -7,6 +7,7 @@ package main
 import (
 	"bytes"
 	"encoding/json"
+	"strings"
 
 	"golang.org/x/net/idna"
 )
@@ -123,7 +124,7 @@ func IDNDecode(in string) string {
 // Encode string from UNICODE to IDN
 //
 func IDNEncode(in string) string {
-	out, err := idna.ToASCII(in)
+	out, err := idna.ToASCII(strings.ToLower(in))
 	if err == nil {
 		return out
 	} else {
