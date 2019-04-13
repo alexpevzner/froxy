@@ -5,6 +5,7 @@
 package main
 
 import (
+	"cmd/tproxy/internal/keys"
 	"context"
 	"fmt"
 	"net"
@@ -21,9 +22,11 @@ import (
 // The SSH transport for net.http
 //
 type SSHTransport struct {
-	http.Transport              // SSH-backed http.Transport
-	tproxy         *Tproxy      // Back link to Tproxy
-	params         ServerParams // Server parameters
+	http.Transport                 // SSH-backed http.Transport
+	tproxy            *Tproxy      // Back link to Tproxy
+	params            ServerParams // Server parameters
+	key               *keys.Key    // SSH key to use, if any
+	paramsOkToConnect bool         // Server parameters OK to connect
 
 	// Management of active sessions
 	clientsLock sync.Mutex              // Access lock
@@ -94,8 +97,7 @@ func NewSSHTransport(tproxy *Tproxy) *SSHTransport {
 // Reconnect to the server
 //
 // This function updates server connection parameters, which
-// may either cause a disconnect (if params.Configured() == false)
-// or [re]connect
+// may either cause a disconnect or [re]connect
 //
 // In a case of [re]connect this function doesn't establish server
 // connection immediately, it only initiates asynchronous process of
@@ -127,9 +129,19 @@ func (t *SSHTransport) Reconnect(params ServerParams) {
 		context.Background())
 	t.params = params
 
+	// Check that we have everything to proceed with connection
+	t.paramsOkToConnect = params.Addr != "" && params.Login != ""
+	if t.paramsOkToConnect {
+		if params.Keyid != "" {
+			t.key = t.tproxy.KeyById(params.Keyid)
+			t.paramsOkToConnect = t.key != nil
+		} else {
+			t.paramsOkToConnect = params.Password != ""
+		}
+	}
+
 	// Update connection state
-	ok := params.Configured()
-	if ok {
+	if t.paramsOkToConnect {
 		t.tproxy.SetConnState(ConnTrying, "")
 	} else {
 		t.tproxy.SetConnState(ConnNotConfigured, "")
@@ -138,7 +150,7 @@ func (t *SSHTransport) Reconnect(params ServerParams) {
 	t.disconnectLock.Unlock()
 
 	// In a case of disconnect -- wait for completion
-	if !ok {
+	if !t.paramsOkToConnect {
 		t.disconnectWait.Wait()
 	}
 }
@@ -152,9 +164,10 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 
 	ctx := t.disconnectCtx
 	params := t.params
+	key := t.key
 	var err error
 
-	if params.Configured() {
+	if t.paramsOkToConnect {
 		t.disconnectWait.Add(1)
 	} else {
 		err = ErrServerNotConfigured
@@ -170,7 +183,7 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	// Obtain SSH client
 	clnt := t.getClient()
 	if clnt == nil {
-		clnt, err = t.newClient(ctx, params)
+		clnt, err = t.newClient(ctx, params, key)
 	}
 	if err != nil {
 		t.disconnectWait.Done()
@@ -266,7 +279,8 @@ func (t *SSHTransport) newClientDone() {
 //
 func (t *SSHTransport) newClient(
 	ctx context.Context,
-	params ServerParams) (*sshClient, error) {
+	params ServerParams,
+	key *keys.Key) (*sshClient, error) {
 
 	// Obtain grant to dial new session
 	t.newClientWait()
@@ -281,11 +295,16 @@ func (t *SSHTransport) newClient(
 	// Create SSH configuration
 	t.tproxy.Debug("params=%#v)", params)
 
+	auth := []ssh.AuthMethod{}
+	if key != nil {
+		auth = append(auth, ssh.PublicKeys(key.Signer()))
+	} else {
+		auth = append(auth, ssh.Password(params.Password))
+	}
+
 	cfg := &ssh.ClientConfig{
-		User: params.Login,
-		Auth: []ssh.AuthMethod{
-			ssh.Password(params.Password),
-		},
+		User:            params.Login,
+		Auth:            auth,
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
 	}
 

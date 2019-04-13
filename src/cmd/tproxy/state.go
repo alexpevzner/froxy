@@ -32,13 +32,6 @@ type ServerParams struct {
 }
 
 //
-// Check if server is configured
-//
-func (p *ServerParams) Configured() bool {
-	return p.Addr != "" && p.Login != "" && p.Password != ""
-}
-
-//
 // Site parameters
 //
 type SiteParams struct {

@@ -92,6 +92,16 @@ func (set *KeySet) GetKeys() []KeyInfo {
 }
 
 //
+// Get key by id
+//
+func (set *KeySet) KeyById(id string) *keys.Key {
+	set.lock.Lock()
+	defer set.lock.Unlock()
+
+	return set.keys[id]
+}
+
+//
 // Modify the key
 //
 func (set *KeySet) KeyMod(id string, newinfo *KeyInfo) error {
