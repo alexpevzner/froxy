@@ -42,6 +42,8 @@ func DomainValidate(domain string) (string, error) {
 	// Check for invalid characters
 	for _, c := range domain {
 		switch {
+		// Underscore characters are not allowed in domain names, but some
+		// browsers allow them, so we do the same
 		case '0' <= c && c <= '9' || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' ||
 			c == '-' || c == '_' || c == '.':
 		default:
@@ -52,6 +54,9 @@ func DomainValidate(domain string) (string, error) {
 	// Split into labels and check each of them
 	labels := strings.Split(domain, ".")
 	for _, label := range labels {
+		// Labels cannot start or end with hyphens, but we are permissive
+		// here in case somebody may register such a domain and
+		// browsers are tolerant
 		switch {
 		case len(label) < 1:
 			return "", errors.New("Domain name label cannot be empty")
