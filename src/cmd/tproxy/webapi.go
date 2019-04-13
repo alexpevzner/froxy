@@ -46,6 +46,7 @@ func NewWebAPI(tproxy *Tproxy) *WebAPI {
 		mux:    http.NewServeMux(),
 	}
 
+	// Pollable endpoints
 	webapi.handlers = map[string]http.Handler{
 		"/api/server":   &HandlerWithPoll{tproxy, EventServerParamsChanged, webapi.handleServer},
 		"/api/sites":    &HandlerWithPoll{tproxy, EventSitesChanged, webapi.handleSites},
@@ -54,11 +55,12 @@ func NewWebAPI(tproxy *Tproxy) *WebAPI {
 		"/api/keys":     &HandlerWithPoll{tproxy, EventKeysChanged, webapi.handleKeys},
 	}
 
-	// Install handlers
 	for path, handler := range webapi.handlers {
 		webapi.mux.Handle(path, handler)
 	}
 
+	// Non-pollable endpoints
+	webapi.mux.HandleFunc("/api/domain", webapi.handleDomain)
 	webapi.mux.HandleFunc("/api/poll", webapi.handlePoll)
 	webapi.mux.HandleFunc("/api/shutdown", webapi.handleShutdown)
 
@@ -283,6 +285,38 @@ func (webapi *WebAPI) handleCounters(w http.ResponseWriter, r *http.Request) {
 	}
 
 	webapi.replyJSON(w, &webapi.tproxy.Counters)
+}
+
+//
+// Handle /api/domain requests
+//
+// GET /api/domain?domain - validate a domain
+//
+// Returns:
+//     on success: { "host": "..." } - extracted host part of input string
+//                                     (which can be URL, for example)
+//     on error:   { "err": "..." }  - error text
+//
+func (webapi *WebAPI) handleDomain(w http.ResponseWriter, r *http.Request) {
+	// Decode request
+	host, err := url.QueryUnescape(r.URL.RawQuery)
+	if err != nil {
+		webapi.replyError(w, r,
+			http.StatusInternalServerError, err)
+		return
+	}
+
+	// Validate domain
+	host, err = DomainValidate(host)
+
+	// Send a reply
+	reply := map[string]string{}
+	if err == nil {
+		reply["host"] = host
+	} else {
+		reply["err"] = err.Error()
+	}
+	webapi.replyJSON(w, reply)
 }
 
 //
