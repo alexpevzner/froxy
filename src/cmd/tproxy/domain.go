@@ -35,8 +35,11 @@ func DomainValidate(domain string) (string, error) {
 	domain = IDNEncode(domain)
 
 	// Check total length
-	if len(domain) > 253 {
-		return "", errors.New("Domain name too long")
+	switch {
+	case len(domain) < 1:
+		return "", errors.New("Domain name is empty")
+	case len(domain) > 253:
+		return "", errors.New("Domain name exceeds 253 bytes")
 	}
 
 	// Check for invalid characters
@@ -47,7 +50,7 @@ func DomainValidate(domain string) (string, error) {
 		case '0' <= c && c <= '9' || 'a' <= c && c <= 'z' || 'A' <= c && c <= 'Z' ||
 			c == '-' || c == '_' || c == '.':
 		default:
-			return "", fmt.Errorf("Domain name cannot contain character '%c'", c)
+			return "", fmt.Errorf("Domain name contains character '%c'", c)
 		}
 	}
 
@@ -59,9 +62,9 @@ func DomainValidate(domain string) (string, error) {
 		// browsers are tolerant
 		switch {
 		case len(label) < 1:
-			return "", errors.New("Domain name label cannot be empty")
+			return "", errors.New("Domain name label is empty")
 		case len(label) > 63:
-			return "", errors.New("Domain name label cannot exceed 63 bytes")
+			return "", errors.New("Domain name label exceeds 63 bytes")
 		}
 	}
 
