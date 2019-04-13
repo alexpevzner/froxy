@@ -124,7 +124,7 @@ function DomainChecked (id, reply) {
     var ok = !!reply.host;
 
     if (ok) {
-        elm.setAttribute("hostname", reply.data);
+        elm.setAttribute("hostname", reply.host);
     } else {
         elm.removeAttribute("hostname");
     }
