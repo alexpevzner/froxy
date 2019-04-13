@@ -33,7 +33,6 @@ function AddSite () {
 // Called when table button is clicked
 //
 function TableButtonClicked (button, rownum) {
-    console.log("click", button, rownum);
     var row = table[rownum];
     var oldhost = row.getAttribute("host");
 
