@@ -14,18 +14,21 @@ var table = [];
 // Add a site
 //
 function AddSite () {
-    var params = {
-        host: tproxy.UiGetInput("add.host"),
-        rec: tproxy.UiGetInput("add.rec"),
-        block: tproxy.UiGetInput("add.block")
-    };
+    var elm = document.getElementById("add.host");
+    if (elm.hasAttribute("hostname")) {
+        var host = elm.getAttribute("hostname");
+        var params = {
+            host: host,
+            rec: tproxy.UiGetInput("add.rec"),
+            block: tproxy.UiGetInput("add.block")
+        };
 
-    if (params.host) {
         tproxy.SetSite(params.host, params);
 
         tproxy.UiSetInput("add.host", "");
         tproxy.UiSetInput("add.rec", true);
         tproxy.UiSetInput("add.block", false);
+        elm.removeAttribute("hostname");
     }
 }
 
@@ -38,10 +41,15 @@ function TableButtonClicked (button, rownum) {
 
     switch (button) {
     case "update":
+        var elm = document.getElementById(rownum + ".host");
+        if (!elm.hasAttribute("hostname")) {
+            break;
+        }
+
         var params = {
-            host: tproxy.UiGetInput(rownum + "." + "host"),
-            rec: tproxy.UiGetInput(rownum + "." + "rec"),
-            block: tproxy.UiGetInput(rownum + "." + "block")
+            host: elm.getAttribute("hostname"),
+            rec: tproxy.UiGetInput(rownum + ".rec"),
+            block: tproxy.UiGetInput(rownum + ".block")
         };
 
         tproxy.SetSite(oldhost, params);
@@ -66,6 +74,7 @@ function UpdateTable (sites) {
     if (table.length > sz) {
         while(table.length > sz) {
             table.pop().remove();
+            tproxy.BgWatchStop(table.length + ".host");
         }
     } else {
         var tbody = document.getElementById("tbody");
@@ -102,6 +111,30 @@ function UpdateTable (sites) {
         tproxy.UiSetInput(n + ".rec", sites[n].rec);
         tproxy.UiSetInput(n + ".block", sites[n].block);
         table[n].setAttribute("host", sites[n].host);
+        tproxy.BgWatch(n + ".host", "/api/domain", DomainChecked);
+    }
+}
+
+//
+// This function is called when domain name being edited
+// by user was checked by Tproxy
+//
+function DomainChecked (id, reply) {
+    var elm = document.getElementById(id);
+    var ok = !!reply.host;
+
+    if (ok) {
+        elm.setAttribute("hostname", reply.data);
+    } else {
+        elm.removeAttribute("hostname");
+    }
+
+    if (elm.value && !ok) {
+        elm.style.borderColor = "red";
+        elm.style.borderStyle = "dashed";
+    } else {
+        elm.style.borderColor = "";
+        elm.style.borderStyle = "";
     }
 }
 
@@ -110,6 +143,7 @@ function UpdateTable (sites) {
 //
 function init () {
     tproxy.BgPoll("/api/sites", UpdateTable);
+    tproxy.BgWatch("add.host", "/api/domain", DomainChecked);
 }
 
 init();

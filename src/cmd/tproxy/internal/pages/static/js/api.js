@@ -62,6 +62,7 @@ tproxy._.http_request = function(method, query, data) {
     var rq = {
         _xrq:      new XMLHttpRequest(),
         _ui:       tproxy._.uiguard,
+        canceled:  false,
         OnSuccess: function() {},
         OnError:   function() {}
     };
@@ -84,6 +85,11 @@ tproxy._.http_request = function(method, query, data) {
     };
     rq.GetResponseHeader = function (name) {
         return rq._xrq.getResponseHeader(name);
+    };
+
+    rq.Cancel = function() {
+        rq._xrq.abort();
+        rq.canceled = true;
     };
 
     // Setup event handling
@@ -148,7 +154,12 @@ tproxy._.http_request = function(method, query, data) {
         data = JSON.stringify(data);
     }
 
-    setTimeout(function() { rq._xrq.send(data); }, 0);
+    setTimeout(
+        function() {
+            if (!rq.canceled) {
+                rq._xrq.send(data);
+            }
+        }, 0);
 
     return rq;
 };
@@ -488,6 +499,77 @@ tproxy.BgPoll = function (url, OnSuccess, OnError) {
 };
 
 //
+// Watch particular text input control for changes
+//
+//   id                - id of the text input control
+//   url               - webapi URL (i.e., "/api/domain")
+//   callback(id,data) - user callback
+//
+// When user changes text, contained by the specified
+// text input control, webapi GET request to the specified
+// url will be scheduled, giving current text as a
+// parameter, and when reply will be received,
+// the callback will be invoked with reply data
+// used as a callback parameter
+//
+// This function is useful for autocompletion,
+// syntax checking during editing and similar tasks
+//
+tproxy.BgWatch = function (id, url, callback) {
+    var elm = document.getElementById(id);
+    if (!elm) {
+        return;
+    }
+
+    tproxy.BgWatchStop(id);
+
+    var watch = tproxy._.watch[id] = {};
+
+    elm.oninput = function () {
+        if (watch.rq) {
+            watch.textChanged = true;
+        } else {
+            watch.fire();
+        }
+    };
+
+    // Fire the request to server
+    watch.fire = function () {
+        var q = url + "?" + tproxy.UiGetInput(id);
+        watch.rq = tproxy._.http_request("GET", q);
+
+        watch.rq.OnSuccess = function (data) {
+            delete(watch.rq);
+            if (watch.textChanged) {
+                watch.fire();
+            }
+            watch.textChanged = false;
+            callback(id, data);
+        };
+    };
+
+    watch.fire();
+};
+
+//
+// Stop watch initiated by tproxy.BgWatch()
+//
+tproxy.BgWatchStop = function (id) {
+    var elm = document.getElementById(id);
+    var watch = tproxy._.watch[id];
+
+    if (elm) {
+        elm.onchange = function (){};
+    }
+
+    if (watch && watch.rq) {
+        watch.rq.Cancel();
+    }
+
+    delete(tproxy._.watch[id]);
+};
+
+//
 // Initialize BgPoll
 //
 // THIS IS INTERNAL FUNCTION, DON'T CALL IT DIRECTLY
@@ -500,6 +582,7 @@ tproxy._.BgPollInit = function () {
     tproxy._.poll_sock.onerror = tproxy._.poll_sock_onerror;
     tproxy._.poll_sock.onclose = tproxy._.poll_sock_onclose;
     tproxy._.poll = {};
+    tproxy._.watch = {};
 };
 
 //

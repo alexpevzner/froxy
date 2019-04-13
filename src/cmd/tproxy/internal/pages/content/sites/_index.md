@@ -13,7 +13,7 @@ In most cases you will want to check the "With subdomains" button
   <table >
     <tbody>
       <tr>
-        <td><input id="add.host" type="text" style="width: 95%;" placeholder="Enter site address"/></td>
+        <td><input id="add.host" type="text" style="width: 95%;" placeholder="Enter domain or url"/></td>
         <td>&nbsp;<input id="add.rec" type="checkbox" checked />With subdomains</td>
         <td>&nbsp;<input id="add.block" type="checkbox" />Block</td>
         <td><input type="button" value="Add" onclick="tproxy.Ui(AddSite)" /></td>
