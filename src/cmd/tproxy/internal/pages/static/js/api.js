@@ -365,6 +365,7 @@ tproxy._.UiQueue = [];
 // Enqueue Ui callback
 //
 tproxy._.UiQueuePush = function (fn) {
+    tproxy._.uiguard ++;
     tproxy._.UiQueue.push(fn);
 };
 
@@ -374,7 +375,6 @@ tproxy._.UiQueuePush = function (fn) {
 tproxy._.UiQueueRun = function () {
     while (tproxy._.rq_count == 0 && tproxy._.UiQueue.length) {
         var fn = tproxy._.UiQueue.shift();
-        tproxy._.uiguard ++;
         fn();
         tproxy._.uiguard --;
     }
