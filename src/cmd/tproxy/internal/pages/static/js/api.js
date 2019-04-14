@@ -28,6 +28,11 @@ tproxy._.uiguard = 0;
 //
 tproxy._.ui = 0;
 
+//
+// Count of active HTTP requests
+//
+tproxy._.rq_count = 0;
+
 // ----- HTTP requests handling -----
 //
 // Create asynchronous HTTP request
@@ -67,16 +72,6 @@ tproxy._.http_request = function(method, query, data) {
         OnError:   function() {}
     };
 
-    if (rq._ui) {
-        if (!tproxy._.ui) {
-            tproxy._.uitimer = window.setTimeout(
-                tproxy._.pleasewait.bind(null, true),
-                100
-            );
-        }
-        tproxy._.ui ++;
-    }
-
     rq._xrq.open(method, query, true);
 
     // Add a couple of methods
@@ -87,9 +82,38 @@ tproxy._.http_request = function(method, query, data) {
         return rq._xrq.getResponseHeader(name);
     };
 
-    rq.Cancel = function() {
+    rq.Cancel = function () {
         rq._xrq.abort();
         rq.canceled = true;
+        rq._finished();
+    };
+
+    // Request hooks
+    rq._started = function () {
+        tproxy._.rq_count ++;
+        if (rq._ui) {
+            if (!tproxy._.ui) {
+                tproxy._.uitimer = window.setTimeout(
+                    tproxy._.pleasewait.bind(null, true),
+                    100
+                );
+            }
+            tproxy._.ui ++;
+        }
+
+    };
+
+    rq._finished = function () {
+        if (rq._ui) {
+            tproxy._.ui --;
+            if (!tproxy._.ui) {
+                window.clearTimeout(tproxy._.uitimer);
+                tproxy._.pleasewait(false);
+            }
+        }
+
+        tproxy._.rq_count --;
+        tproxy._.UiQueueRun();
     };
 
     // Setup event handling
@@ -139,13 +163,7 @@ tproxy._.http_request = function(method, query, data) {
                 }
             }
 
-            if (rq._ui) {
-                tproxy._.ui --;
-                if (!tproxy._.ui) {
-                    window.clearTimeout(tproxy._.uitimer);
-                    tproxy._.pleasewait(false);
-                }
-            }
+            rq._finished();
         }
     };
 
@@ -159,8 +177,10 @@ tproxy._.http_request = function(method, query, data) {
             if (!rq.canceled) {
                 rq._xrq.send(data);
             }
-        }, 0);
+        }, 0
+    );
 
+    rq._started();
     return rq;
 };
 
@@ -336,6 +356,31 @@ tproxy.DomChildren = function (element) {
 
 // ----- UI helper functions -----
 //
+// Queue of Ui callbacks, differed until completion of HTTP
+// requests being executed
+//
+tproxy._.UiQueue = [];
+
+//
+// Enqueue Ui callback
+//
+tproxy._.UiQueuePush = function (fn) {
+    tproxy._.UiQueue.push(fn);
+};
+
+//
+// Execute queued Ui callbacks
+//
+tproxy._.UiQueueRun = function () {
+    while (tproxy._.rq_count == 0 && tproxy._.UiQueue.length) {
+        var fn = tproxy._.UiQueue.shift();
+        tproxy._.uiguard ++;
+        fn();
+        tproxy._.uiguard --;
+    }
+};
+
+//
 // Wrapper for functions that called as input events handlers.
 //
 // Usage:
@@ -347,9 +392,8 @@ tproxy.DomChildren = function (element) {
 //
 tproxy.Ui = function(fn) {
     if (tproxy._.ui == 0) {
-        tproxy._.uiguard ++;
-        fn();
-        tproxy._.uiguard --;
+        tproxy._.UiQueuePush(fn);
+        tproxy._.UiQueueRun();
     }
 };
 
