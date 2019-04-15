@@ -128,12 +128,13 @@ func (ftpp *FTPProxy) Handle(w http.ResponseWriter, r *http.Request, transport T
 //
 func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
 	conn *ftpConn, path string, files []*ftp.Entry) {
-	w.Write([]byte("<html>"))
-	w.Write([]byte(`<head><meta charset="utf-8"></head>`))
-	w.Write([]byte("<title>"))
-	template.HTMLEscape(w, []byte(r.URL.String()))
-	w.Write([]byte("</title><body>\n"))
 
+	// Normalize path
+	if len(path) > 1 && strings.HasSuffix(path, "/") {
+		path = path[:len(path)-1]
+	}
+
+	// Prepare list of files
 	sort.Slice(files, func(i, j int) bool {
 		f1 := files[i]
 		f2 := files[j]
@@ -162,8 +163,25 @@ func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
 		return f1.Name < f2.Name
 	})
 
+	// Make sure we have parent directory
+	switch {
+	case len(files) > 0 && files[0].Name == "..":
+	case len(files) > 1 && files[1].Name == "..":
+	default:
+		files = append([]*ftp.Entry{{Name: "..", Type: ftp.EntryTypeFolder}}, files...)
+	}
+
+	// Format HTML head
+	w.Write([]byte("<html>"))
+	w.Write([]byte(`<head><meta charset="utf-8"></head>`))
+	w.Write([]byte("<title>"))
+	template.HTMLEscape(w, []byte(r.URL.String()))
+	w.Write([]byte("</title><body>\n"))
+
+	// Format table of files
 	w.Write([]byte(`<fieldset style="border-radius:10px">`))
 	fmt.Fprintf(w, "<legend>Listing of %s</legend>\n", template.HTMLEscapeString(path))
+	w.Write([]byte("<table><tbody>\n"))
 
 	for _, f := range files {
 		var href, name, symbol string
@@ -182,7 +200,7 @@ func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
 				href = "/"
 			}
 			name = "Parent directory"
-			symbol = "&#x1f519;"
+			symbol = "&#x1f8a0;"
 
 		default:
 			href = path
@@ -202,9 +220,39 @@ func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
 			}
 		}
 
-		fmt.Fprintf(w, "%s&nbsp;<a href=%q>%s</a><br>\n", symbol, href, name)
+		// Format file time and size
+		time := ""
+		size := ""
+		if f.Type != ftp.EntryTypeFolder {
+			switch {
+			case f.Size < 1024:
+				size = fmt.Sprintf("%d", f.Size)
+			case f.Size < 1024*1024:
+				size = fmt.Sprintf("%.1fK", float64(f.Size)/1024)
+			case f.Size < 1024*1024*1024:
+				size = fmt.Sprintf("%.1fM", float64(f.Size)/(1024*1024))
+			case f.Size < 1024*1024*1024*1024:
+				size = fmt.Sprintf("%.1fG", float64(f.Size)/(1024*1024*1024))
+			}
+
+			time = fmt.Sprintf("%.2d-%.2d-%.4d %.2d:%.2d",
+				f.Time.Day(),
+				f.Time.Month(),
+				f.Time.Year(),
+				f.Time.Hour(),
+				f.Time.Minute(),
+			)
+		}
+
+		// Create table row
+		w.Write([]byte("<tr>"))
+		fmt.Fprintf(w, "<td>%s&nbsp;<a href=%q>%s</a></td>", symbol, href, name)
+		fmt.Fprintf(w, "<td>%s</td>", time)
+		fmt.Fprintf(w, "<td>%s</td>", size)
+		w.Write([]byte("</tr>\n"))
 	}
 
+	w.Write([]byte("</tbody><t/table>\n"))
 	w.Write([]byte("</fieldset></body></html>\n"))
 }
 
