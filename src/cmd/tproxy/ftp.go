@@ -36,9 +36,12 @@ type ftpIddleConnBucket map[*ftpConn]time.Time
 // FTP connection
 //
 type ftpConn struct {
-	*ftp.ServerConn
-	netconn net.Conn
-	site    string
+	*ftp.ServerConn           // Underlying ftp.ServerConn
+	ftpp            *FTPProxy // Back link to owning FTPProxy
+	netconn         net.Conn  // Underlying net.Conn
+	site            string    // Site URL
+	reused          bool      // This is reused idle connection
+	closed          bool      // This is closed connection
 }
 
 //
@@ -82,6 +85,7 @@ func (ftpp *FTPProxy) Handle(w http.ResponseWriter, r *http.Request, transport T
 	site := site_url.String()
 
 	// Obtain a connection
+RETRY:
 	conn := ftpp.getConn(site)
 	var err error
 	if conn == nil {
@@ -92,7 +96,7 @@ func (ftpp *FTPProxy) Handle(w http.ResponseWriter, r *http.Request, transport T
 		}
 	}
 
-	defer ftpp.putConn(conn)
+	defer conn.putConn()
 
 	// Perform a transaction
 	path := r.URL.Path
@@ -117,6 +121,15 @@ func (ftpp *FTPProxy) Handle(w http.ResponseWriter, r *http.Request, transport T
 		if err == nil {
 			err = err2
 		}
+	}
+
+	// If it is reused connection, try to reconnect
+	//
+	// FIXME - distinguish between network errors and
+	// FTP errors
+	if conn.reused {
+		conn.Close()
+		goto RETRY
 	}
 
 	ftpp.sendError(w, conn, err)
@@ -290,7 +303,7 @@ func (ftpp *FTPProxy) dialConn(transport Transport, site_url url.URL) (*ftpConn,
 	}
 
 	// create ftpConn
-	conn := &ftpConn{netconn: netconn, site: site_url.String()}
+	conn := &ftpConn{ftpp: ftpp, netconn: netconn, site: site_url.String()}
 
 	ftpp.tproxy.Debug("FTP: trying %s", addr)
 	conn.ServerConn, err = ftp.DialWithOptions(addr, ftp.DialWithNetConn(netconn))
@@ -340,6 +353,7 @@ func (ftpp *FTPProxy) getConn(site string) *ftpConn {
 
 		if conn != nil {
 			delete(bucket, conn)
+			conn.reused = true
 		}
 
 		if len(bucket) == 0 {
@@ -353,14 +367,18 @@ func (ftpp *FTPProxy) getConn(site string) *ftpConn {
 //
 // Put a connection
 //
-func (ftpp *FTPProxy) putConn(conn *ftpConn) {
-	ftpp.idleLock.Lock()
-	defer ftpp.idleLock.Unlock()
+func (conn *ftpConn) putConn() {
+	if conn.closed {
+		return
+	}
 
-	bucket := ftpp.idleConnections[conn.site]
+	conn.ftpp.idleLock.Lock()
+	defer conn.ftpp.idleLock.Unlock()
+
+	bucket := conn.ftpp.idleConnections[conn.site]
 	if bucket == nil {
 		bucket = make(ftpIddleConnBucket)
-		ftpp.idleConnections[conn.site] = bucket
+		conn.ftpp.idleConnections[conn.site] = bucket
 	}
 
 	if _, found := bucket[conn]; found {
@@ -370,7 +388,18 @@ func (ftpp *FTPProxy) putConn(conn *ftpConn) {
 	bucket[conn] = time.Now().Add(5 * time.Minute)
 
 	select {
-	case ftpp.idleChan <- struct{}{}:
+	case conn.ftpp.idleChan <- struct{}{}:
+	}
+}
+
+//
+// Close a connection
+//
+func (conn *ftpConn) Close() {
+	if !conn.closed {
+		conn.closed = true
+		conn.netconn.Close()
+		conn.ftpp.tproxy.DecCounter(&conn.ftpp.tproxy.Counters.FTPConnections)
 	}
 }
 
@@ -397,9 +426,8 @@ func (ftpp *FTPProxy) expireIdleConnections() {
 			for conn, exp := range bucket {
 				switch {
 				case !exp.After(now):
-					conn.netconn.Close()
+					conn.Close()
 					delete(bucket, conn)
-					ftpp.tproxy.DecCounter(&ftpp.tproxy.Counters.FTPConnections)
 				case exp.Before(next):
 					next = exp
 				}
