@@ -33,13 +33,12 @@ type FTPProxy struct {
 type ftpIddleConnBucket map[*ftpConn]time.Time
 
 //
-//
+// FTP connection
 //
 type ftpConn struct {
 	*ftp.ServerConn
 	netconn net.Conn
 	site    string
-	refcnt  int
 }
 
 //
@@ -291,7 +290,7 @@ func (ftpp *FTPProxy) dialConn(transport Transport, site_url url.URL) (*ftpConn,
 	}
 
 	// create ftpConn
-	conn := &ftpConn{netconn: netconn, site: site_url.String(), refcnt: 1}
+	conn := &ftpConn{netconn: netconn, site: site_url.String()}
 
 	ftpp.tproxy.Debug("FTP: trying %s", addr)
 	conn.ServerConn, err = ftp.DialWithOptions(addr, ftp.DialWithNetConn(netconn))
@@ -317,6 +316,8 @@ func (ftpp *FTPProxy) dialConn(transport Transport, site_url url.URL) (*ftpConn,
 	} else {
 		ftpp.tproxy.Debug("FTP: login %s %s: OK", user, pass)
 	}
+
+	ftpp.tproxy.IncCounter(&ftpp.tproxy.Counters.FTPConnections)
 
 	return conn, nil
 }
@@ -353,11 +354,6 @@ func (ftpp *FTPProxy) getConn(site string) *ftpConn {
 // Put a connection
 //
 func (ftpp *FTPProxy) putConn(conn *ftpConn) {
-	conn.refcnt--
-	if conn.refcnt > 0 {
-		return
-	}
-
 	ftpp.idleLock.Lock()
 	defer ftpp.idleLock.Unlock()
 
@@ -401,7 +397,9 @@ func (ftpp *FTPProxy) expireIdleConnections() {
 			for conn, exp := range bucket {
 				switch {
 				case !exp.After(now):
+					conn.netconn.Close()
 					delete(bucket, conn)
+					ftpp.tproxy.DecCounter(&ftpp.tproxy.Counters.FTPConnections)
 				case exp.Before(next):
 					next = exp
 				}

@@ -18,4 +18,5 @@ HTTP requests pending             | <div id="http_rq_pending"></div>
 HTTP requests handled directly    | <div id="http_rq_direct"></div>
 HTTP requests forwarded to server | <div id="http_rq_forwarded"></div>
 HTTP requests blocked             | <div id="http_rq_blocked"></div>
+FTP Connections                   | <div id="ftp_conns"></div>
 

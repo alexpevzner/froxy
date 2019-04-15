@@ -17,4 +17,5 @@ type Counters struct {
 	HTTPRqDirect    int32 `json:"http_rq_direct"`    // Count of direct requests
 	HTTPRqForwarded int32 `json:"http_rq_forwarded"` // Count of forwarded requests
 	HTTPRqBlocked   int32 `json:"http_rq_blocked"`   // Count of blocked requests
+	FTPConnections  int32 `json:"ftp_conns"`         // Count of FTP connections
 }
