@@ -99,7 +99,7 @@ RETRY:
 	if conn == nil {
 		conn, err = ftpp.dialConn(transport, site_url)
 		if err != nil {
-			ftpp.tproxy.httpError(w, http.StatusServiceUnavailable, err)
+			ftpp.sendError(w, 0, err)
 			return
 		}
 	}
@@ -107,10 +107,10 @@ RETRY:
 	defer conn.putConn()
 
 	// Try to interpret path as file
+	httpStatus := 0
 	if !isDir {
 		var body *ftp.Response
-		ftpp.tproxy.Debug("FTP: RETR %q", path)
-		body, err = conn.Retr(path)
+		body, httpStatus, err = ftpp.readFile(conn, path)
 		if err == nil {
 			ftpp.sendFile(w, body)
 			return
@@ -118,48 +118,102 @@ RETRY:
 	}
 
 	// Try to interpret path as directory
-	if list, err2 := ftpp.readDir(conn, path); err2 == nil {
+	if list, httpStatus2, err2 := ftpp.readDir(conn, path); err2 == nil {
 		ftpp.sendDirectory(w, r, path, list)
 		return
 	} else {
 		if err == nil {
 			err = err2
+			httpStatus = httpStatus2
 		}
 	}
 
-	// Error handling
-	if ftperr, ok := err.(*textproto.Error); ok {
-		ftpp.sendError(w, ftperr)
-	} else {
-		// If it is reused connection, try to reconnect
-		conn.Close()
-		if conn.reused {
-			goto RETRY
-		}
-		ftpp.tproxy.httpError(w, http.StatusServiceUnavailable, err)
+	// If it is reused connection, try to reconnect
+	conn.Close()
+	if conn.reused {
+		goto RETRY
 	}
+
+	// Error handling
+	if httpStatus == 0 {
+		httpStatus = http.StatusServiceUnavailable
+	}
+
+	ftpp.sendError(w, httpStatus, err)
+}
+
+//
+// Read the file
+//
+func (ftpp *FTPProxy) readFile(conn *ftpConn, path string) (*ftp.Response, int, error) {
+	// Try to fetch the file
+	ftpp.tproxy.Debug("FTP: RETR %q", path)
+	body, err := conn.Retr(path)
+	if err == nil {
+		return body, 0, nil
+	} else {
+		ftpp.tproxy.Debug("FTP: RETR: %s", err)
+	}
+
+	// Try to guess appropriate HTTP status
+	httpStatus := 0
+	if ftperr, ok := err.(*textproto.Error); ok && ftperr.Code == ftp.StatusFileUnavailable {
+		ftpp.tproxy.Debug("FTP: SIZE %q", path)
+		_, err2 := conn.FileSize(path)
+		if err2 == nil {
+			httpStatus = http.StatusForbidden
+		} else {
+			ftpp.tproxy.Debug("FTP: SIZE: %s", err2)
+			httpStatus = http.StatusNotFound
+		}
+	}
+
+	return nil, httpStatus, err
 }
 
 //
 // Read the directory
 //
-func (ftpp *FTPProxy) readDir(conn *ftpConn, path string) ([]*ftp.Entry, error) {
+func (ftpp *FTPProxy) readDir(conn *ftpConn, path string) ([]*ftp.Entry, int, error) {
 	ftpp.tproxy.Debug("FTP: CWD %q", path)
 	err := conn.ChangeDir(path)
 	if err != nil {
-		return nil, err
+		ftpp.tproxy.Debug("FTP: CWD %s", err)
+		return nil, 0, err
 	}
 
 	ftpp.tproxy.Debug("FTP: LIST .")
 	files, err := conn.List(".")
+	if err != nil {
+		ftpp.tproxy.Debug("FTP: LIST %s", err)
+	}
 
 	ftpp.tproxy.Debug("FTP: CWD /")
 	err2 := conn.ChangeDir("/")
 	if err2 != nil {
+		ftpp.tproxy.Debug("FTP: CWD: %s", err2)
 		conn.Close()
 	}
 
-	return files, err
+	return files, 0, err
+}
+
+//
+// Send a error response
+//
+func (ftpp *FTPProxy) sendError(w http.ResponseWriter, httpStatus int, err error) {
+	if ftperr, ok := err.(*textproto.Error); ok {
+		err = fmt.Errorf("FTP: %s", err)
+
+		if httpStatus == 0 {
+			switch ftperr.Code {
+			case ftp.StatusNotLoggedIn:
+				httpStatus = http.StatusUnauthorized
+			}
+		}
+	}
+
+	ftpp.tproxy.httpError(w, httpStatus, err)
 }
 
 //
@@ -305,17 +359,6 @@ func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
 func (ftpp *FTPProxy) sendFile(w http.ResponseWriter, body *ftp.Response) {
 	io.Copy(w, body)
 	body.Close()
-}
-
-//
-// Send FTP error
-//
-func (ftpp *FTPProxy) sendError(w http.ResponseWriter, ftperr *textproto.Error) {
-	if ftperr.Code == ftp.StatusFileUnavailable {
-		ftpp.tproxy.httpError(w, http.StatusNotFound, ftperr)
-	} else {
-		ftpp.tproxy.httpError(w, http.StatusServiceUnavailable, ftperr)
-	}
 }
 
 //
