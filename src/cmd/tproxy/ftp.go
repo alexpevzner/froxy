@@ -173,10 +173,19 @@ func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
 
 	// Format HTML head
 	w.Write([]byte("<html>"))
-	w.Write([]byte(`<head><meta charset="utf-8"></head>`))
+
+	w.Write([]byte(`<head><meta charset="utf-8">` + "\n"))
+	w.Write([]byte("<style>\n"))
+	w.Write([]byte("th, td {\n"))
+	w.Write([]byte("    padding-right: 15px;\n"))
+	w.Write([]byte("}\n"))
+	w.Write([]byte("</style>\n"))
+	w.Write([]byte("</head>\n"))
+
 	w.Write([]byte("<title>"))
 	template.HTMLEscape(w, []byte(r.URL.String()))
-	w.Write([]byte("</title><body>\n"))
+	w.Write([]byte("</title>\n"))
+	w.Write([]byte("<body>\n"))
 
 	// Format table of files
 	w.Write([]byte(`<fieldset style="border-radius:10px">`))
@@ -246,13 +255,13 @@ func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
 
 		// Create table row
 		w.Write([]byte("<tr>"))
-		fmt.Fprintf(w, "<td>%s&nbsp;<a href=%q>%s</a></td>", symbol, href, name)
-		fmt.Fprintf(w, "<td>%s</td>", time)
-		fmt.Fprintf(w, "<td>%s</td>", size)
+		fmt.Fprintf(w, `<td>%s&nbsp;<a href=%q>%s</a></td>`, symbol, href, name)
+		fmt.Fprintf(w, `<td>%s</td>`, size)
+		fmt.Fprintf(w, `<td>%s</td>`, time)
 		w.Write([]byte("</tr>\n"))
 	}
 
-	w.Write([]byte("</tbody><t/table>\n"))
+	w.Write([]byte("</tbody></table>\n"))
 	w.Write([]byte("</fieldset></body></html>\n"))
 }
 
