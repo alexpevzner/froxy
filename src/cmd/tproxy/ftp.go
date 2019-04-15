@@ -10,6 +10,7 @@ import (
 	"io"
 	"net"
 	"net/http"
+	"net/textproto"
 	"net/url"
 	"sort"
 	"strings"
@@ -84,6 +85,13 @@ func (ftpp *FTPProxy) Handle(w http.ResponseWriter, r *http.Request, transport T
 
 	site := site_url.String()
 
+	// Normalize path
+	path := r.URL.Path
+	isDir := strings.HasSuffix(path, "/")
+	if isDir && len(path) > 1 {
+		path = path[:len(path)-1]
+	}
+
 	// Obtain a connection
 RETRY:
 	conn := ftpp.getConn(site)
@@ -98,24 +106,20 @@ RETRY:
 
 	defer conn.putConn()
 
-	// Perform a transaction
-	path := r.URL.Path
-
 	// Try to interpret path as file
-	if !strings.HasSuffix(path, "/") {
+	if !isDir {
 		var body *ftp.Response
-		ftpp.tproxy.Debug("FTP: retr %q", path)
+		ftpp.tproxy.Debug("FTP: RETR %q", path)
 		body, err = conn.Retr(path)
 		if err == nil {
-			ftpp.sendFile(w, conn, body)
+			ftpp.sendFile(w, body)
 			return
 		}
 	}
 
 	// Try to interpret path as directory
-	ftpp.tproxy.Debug("FTP: LIST %q", path)
-	if list, err2 := conn.List(path); err2 == nil {
-		ftpp.sendDirectory(w, r, conn, path, list)
+	if list, err2 := ftpp.readDir(conn, path); err2 == nil {
+		ftpp.sendDirectory(w, r, path, list)
 		return
 	} else {
 		if err == nil {
@@ -123,28 +127,46 @@ RETRY:
 		}
 	}
 
-	// If it is reused connection, try to reconnect
-	//
-	// FIXME - distinguish between network errors and
-	// FTP errors
-	if conn.reused {
+	// Error handling
+	if ftperr, ok := err.(*textproto.Error); ok {
+		ftpp.sendError(w, ftperr)
+	} else {
+		// If it is reused connection, try to reconnect
 		conn.Close()
-		goto RETRY
+		if conn.reused {
+			goto RETRY
+		}
+		ftpp.tproxy.httpError(w, http.StatusServiceUnavailable, err)
+	}
+}
+
+//
+// Read the directory
+//
+func (ftpp *FTPProxy) readDir(conn *ftpConn, path string) ([]*ftp.Entry, error) {
+	ftpp.tproxy.Debug("FTP: CWD %q", path)
+	err := conn.ChangeDir(path)
+	if err != nil {
+		return nil, err
 	}
 
-	ftpp.sendError(w, conn, err)
+	ftpp.tproxy.Debug("FTP: LIST .")
+	files, err := conn.List(".")
+
+	ftpp.tproxy.Debug("FTP: CWD /")
+	err2 := conn.ChangeDir("/")
+	if err2 != nil {
+		conn.Close()
+	}
+
+	return files, err
 }
 
 //
 // Send a response with directory listing
 //
 func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
-	conn *ftpConn, path string, files []*ftp.Entry) {
-
-	// Normalize path
-	if len(path) > 1 && strings.HasSuffix(path, "/") {
-		path = path[:len(path)-1]
-	}
+	path string, files []*ftp.Entry) {
 
 	// Prepare list of files
 	sort.Slice(files, func(i, j int) bool {
@@ -280,7 +302,7 @@ func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
 //
 // Send a response with directory listing
 //
-func (ftpp *FTPProxy) sendFile(w http.ResponseWriter, conn *ftpConn, body *ftp.Response) {
+func (ftpp *FTPProxy) sendFile(w http.ResponseWriter, body *ftp.Response) {
 	io.Copy(w, body)
 	body.Close()
 }
@@ -288,7 +310,12 @@ func (ftpp *FTPProxy) sendFile(w http.ResponseWriter, conn *ftpConn, body *ftp.R
 //
 // Send FTP error
 //
-func (ftpp *FTPProxy) sendError(w http.ResponseWriter, conn *ftpConn, err error) {
+func (ftpp *FTPProxy) sendError(w http.ResponseWriter, ftperr *textproto.Error) {
+	if ftperr.Code == ftp.StatusFileUnavailable {
+		ftpp.tproxy.httpError(w, http.StatusNotFound, ftperr)
+	} else {
+		ftpp.tproxy.httpError(w, http.StatusServiceUnavailable, ftperr)
+	}
 }
 
 //
