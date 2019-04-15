@@ -47,6 +47,7 @@ type Tproxy struct {
 	// Transports
 	sshTransport    *SSHTransport    // SSH transport
 	directTransport *DirectTransport // Direct transport
+	ftpProxy        *FTPProxy        // FTP-over-http proxy
 }
 
 // ----- Connection state -----
@@ -433,6 +434,9 @@ func (proxy *Tproxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 
 	// Handle request
 	switch {
+	case r.URL.Scheme == "ftp":
+		proxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
+		proxy.ftpProxy.Handle(w, r, transport)
 	case r.Method == http.MethodConnect:
 		proxy.handleConnect(w, r, transport)
 	default:
@@ -499,6 +503,7 @@ func NewTproxy(env *Env, port int) (*Tproxy, error) {
 	// Create transports
 	proxy.sshTransport = NewSSHTransport(proxy)
 	proxy.directTransport = NewDirectTransport(proxy)
+	proxy.ftpProxy = NewFTPProxy(proxy)
 
 	// Create HTTP server
 	proxy.httpSrv = &http.Server{
