@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"cmd/tproxy/internal/pages"
 	"errors"
 	"fmt"
 	"io"
@@ -17,6 +16,9 @@ import (
 	"strings"
 	"time"
 	"unicode"
+
+	"cmd/tproxy/internal/pages"
+	"cmd/tproxy/internal/sysdep"
 )
 
 //
@@ -83,18 +85,22 @@ func (adm *Adm) Install() error {
 	}
 
 	// Create desktop entry
-	err = adm.CreateDesktopShortcut(
+	err = sysdep.CreateDesktopShortcut(
 		adm.PathUserDesktopFile,
-		"Open TProxy configuration page in a web browser",
+		adm.OsExecutable,
 		"-open",
+		adm.PathUserIconFile,
+		"Open TProxy configuration page in a web browser",
 		false,
 	)
 
 	if err == nil {
-		err = adm.CreateDesktopShortcut(
+		err = sysdep.CreateDesktopShortcut(
 			adm.PathUserStartupFile,
-			"Start TProxy service",
+			adm.OsExecutable,
 			"-r",
+			adm.PathUserIconFile,
+			"Start TProxy service",
 			true,
 		)
 	}
@@ -152,7 +158,7 @@ func (adm *Adm) Run() error {
 	}
 
 	// Initialize process attributes
-	attr := adm.RunProcAddr()
+	attr := sysdep.ProcAttrBackground()
 	attr.Files = []*os.File{devnull, wstdout, wstderr}
 
 	// Initialize process arguments
@@ -259,5 +265,5 @@ func (adm *Adm) Open() error {
 	}
 
 	url := fmt.Sprintf("http://localhost:%d", adm.GetPort())
-	return adm.OpenURL(url)
+	return sysdep.OpenURL(url)
 }

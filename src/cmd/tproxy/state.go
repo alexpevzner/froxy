@@ -10,6 +10,8 @@ import (
 	"io"
 	"io/ioutil"
 	"os"
+
+	"cmd/tproxy/internal/sysdep"
 )
 
 //
@@ -56,12 +58,12 @@ func (state *State) Load(file string) error {
 
 	defer f.Close()
 
-	err = FileLock(f, false, true)
+	err = sysdep.FileLock(f, false, true)
 	if err != nil {
 		return err
 	}
 
-	defer FileUnlock(f)
+	defer sysdep.FileUnlock(f)
 
 	data, err := ioutil.ReadAll(f)
 	if err != nil {
@@ -98,7 +100,7 @@ func (state *State) Save(file string) error {
 		return err
 	}
 
-	err = FileLock(f, true, true)
+	err = sysdep.FileLock(f, true, true)
 	if err != nil {
 		f.Close()
 		return err
@@ -113,7 +115,7 @@ func (state *State) Save(file string) error {
 		err = err2
 	}
 
-	FileUnlock(f)
+	sysdep.FileUnlock(f)
 
 	if err2 := f.Close(); err == nil {
 		err = err2

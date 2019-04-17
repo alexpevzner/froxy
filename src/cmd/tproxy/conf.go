@@ -7,6 +7,11 @@ package main
 const (
 	// ----- Built-in HTTP server configuration -----
 	//
+	// Name of this program
+	//
+	PROGRAM_NAME = "TProxy"
+
+	//
 	// TCP port to run server on
 	//
 	HTTP_SERVER_PORT = 8888

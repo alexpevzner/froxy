@@ -1,8 +1,8 @@
 //
-// TProxy administration (install/uninstall etc) -- Windows version
+// Desktop shortcuts management -- Windows version
 //
 
-package main
+package sysdep
 
 /*
 #define NTDDI_VERSION NTDDI_WIN7
@@ -11,10 +11,7 @@ package main
 import "C"
 
 import (
-	"os"
-	"os/exec"
 	"runtime"
-	"syscall"
 
 	"github.com/go-ole/go-ole"
 	"github.com/go-ole/go-ole/oleutil"
@@ -23,7 +20,12 @@ import (
 //
 // Create desktop shortcut
 //
-func (adm *Adm) CreateDesktopShortcut(outpath, comment, args string,
+func CreateDesktopShortcut(
+	outpath,
+	exepath,
+	args,
+	iconpath,
+	comment string,
 	startup bool) error {
 
 	// Lock OS thread. Otherwise OLE will get crazy
@@ -47,34 +49,12 @@ func (adm *Adm) CreateDesktopShortcut(outpath, comment, args string,
 		return err
 	}
 	idispatch := cs.ToIDispatch()
-	oleutil.PutProperty(idispatch, "IconLocation", adm.PathUserIconFile)
-	oleutil.PutProperty(idispatch, "TargetPath", adm.OsExecutable)
+	oleutil.PutProperty(idispatch, "IconLocation", iconpath)
+	oleutil.PutProperty(idispatch, "TargetPath", exepath)
 	oleutil.PutProperty(idispatch, "Arguments", args)
 	oleutil.PutProperty(idispatch, "Description", comment)
 	oleutil.PutProperty(idispatch, "WindowStyle", 7)
 	_, err = oleutil.CallMethod(idispatch, "Save")
 
 	return err
-}
-
-//
-// Create os.ProcAttr to run TProxy in background
-//
-func (adm *Adm) RunProcAddr() *os.ProcAttr {
-	sys := &syscall.SysProcAttr{
-		HideWindow: true,
-		CreationFlags: uint32(C.CREATE_NO_WINDOW |
-			C.DETACHED_PROCESS),
-	}
-	attr := &os.ProcAttr{
-		Sys: sys,
-	}
-	return attr
-}
-
-//
-// Open URL in a browser
-//
-func (adm *Adm) OpenURL(url string) error {
-	return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
 }

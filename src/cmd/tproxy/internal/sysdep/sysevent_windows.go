@@ -2,7 +2,7 @@
 // System events notifier -- Windows version
 //
 
-package main
+package sysdep
 
 /*
 #define NTDDI_VERSION NTDDI_WIN7
@@ -23,16 +23,16 @@ import (
 //
 // System events notifier
 //
-type SysNotifier struct {
-	tproxy *Tproxy // Back link to Tproxy
-	hWnd   C.HWND  // Handle of hidden window for receiving system messages
+type SysEventNotifier struct {
+	callback func(SysEvent)
+	hWnd     C.HWND // Handle of hidden window for receiving system messages
 }
 
 //
-// Create new SysNotifier
+// Create new SysEventNotifier
 //
-func NewSysNotifier(tproxy *Tproxy) *SysNotifier {
-	sn := &SysNotifier{tproxy: tproxy}
+func NewSysEventNotifier(callback func(SysEvent)) *SysEventNotifier {
+	sn := &SysEventNotifier{callback: callback}
 	hWndChan := make(chan C.HWND)
 	go sn.winGoroutine(hWndChan)
 	sn.hWnd = <-hWndChan
@@ -43,7 +43,7 @@ func NewSysNotifier(tproxy *Tproxy) *SysNotifier {
 //
 // This goroutine waits for console events, using Go's os/signal wrapper
 //
-func (sn *SysNotifier) conGoroutine() {
+func (sn *SysEventNotifier) conGoroutine() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
 
@@ -54,7 +54,7 @@ func (sn *SysNotifier) conGoroutine() {
 //
 // This goroutine creates invisible window and waits for system messages
 //
-func (sn *SysNotifier) winGoroutine(hWndChan chan C.HWND) {
+func (sn *SysEventNotifier) winGoroutine(hWndChan chan C.HWND) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
 
@@ -105,15 +105,14 @@ func (sn *SysNotifier) winGoroutine(hWndChan chan C.HWND) {
 }
 
 //
-// SysNotifier window procedure
+// SysEventNotifier window procedure
 //
-func (sn *SysNotifier) wndProc(hWnd C.HWND, msg C.UINT, wParam C.WPARAM, lParam C.LPARAM) C.LRESULT {
-	sn.tproxy.Debug("msg=%d", msg)
+func (sn *SysEventNotifier) wndProc(hWnd C.HWND, msg C.UINT, wParam C.WPARAM, lParam C.LPARAM) C.LRESULT {
 	switch msg {
 	case C.WM_CLOSE:
 		C.DestroyWindow(hWnd)
 	case C.WM_DESTROY, C.WM_QUIT, C.WM_ENDSESSION:
-		sn.tproxy.Raise(EventShutdownRequested)
+		sn.callback(SysEventShutdown)
 	default:
 		return C.DefWindowProc(hWnd, C.UINT(msg), wParam, lParam)
 	}

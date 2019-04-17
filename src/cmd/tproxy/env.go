@@ -5,13 +5,15 @@
 package main
 
 import (
-	"cmd/tproxy/internal/log"
 	"fmt"
 	"os"
 	"path/filepath"
 	"strings"
 	"sync"
 	"syscall"
+
+	"cmd/tproxy/internal/log"
+	"cmd/tproxy/internal/sysdep"
 )
 
 //
@@ -74,11 +76,27 @@ func NewEnv() *Env {
 	}
 
 	// Populate paths
-	env.populateOsPaths()
-	env.PathUserConfFile = filepath.Join(env.PathUserConfDir, "tproxy.cfg")
-	env.PathUserStateFile = filepath.Join(env.PathUserConfDir, "tproxy.state")
-	env.PathUserLogFile = filepath.Join(env.PathUserLogDir, "tproxy.log")
-	env.PathUserLockFile = filepath.Join(env.PathUserConfDir, "tproxy.lock")
+	env.PathSysConfDir = sysdep.SysConfDir(PROGRAM_NAME)
+	env.PathUserHomeDir = sysdep.UserHomeDir()
+	env.PathUserConfDir = sysdep.UserConfDir(PROGRAM_NAME)
+	env.PathUserStateDir = env.PathUserConfDir
+	env.PathUserLogDir = filepath.Join(env.PathUserStateDir, "log")
+	env.PathUserKeysDir = filepath.Join(env.PathUserStateDir, "keys")
+	env.PathUserDesktopDir = sysdep.UserDesktopDir()
+	env.PathUserStartupDir = sysdep.UserStartupDir()
+	env.PathUserIconsDir = env.PathUserConfDir
+	env.PathUserLockDir = filepath.Join(env.PathUserStateDir, "lock")
+
+	progname := strings.ToLower(PROGRAM_NAME)
+
+	env.PathUserConfFile = filepath.Join(env.PathUserConfDir, progname+".cfg")
+	env.PathUserStateFile = filepath.Join(env.PathUserConfDir, progname+".state")
+	env.PathUserLogFile = filepath.Join(env.PathUserLogDir, progname+".log")
+	env.PathUserLockFile = filepath.Join(env.PathUserConfDir, progname+".lock")
+
+	env.PathUserDesktopFile = sysdep.UserDesktopFile(PROGRAM_NAME)
+	env.PathUserStartupFile = sysdep.UserStartupFile(PROGRAM_NAME)
+	env.PathUserIconFile = filepath.Join(env.PathUserIconsDir, progname+"."+sysdep.IconExt())
 
 	// Create directories
 	done := make(map[string]struct{})
@@ -114,7 +132,7 @@ func (env *Env) LockAcquire(lock EnvLock, wait bool) error {
 	// acquire the same lock
 	for file := env.locksFiles[lock]; file != nil; {
 		if !wait {
-			return ErrLockIsBusy
+			return sysdep.ErrLockIsBusy
 		}
 		env.locksCond.Wait()
 		file = env.locksFiles[lock]
@@ -131,7 +149,7 @@ func (env *Env) LockAcquire(lock EnvLock, wait bool) error {
 
 	// Try to acquire a file lock
 	env.locksCond.L.Unlock()
-	err = FileLock(file, true, wait)
+	err = sysdep.FileLock(file, true, wait)
 	env.locksCond.L.Lock()
 
 EXIT:
@@ -181,7 +199,7 @@ func (env *Env) LockRelease(lock EnvLock) {
 //
 func (env *Env) TproxyLockAcquire() error {
 	err := env.LockTry(EnvLockRun)
-	if err == ErrLockIsBusy {
+	if err == sysdep.ErrLockIsBusy {
 		err = ErrTProxyRunning
 	}
 	return err
@@ -211,7 +229,7 @@ func (env *Env) Detach() error {
 
 	out := logfile.Fd()
 
-	return env.StdRedirect(uintptr(nul), out, out)
+	return sysdep.StdRedirect(uintptr(nul), out, out)
 }
 
 // ----- Persistent configuration -----

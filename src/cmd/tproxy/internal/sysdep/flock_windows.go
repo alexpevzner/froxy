@@ -1,8 +1,8 @@
 //
-// File locking -- UNIX version
+// File locking -- Windows version
 //
 
-package main
+package sysdep
 
 /*
 #define NTDDI_VERSION NTDDI_WIN7

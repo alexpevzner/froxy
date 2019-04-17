@@ -4,7 +4,7 @@
 // +build darwin dragonfly freebsd linux nacl netbsd openbsd solaris
 //
 
-package main
+package sysdep
 
 import (
 	"os"
@@ -15,29 +15,28 @@ import (
 //
 // System events notifier
 //
-type SysNotifier struct {
-	tproxy *Tproxy // Back link to Tproxy
+type SysEventNotifier struct {
+	callback func(SysEvent)
 }
 
 //
-// Create new SysNotifier
+// Create new SysEventNotifier
 //
-func NewSysNotifier(tproxy *Tproxy) *SysNotifier {
-	sn := &SysNotifier{tproxy: tproxy}
+func NewSysEventNotifier(callback func(SysEvent)) *SysEventNotifier {
+	sn := &SysEventNotifier{callback: callback}
 	go sn.goroutine()
 	return sn
 }
 
 //
-// SysNotifier goroutine
+// SysEventNotifier goroutine
 //
-func (sn *SysNotifier) goroutine() {
+func (sn *SysEventNotifier) goroutine() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT)
 	signal.Notify(c, syscall.SIGTERM)
 	signal.Notify(c, syscall.SIGHUP)
 
-	s := <-c
-	sn.tproxy.Debug("Signal %s received", s)
-	sn.tproxy.Raise(EventShutdownRequested)
+	<-c
+	sn.callback(SysEventShutdown)
 }

@@ -6,7 +6,6 @@ package main
 
 import (
 	"bytes"
-	"cmd/tproxy/internal/pages"
 	"errors"
 	"fmt"
 	"io"
@@ -17,6 +16,9 @@ import (
 	"strings"
 	"sync"
 	"sync/atomic"
+
+	"cmd/tproxy/internal/pages"
+	"cmd/tproxy/internal/sysdep"
 )
 
 //
@@ -36,13 +38,13 @@ type Tproxy struct {
 	Counters Counters // Collection of statistic counters
 
 	// Tproxy parts
-	router      *Router             // Request router
-	webapi      *WebAPI             // JS API handler
-	sysNotifier *SysNotifier        // System events notifier
-	localhosts  map[string]struct{} // Hosts considered local
-	localport   string              // Local port as string
-	listener    net.Listener        // TCP listener
-	httpSrv     *http.Server        // Local HTTP server instance
+	router      *Router                  // Request router
+	webapi      *WebAPI                  // JS API handler
+	sysNotifier *sysdep.SysEventNotifier // System events notifier
+	localhosts  map[string]struct{}      // Hosts considered local
+	localport   string                   // Local port as string
+	listener    net.Listener             // TCP listener
+	httpSrv     *http.Server             // Local HTTP server instance
 
 	// Transports
 	sshTransport    *SSHTransport    // SSH transport
@@ -473,6 +475,17 @@ func (proxy *Tproxy) eventGoroutine() {
 }
 
 //
+// sysdep.SysEventNotifier callback
+//
+func (proxy *Tproxy) sysEventCallback(se sysdep.SysEvent) {
+	switch se {
+	case sysdep.SysEventShutdown:
+		proxy.Info("Shutdown requested")
+		proxy.Raise(EventShutdownRequested)
+	}
+}
+
+//
 // Create a Tproxy instance
 //
 func NewTproxy(env *Env, port int) (*Tproxy, error) {
@@ -486,7 +499,7 @@ func NewTproxy(env *Env, port int) (*Tproxy, error) {
 
 	proxy.webapi = NewWebAPI(proxy)
 	proxy.router = NewRouter(proxy)
-	proxy.sysNotifier = NewSysNotifier(proxy)
+	proxy.sysNotifier = sysdep.NewSysEventNotifier(proxy.sysEventCallback)
 
 	// Populate table of local host names
 	for _, h := range []string{
