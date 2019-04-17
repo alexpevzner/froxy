@@ -90,6 +90,7 @@ func (adm *Adm) Install() error {
 		adm.OsExecutable,
 		"-open",
 		adm.PathUserIconFile,
+		PROGRAM_NAME,
 		"Open TProxy configuration page in a web browser",
 		false,
 	)
@@ -100,6 +101,7 @@ func (adm *Adm) Install() error {
 			adm.OsExecutable,
 			"-r",
 			adm.PathUserIconFile,
+			PROGRAM_NAME,
 			"Start TProxy service",
 			true,
 		)

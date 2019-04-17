@@ -15,11 +15,21 @@ import (
 //
 // Create desktop shortcut
 //
+// Parameters are:
+//     outpath   Output path
+//     exepath   Path to executable file
+//     args      Arguments
+//     iconpath  Path to icon file
+//     name      Program name
+//     comment   Comment
+//     startup   Startup or desktop shortcut
+//
 func CreateDesktopShortcut(
 	outpath,
 	exepath,
 	args,
 	iconpath,
+	name,
 	comment string,
 	startup bool) error {
 
@@ -33,9 +43,9 @@ func CreateDesktopShortcut(
 	text := `[Desktop Entry]
 Type=Application
 Version=1.0
-Name=TProxy
 Terminal=false`
 
+	text += fmt.Sprintf("\nName=%s", name)
 	text += fmt.Sprintf("\nComment=%s", comment)
 	text += fmt.Sprintf("\nExec=%s", cmd)
 	text += fmt.Sprintf("\nIcon=%s", iconpath)
