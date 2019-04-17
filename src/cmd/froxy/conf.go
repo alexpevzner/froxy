@@ -12,6 +12,11 @@ const (
 	PROGRAM_NAME = "Froxy"
 
 	//
+	// Name as shown under desktop icon
+	//
+	PROGRAM_ICON_NAME = PROGRAM_NAME + " Proxy"
+
+	//
 	// TCP port to run server on
 	//
 	HTTP_SERVER_PORT = 8888

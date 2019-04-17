@@ -90,7 +90,7 @@ func (adm *Adm) Install() error {
 		adm.OsExecutable,
 		"-open",
 		adm.PathUserIconFile,
-		PROGRAM_NAME,
+		PROGRAM_ICON_NAME,
 		"Open Froxy configuration page in a web browser",
 		false,
 	)
@@ -105,6 +105,11 @@ func (adm *Adm) Install() error {
 			"Start Froxy service",
 			true,
 		)
+	}
+
+	// Run the program
+	if err == nil {
+		err = adm.Run()
 	}
 
 	// Undo changes in a case of errors
