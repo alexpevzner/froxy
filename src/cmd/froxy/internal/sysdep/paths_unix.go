@@ -65,14 +65,14 @@ func UserStartupDir() string {
 //
 // Get user desktop file for the program
 //
-func UserDesktopFile(program string) string {
+func UserDesktopFile(program, iconname string) string {
 	return filepath.Join(UserDesktopDir(), strings.ToLower(program)+".desktop")
 }
 
 //
 // Get user startup file for the program
 //
-func UserStartupFile(program string) string {
+func UserStartupFile(program, iconname string) string {
 	return filepath.Join(UserStartupDir(), strings.ToLower(program)+".desktop")
 }
 

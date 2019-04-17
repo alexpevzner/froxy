@@ -94,8 +94,8 @@ func NewEnv() *Env {
 	env.PathUserLogFile = filepath.Join(env.PathUserLogDir, progname+".log")
 	env.PathUserLockFile = filepath.Join(env.PathUserConfDir, progname+".lock")
 
-	env.PathUserDesktopFile = sysdep.UserDesktopFile(PROGRAM_NAME)
-	env.PathUserStartupFile = sysdep.UserStartupFile(PROGRAM_NAME)
+	env.PathUserDesktopFile = sysdep.UserDesktopFile(PROGRAM_NAME, PROGRAM_ICON_NAME)
+	env.PathUserStartupFile = sysdep.UserStartupFile(PROGRAM_NAME, PROGRAM_ICON_NAME)
 	env.PathUserIconFile = filepath.Join(env.PathUserIconsDir, progname+"."+sysdep.IconExt())
 
 	// Create directories
