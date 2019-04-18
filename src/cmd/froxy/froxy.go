@@ -83,11 +83,11 @@ func (s ConnState) Strings() (string, string) {
 //
 // Get connection state
 //
-func (proxy *Froxy) GetConnState() (state ConnState, info string) {
-	proxy.connStateLock.Lock()
-	state = proxy.connState
-	info = proxy.connStateInfo
-	proxy.connStateLock.Unlock()
+func (froxy *Froxy) GetConnState() (state ConnState, info string) {
+	froxy.connStateLock.Lock()
+	state = froxy.connState
+	info = froxy.connStateInfo
+	froxy.connStateLock.Unlock()
 
 	return
 }
@@ -95,61 +95,61 @@ func (proxy *Froxy) GetConnState() (state ConnState, info string) {
 //
 // Set connection state
 //
-func (proxy *Froxy) SetConnState(state ConnState, info string) {
-	proxy.connStateLock.Lock()
+func (froxy *Froxy) SetConnState(state ConnState, info string) {
+	froxy.connStateLock.Lock()
 
-	if proxy.connState != state {
-		proxy.connState = state
-		proxy.connStateInfo = info
+	if froxy.connState != state {
+		froxy.connState = state
+		froxy.connStateInfo = info
 
-		proxy.Raise(EventConnStateChanged)
+		froxy.Raise(EventConnStateChanged)
 	}
 
-	proxy.connStateLock.Unlock()
+	froxy.connStateLock.Unlock()
 }
 
 // ----- Connection management -----
 //
 // Set server parameters
 //
-func (proxy *Froxy) SetServerParams(s ServerParams) {
-	proxy.Env.SetServerParams(s)
-	proxy.sshTransport.Reconnect(s)
+func (froxy *Froxy) SetServerParams(s ServerParams) {
+	froxy.Env.SetServerParams(s)
+	froxy.sshTransport.Reconnect(s)
 }
 
 // ----- Statistics counters -----
 //
 // Add value to the statistics counter
 //
-func (proxy *Froxy) AddCounter(cnt *int32, val int32) {
+func (froxy *Froxy) AddCounter(cnt *int32, val int32) {
 	atomic.AddInt32(cnt, val)
-	proxy.Raise(EventCountersChanged)
+	froxy.Raise(EventCountersChanged)
 }
 
 //
 // Increment the statistics counter
 //
-func (proxy *Froxy) IncCounter(cnt *int32) {
-	proxy.AddCounter(cnt, 1)
+func (froxy *Froxy) IncCounter(cnt *int32) {
+	froxy.AddCounter(cnt, 1)
 }
 
 //
 // Decrement the statistics counter
 //
-func (proxy *Froxy) DecCounter(cnt *int32) {
-	proxy.AddCounter(cnt, -1)
+func (froxy *Froxy) DecCounter(cnt *int32) {
+	froxy.AddCounter(cnt, -1)
 }
 
 // ----- Proxying regular HTTP requests (GET/PUT/HEAD etc) -----
 //
 // Regular HTTP request handler
 //
-func (proxy *Froxy) handleRegularHttp(
+func (froxy *Froxy) handleRegularHttp(
 	w http.ResponseWriter,
 	r *http.Request,
 	transport Transport) {
 
-	proxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
+	froxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
 
 	// Strip hop-by-hop headers. Preserve Upgrade header, if any
 	upgrade := httpRemoveHopByHopHeaders(r.Header)
@@ -165,14 +165,14 @@ func (proxy *Froxy) handleRegularHttp(
 		// Actually it's not a big problem, because browsers
 		// implement websockets by calling proxy's CONNECT method
 		// rather that GET with upgrade
-		proxy.httpError(w, http.StatusServiceUnavailable,
+		froxy.httpError(w, http.StatusServiceUnavailable,
 			errors.New("Protocol upgrade is not implemented"))
 	}
 
 	// Perform round-trip
 	resp, err := transport.RoundTrip(r)
 	if err != nil {
-		proxy.httpError(w, http.StatusServiceUnavailable, err)
+		froxy.httpError(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
@@ -180,7 +180,7 @@ func (proxy *Froxy) handleRegularHttp(
 
 	// Finish response, unless protocol is upgraded
 	if resp.StatusCode != http.StatusSwitchingProtocols {
-		proxy.returnHttpResponse(w, resp)
+		froxy.returnHttpResponse(w, resp)
 		return
 	}
 
@@ -191,7 +191,7 @@ func (proxy *Froxy) handleRegularHttp(
 //
 // Return HTTP response back to the client
 //
-func (proxy *Froxy) returnHttpResponse(w http.ResponseWriter, resp *http.Response) {
+func (froxy *Froxy) returnHttpResponse(w http.ResponseWriter, resp *http.Response) {
 	httpCopyHeaders(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
 
@@ -205,22 +205,22 @@ func (proxy *Froxy) returnHttpResponse(w http.ResponseWriter, resp *http.Respons
 //
 // HTTP CONNECT handler
 //
-func (proxy *Froxy) handleConnect(
+func (froxy *Froxy) handleConnect(
 	w http.ResponseWriter,
 	r *http.Request,
 	transport Transport) {
 
-	proxy.Debug("%s %s %s", r.Method, r.Host, r.Proto)
+	froxy.Debug("%s %s %s", r.Method, r.Host, r.Proto)
 
 	dest_conn, err := transport.Dial("tcp", r.Host)
 	if err != nil {
-		proxy.httpError(w, http.StatusServiceUnavailable, err)
+		froxy.httpError(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
 	hijacker, ok := w.(http.Hijacker)
 	if !ok {
-		proxy.httpError(w, http.StatusInternalServerError,
+		froxy.httpError(w, http.StatusInternalServerError,
 			errors.New("Hijacking not supported"))
 		return
 	}
@@ -228,26 +228,26 @@ func (proxy *Froxy) handleConnect(
 	w.WriteHeader(http.StatusOK)
 	client_conn, _, err := hijacker.Hijack()
 	if err != nil {
-		proxy.httpError(w, http.StatusServiceUnavailable, err)
+		froxy.httpError(w, http.StatusServiceUnavailable, err)
 		return
 	}
 
-	ioTransferData(proxy.Env, client_conn, dest_conn)
+	ioTransferData(froxy.Env, client_conn, dest_conn)
 }
 
 // ----- Handling requests to Froxy itself -----
 //
 // Handle local request
 //
-func (proxy *Froxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) {
+func (froxy *Froxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) {
 	// Handle webapi requests
 	if strings.HasPrefix(r.URL.Path, "/api/") {
-		proxy.webapi.ServeHTTP(w, r)
+		froxy.webapi.ServeHTTP(w, r)
 		return
 	}
 
 	// Handle requests to Froxy static pages
-	proxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
+	froxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
 	httpNoCache(w)
 
 	if r.URL.Path == "/" {
@@ -268,12 +268,12 @@ func (proxy *Froxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) {
 
 	onsuccess := func(w http.ResponseWriter,
 		status int) {
-		proxy.httpOnSuccess(w, r, status)
+		froxy.httpOnSuccess(w, r, status)
 	}
 
 	w = &ResponseWriterWithHooks{
 		ResponseWriter: w,
-		OnError:        proxy.httpOnError,
+		OnError:        froxy.httpOnError,
 		OnSuccess:      onsuccess,
 	}
 
@@ -290,7 +290,7 @@ func (proxy *Froxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) {
 //
 // Format body of error response
 //
-func (proxy *Froxy) httpFormatError(status int, err error) (
+func (froxy *Froxy) httpFormatError(status int, err error) (
 	contentType string, content []byte) {
 
 	// Fetch HTML error template
@@ -341,11 +341,11 @@ func (proxy *Froxy) httpFormatError(status int, err error) (
 // Canonicalize URLs, embedded into HTML document, by replacing
 // relative links with absolute
 //
-func (proxy *Froxy) httpCanonicalizeURLs(input []byte) []byte {
+func (froxy *Froxy) httpCanonicalizeURLs(input []byte) []byte {
 	return bytes.Replace(
 		input,
 		[]byte(`href="/`),
-		[]byte(`href="http://`+proxy.httpSrv.Addr+"/"),
+		[]byte(`href="http://`+froxy.httpSrv.Addr+"/"),
 		-1,
 	)
 }
@@ -353,22 +353,22 @@ func (proxy *Froxy) httpCanonicalizeURLs(input []byte) []byte {
 //
 // Reply with HTTP error
 //
-func (proxy *Froxy) httpError(w http.ResponseWriter, status int, err error) {
-	contentType, content := proxy.httpFormatError(status, err)
+func (froxy *Froxy) httpError(w http.ResponseWriter, status int, err error) {
+	contentType, content := froxy.httpFormatError(status, err)
 	w.Header().Set("Content-Type", contentType)
 	httpNoCache(w)
 
 	w.WriteHeader(status)
 
-	content = proxy.httpCanonicalizeURLs(content)
+	content = froxy.httpCanonicalizeURLs(content)
 	w.Write(content)
 }
 
 //
 // ResponseWriterWithHooks.OnError hook
 //
-func (proxy *Froxy) httpOnError(w http.ResponseWriter, status int) []byte {
-	contentType, content := proxy.httpFormatError(status, nil)
+func (froxy *Froxy) httpOnError(w http.ResponseWriter, status int) []byte {
+	contentType, content := froxy.httpFormatError(status, nil)
 	w.Header().Set("Content-Type", contentType)
 	httpNoCache(w)
 	return content
@@ -377,7 +377,7 @@ func (proxy *Froxy) httpOnError(w http.ResponseWriter, status int) []byte {
 //
 // ResponseWriterWithHooks.OnSuccess hook
 //
-func (proxy *Froxy) httpOnSuccess(w http.ResponseWriter,
+func (froxy *Froxy) httpOnSuccess(w http.ResponseWriter,
 	r *http.Request, status int) {
 
 	path := r.URL.Path
@@ -396,39 +396,39 @@ func (proxy *Froxy) httpOnSuccess(w http.ResponseWriter,
 // handle HTTP request. Provides multiplexing between regular request
 // and CONNECT request handlers
 //
-func (proxy *Froxy) httpHandler(w http.ResponseWriter, r *http.Request) {
+func (froxy *Froxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	// Normalize hostname
 	host, port := NetSplitHostPort(strings.ToLower(r.Host), "")
 
 	// Check for request to Froxy itself
-	if port == proxy.localport {
-		_, local := proxy.localhosts[host]
+	if port == froxy.localport {
+		_, local := froxy.localhosts[host]
 		if local {
-			proxy.handleLocalRequest(w, r)
+			froxy.handleLocalRequest(w, r)
 			return
 		}
 	}
 
 	// Check routing
-	rt := proxy.router.Route(host)
+	rt := froxy.router.Route(host)
 
 	// Update counters
-	proxy.IncCounter(&proxy.Counters.HTTPRqReceived)
-	proxy.IncCounter(&proxy.Counters.HTTPRqPending)
-	defer proxy.DecCounter(&proxy.Counters.HTTPRqPending)
+	froxy.IncCounter(&froxy.Counters.HTTPRqReceived)
+	froxy.IncCounter(&froxy.Counters.HTTPRqPending)
+	defer froxy.DecCounter(&froxy.Counters.HTTPRqPending)
 
 	// Choose transport
 	var transport Transport
 	switch rt {
 	case RouterBypass:
-		proxy.IncCounter(&proxy.Counters.HTTPRqDirect)
-		transport = proxy.directTransport
+		froxy.IncCounter(&froxy.Counters.HTTPRqDirect)
+		transport = froxy.directTransport
 	case RouterForward:
-		proxy.IncCounter(&proxy.Counters.HTTPRqForwarded)
-		transport = proxy.sshTransport
+		froxy.IncCounter(&froxy.Counters.HTTPRqForwarded)
+		transport = froxy.sshTransport
 	case RouterBlock:
-		proxy.IncCounter(&proxy.Counters.HTTPRqBlocked)
-		proxy.httpError(w, http.StatusForbidden, ErrSiteBlocked)
+		froxy.IncCounter(&froxy.Counters.HTTPRqBlocked)
+		froxy.httpError(w, http.StatusForbidden, ErrSiteBlocked)
 		return
 	default:
 		panic("internal error")
@@ -437,23 +437,23 @@ func (proxy *Froxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	// Handle request
 	switch {
 	case r.URL.Scheme == "ftp":
-		proxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
-		proxy.ftpProxy.Handle(w, r, transport)
+		froxy.Debug("%s %s %s", r.Method, r.URL, r.Proto)
+		froxy.ftpProxy.Handle(w, r, transport)
 	case r.Method == http.MethodConnect:
-		proxy.handleConnect(w, r, transport)
+		froxy.handleConnect(w, r, transport)
 	default:
-		proxy.handleRegularHttp(w, r, transport)
+		froxy.handleRegularHttp(w, r, transport)
 	}
 }
 
 //
-// Run a proxy
+// Run Froxy
 //
-func (proxy *Froxy) Run() {
-	go proxy.eventGoroutine()
-	proxy.Raise(EventStartup)
+func (froxy *Froxy) Run() {
+	go froxy.eventGoroutine()
+	froxy.Raise(EventStartup)
 
-	err := proxy.httpSrv.Serve(proxy.listener)
+	err := froxy.httpSrv.Serve(froxy.listener)
 	if err != nil {
 		panic("Internal error: " + err.Error())
 	}
@@ -462,13 +462,13 @@ func (proxy *Froxy) Run() {
 //
 // Event monitoring goroutine
 //
-func (proxy *Froxy) eventGoroutine() {
-	events := proxy.Sub()
+func (froxy *Froxy) eventGoroutine() {
+	events := froxy.Sub()
 	for {
 		e := <-events
 		switch e {
 		case EventShutdownRequested:
-			proxy.Debug("Shutdown requested. Exiting...")
+			froxy.Debug("Shutdown requested. Exiting...")
 			os.Exit(0)
 		}
 	}
@@ -477,11 +477,11 @@ func (proxy *Froxy) eventGoroutine() {
 //
 // sysdep.SysEventNotifier callback
 //
-func (proxy *Froxy) sysEventCallback(se sysdep.SysEvent) {
+func (froxy *Froxy) sysEventCallback(se sysdep.SysEvent) {
 	switch se {
 	case sysdep.SysEventShutdown:
-		proxy.Info("Shutdown requested")
-		proxy.Raise(EventShutdownRequested)
+		froxy.Info("Shutdown requested")
+		froxy.Raise(EventShutdownRequested)
 	}
 }
 
@@ -490,16 +490,16 @@ func (proxy *Froxy) sysEventCallback(se sysdep.SysEvent) {
 //
 func NewFroxy(env *Env, port int) (*Froxy, error) {
 	// Create Froxy structure
-	proxy := &Froxy{
+	froxy := &Froxy{
 		Env:        env,
 		Ebus:       NewEbus(),
 		KeySet:     NewKeySet(env),
 		localhosts: make(map[string]struct{}),
 	}
 
-	proxy.webapi = NewWebAPI(proxy)
-	proxy.router = NewRouter(proxy)
-	proxy.sysNotifier = sysdep.NewSysEventNotifier(proxy.sysEventCallback)
+	froxy.webapi = NewWebAPI(froxy)
+	froxy.router = NewRouter(froxy)
+	froxy.sysNotifier = sysdep.NewSysEventNotifier(froxy.sysEventCallback)
 
 	// Populate table of local host names
 	for _, h := range []string{
@@ -508,35 +508,35 @@ func NewFroxy(env *Env, port int) (*Froxy, error) {
 		"127.1",
 		"[::1]",
 	} {
-		proxy.localhosts[h] = struct{}{}
+		froxy.localhosts[h] = struct{}{}
 	}
 
-	proxy.localport = fmt.Sprintf("%d", port)
+	froxy.localport = fmt.Sprintf("%d", port)
 
 	// Create transports
-	proxy.sshTransport = NewSSHTransport(proxy)
-	proxy.directTransport = NewDirectTransport(proxy)
-	proxy.ftpProxy = NewFTPProxy(proxy)
+	froxy.sshTransport = NewSSHTransport(froxy)
+	froxy.directTransport = NewDirectTransport(froxy)
+	froxy.ftpProxy = NewFTPProxy(froxy)
 
 	// Create HTTP server
-	proxy.httpSrv = &http.Server{
+	froxy.httpSrv = &http.Server{
 		Addr:    fmt.Sprintf("localhost:%d", port),
-		Handler: http.HandlerFunc(proxy.httpHandler),
+		Handler: http.HandlerFunc(froxy.httpHandler),
 	}
 
 	// Create TCP listener
 	var err error
-	proxy.listener, err = NewListener(proxy, proxy.httpSrv.Addr)
+	froxy.listener, err = NewListener(froxy, froxy.httpSrv.Addr)
 	if err != nil {
 		return nil, err
 	}
 
-	proxy.Info("Starting HTTP server at http://%s", proxy.httpSrv.Addr)
+	froxy.Info("Starting HTTP server at http://%s", froxy.httpSrv.Addr)
 
 	// Update last used port
-	if port != proxy.GetPort() {
-		proxy.SetPort(port)
+	if port != froxy.GetPort() {
+		froxy.SetPort(port)
 	}
 
-	return proxy, nil
+	return froxy, nil
 }
