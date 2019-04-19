@@ -12,7 +12,6 @@ import (
 	"sync"
 	"syscall"
 
-	"cmd/froxy/internal/log"
 	"cmd/froxy/internal/sysdep"
 )
 
@@ -20,7 +19,7 @@ import (
 // Environment type
 //
 type Env struct {
-	*log.Logger
+	Logger
 
 	// Directories
 	PathSysConfDir     string // System-wide configuration directory
@@ -69,7 +68,6 @@ const (
 //
 func NewEnv() *Env {
 	env := &Env{
-		Logger:     &log.DefaultLogger,
 		state:      &State{},
 		locksCond:  sync.NewCond(&sync.Mutex{}),
 		locksFiles: make(map[EnvLock]*os.File),
@@ -222,14 +220,13 @@ func (env *Env) Detach() error {
 		return fmt.Errorf("Open %q: %s", os.DevNull, err)
 	}
 
-	logfile, err := NewLogfile(env.PathUserLogFile)
+	err = env.Logger.LogToFile(env.PathUserLogFile)
 	if err != nil {
 		return err
 	}
 
-	out := logfile.Fd()
-
-	return sysdep.StdRedirect(uintptr(nul), out, out)
+	nullfd := uintptr(nul)
+	return sysdep.StdRedirect(nullfd, nullfd, nullfd)
 }
 
 // ----- Persistent configuration -----

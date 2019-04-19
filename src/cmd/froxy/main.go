@@ -37,7 +37,7 @@ func Usage() {
 func FroxyAdm(env *Env) {
 	adm, err := NewAdm(env, *opt_port)
 	if err != nil {
-		adm.Exit("%s", err)
+		adm.Fatal("%s", err)
 	}
 
 	switch {
@@ -56,7 +56,7 @@ func FroxyAdm(env *Env) {
 	}
 
 	if err != nil {
-		adm.Exit("%s", err)
+		adm.Fatal("%s", err)
 	}
 
 	os.Exit(0)
@@ -97,11 +97,11 @@ func main() {
 	// Check port
 	if _, ok := opt_used["p"]; ok {
 		if *opt_port < 1 || *opt_port > 0xffff {
-			env.Exit("Port number %d out of range", *opt_port)
+			env.Fatal("Port number %d out of range", *opt_port)
 		}
 
 		if *opt_uninstall || *opt_kill || *opt_open {
-			env.Exit("Option -p is not compatible with -u, -k and -open")
+			env.Fatal("Option -p is not compatible with -u, -k and -open")
 		}
 	} else {
 		*opt_port = env.GetPort()
@@ -115,20 +115,20 @@ func main() {
 	// Acquire froxy.lock
 	err := env.FroxyLockAcquire()
 	if err != nil {
-		env.Exit("%s", err)
+		env.Fatal("%s", err)
 	}
 
 	// Create froxy
 	proxy, err := NewFroxy(env, *opt_port)
 	if err != nil {
-		env.Exit("%s", err)
+		env.Fatal("%s", err)
 	}
 
 	// Detach stdin/stdout/stderr
 	if *opt_detach {
 		err = env.Detach()
 		if err != nil {
-			env.Exit("%s", err)
+			env.Fatal("%s", err)
 		}
 	}
 

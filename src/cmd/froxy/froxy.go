@@ -10,6 +10,7 @@ import (
 	"fmt"
 	"io"
 	"io/ioutil"
+	"log"
 	"net"
 	"net/http"
 	"os"
@@ -520,8 +521,9 @@ func NewFroxy(env *Env, port int) (*Froxy, error) {
 
 	// Create HTTP server
 	froxy.httpSrv = &http.Server{
-		Addr:    fmt.Sprintf("localhost:%d", port),
-		Handler: http.HandlerFunc(froxy.httpHandler),
+		Addr:     fmt.Sprintf("localhost:%d", port),
+		Handler:  http.HandlerFunc(froxy.httpHandler),
+		ErrorLog: log.New(froxy.NewLogWriter(LogLevelError), "", 0),
 	}
 
 	// Create TCP listener
