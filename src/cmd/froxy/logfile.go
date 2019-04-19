@@ -68,7 +68,7 @@ func (l *Logfile) goroutine() {
 		now := time.Now()
 
 		year, month, day := now.Date()
-		fmt.Fprintf(buf, "%2.2d-%2.2d-%4.4d", day, month, year)
+		fmt.Fprintf(buf, "%2.2d-%2.2d-%4.4d ", day, month, year)
 
 		hour, min, sec := now.Clock()
 		fmt.Fprintf(buf, "%2.2d:%2.2d:%2.2d", hour, min, sec)
