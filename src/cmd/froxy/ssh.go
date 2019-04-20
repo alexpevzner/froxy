@@ -29,14 +29,14 @@ type SSHTransport struct {
 	paramsOkToConnect bool         // Server parameters OK to connect
 
 	// Management of active sessions
-	clientsLock sync.Mutex              // Access lock
-	clients     map[*sshClient]struct{} // Pool of active clients
+	sessionsLock sync.Mutex               // Access lock
+	sessions     map[*sshSession]struct{} // Pool of active sessions
 
 	// Establishing new sessions
-	newClientLock      sync.Mutex // Access lock
-	newClientCond      *sync.Cond // Wait queue
-	newClientWaitCount int        // Count of waiters
-	newClientDialCount int        // Count of active dialers
+	newSessionLock      sync.Mutex // Access lock
+	newSessionCond      *sync.Cond // Wait queue
+	newSessionWaitCount int        // Count of waiters
+	newSessionDialCount int        // Count of active dialers
 
 	// Disconnect/reconnect machinery
 	reconnectLock       sync.Mutex         // Reconnect lock
@@ -49,11 +49,11 @@ type SSHTransport struct {
 var _ = Transport(&SSHTransport{})
 
 //
-// SSH client -- wraps ssh.Client
+// SSH session -- wraps ssh.Client
 //
-type sshClient struct {
+type sshSession struct {
 	*ssh.Client               // Underlying ssh.Client
-	transport   *SSHTransport // Transport that owns the client
+	transport   *SSHTransport // Transport that owns the session
 	refcnt      uint32        // Reference count
 }
 
@@ -61,9 +61,9 @@ type sshClient struct {
 // SSH-tunneled connection
 //
 type sshConn struct {
-	net.Conn            // Underlying SSH-backed net.Conn
-	closed   uint32     // Non-zero when closed
-	client   *sshClient // Client that owns the connection
+	net.Conn             // Underlying SSH-backed net.Conn
+	closed   uint32      // Non-zero when closed
+	session  *sshSession // Session that owns the connection
 }
 
 //
@@ -78,11 +78,11 @@ func NewSSHTransport(froxy *Froxy) *SSHTransport {
 			TLSHandshakeTimeout:   10 * time.Second,
 			ExpectContinueTimeout: 1 * time.Second,
 		},
-		froxy:   froxy,
-		clients: make(map[*sshClient]struct{}),
+		froxy:    froxy,
+		sessions: make(map[*sshSession]struct{}),
 	}
 
-	t.newClientCond = sync.NewCond(&t.newClientLock)
+	t.newSessionCond = sync.NewCond(&t.newSessionLock)
 	t.Transport.Dial = func(net, addr string) (net.Conn, error) {
 		conn, err := t.Dial(net, addr)
 		return conn, err
@@ -180,10 +180,10 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 		return nil, err
 	}
 
-	// Obtain SSH client
-	clnt := t.getClient()
-	if clnt == nil {
-		clnt, err = t.newClient(ctx, params, key)
+	// Obtain SSH session
+	session := t.getSession()
+	if session == nil {
+		session, err = t.newSession(ctx, params, key)
 	}
 	if err != nil {
 		t.disconnectWait.Done()
@@ -193,9 +193,9 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	}
 
 	// Dial a new connection
-	conn, err := clnt.Dial(net, addr)
+	conn, err := session.Dial(net, addr)
 	if err != nil {
-		clnt.unref()
+		session.unref()
 		err = fmt.Errorf("Server can connect to %q: %s",
 			addr, err)
 		return nil, err
@@ -204,34 +204,34 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	t.froxy.Debug("SSH: connection established")
 	t.froxy.IncCounter(&t.froxy.Counters.SSHConnections)
 
-	return &sshConn{Conn: conn, client: clnt}, nil
+	return &sshConn{Conn: conn, session: session}, nil
 }
 
 //
 // Get a client session for establishing new connection
 // May return nil if appropriate session is not found
 //
-func (t *SSHTransport) getClient() *sshClient {
+func (t *SSHTransport) getSession() *sshSession {
 	// Acquire the lock
-	t.clientsLock.Lock()
-	t.clientsLock.Unlock()
+	t.sessionsLock.Lock()
+	t.sessionsLock.Unlock()
 
-	// Lookup a client pool
-	clnt := (*sshClient)(nil)
+	// Lookup a sessions pool
+	session := (*sshSession)(nil)
 
-	for c, _ := range t.clients {
-		if c.refcnt < SSH_MAX_CONN_PER_CLIENT {
-			if clnt == nil || clnt.refcnt > c.refcnt {
-				clnt = c
+	for ssn, _ := range t.sessions {
+		if ssn.refcnt < SSH_MAX_CONN_PER_CLIENT {
+			if session == nil || session.refcnt > ssn.refcnt {
+				session = ssn
 			}
 		}
 	}
 
-	if clnt != nil {
-		clnt.refcnt++
+	if session != nil {
+		session.refcnt++
 	}
 
-	return clnt
+	return session
 }
 
 // ----- Establishing new client sessions -----
@@ -242,54 +242,50 @@ func (t *SSHTransport) getClient() *sshClient {
 // new sessions, depending on a present demand in new connections
 // (one session my provide up to SSH_MAX_CONN_PER_CLIENT connections)
 //
-// Usage:
-//     t.newClientWait()
-//     c := t.getClient()
-//     if c == nil {
-//         c = dialNewClient(...)
-//     }
-//     t.newClientDone()
-//
-func (t *SSHTransport) newClientWait() {
-	t.newClientLock.Lock()
-	t.newClientWaitCount++
+func (t *SSHTransport) newSessionWait() {
+	t.newSessionLock.Lock()
 
-	for t.newClientDialCount*SSH_MAX_CONN_PER_CLIENT >= t.newClientWaitCount {
-		t.newClientCond.Wait()
+	t.newSessionWaitCount++
+
+	for t.newSessionDialCount*SSH_MAX_CONN_PER_CLIENT >= t.newSessionWaitCount {
+		t.newSessionCond.Wait()
 	}
 
-	t.newClientDialCount++
-	t.newClientLock.Unlock()
+	t.newSessionDialCount++
+
+	t.newSessionLock.Unlock()
 }
 
 //
-// Notify new sessions scheduler that session establishment is
+// Notify sessions scheduler that new session establishment is
 // done (or not longer needed)
 //
-func (t *SSHTransport) newClientDone() {
-	t.newClientLock.Lock()
-	t.newClientDialCount--
-	t.newClientWaitCount--
-	t.newClientCond.Signal()
-	t.newClientLock.Unlock()
+func (t *SSHTransport) newSessionDone() {
+	t.newSessionLock.Lock()
+
+	t.newSessionDialCount--
+	t.newSessionWaitCount--
+	t.newSessionCond.Signal()
+
+	t.newSessionLock.Unlock()
 }
 
 //
-// Establish a new client connection
+// Establish a new client session
 //
-func (t *SSHTransport) newClient(
+func (t *SSHTransport) newSession(
 	ctx context.Context,
 	params ServerParams,
-	key *keys.Key) (*sshClient, error) {
+	key *keys.Key) (*sshSession, error) {
 
 	// Obtain grant to dial new session
-	t.newClientWait()
-	defer t.newClientDone()
+	t.newSessionWait()
+	defer t.newSessionDone()
 
 	// Do we still need to dial?
-	clnt := t.getClient()
-	if clnt != nil {
-		return clnt, nil
+	session := t.getSession()
+	if session != nil {
+		return session, nil
 	}
 
 	// Create SSH configuration
@@ -331,44 +327,44 @@ func (t *SSHTransport) newClient(
 
 	t.froxy.SetConnState(ConnEstablished, "")
 
-	// Create &sshClient structure
-	clnt = &sshClient{
+	// Create &sshSession structure
+	session = &sshSession{
 		Client:    ssh.NewClient(c, chans, reqs),
 		transport: t,
 		refcnt:    1,
 	}
 
-	t.clientsLock.Lock()
+	t.sessionsLock.Lock()
 	t.froxy.IncCounter(&t.froxy.Counters.SSHSessions)
-	t.clients[clnt] = struct{}{}
-	t.clientsLock.Unlock()
+	t.sessions[session] = struct{}{}
+	t.sessionsLock.Unlock()
 
 	// Wait in background for connection termination
 	go func() {
-		err := clnt.Wait()
+		err := session.Wait()
 
-		t.clientsLock.Lock()
+		t.sessionsLock.Lock()
 
 		t.froxy.DecCounter(&t.froxy.Counters.SSHSessions)
-		delete(t.clients, clnt)
+		delete(t.sessions, session)
 
-		if len(t.clients) == 0 && ctx.Err() == nil {
+		if len(t.sessions) == 0 && ctx.Err() == nil {
 			t.froxy.SetConnState(ConnTrying, err.Error())
 		}
 
 		t.disconnectWait.Done()
 
-		t.clientsLock.Unlock()
+		t.sessionsLock.Unlock()
 	}()
 
-	return clnt, nil
+	return session, nil
 }
 
-// ----- sshClient methods -----
+// ----- sshSession methods -----
 //
-// Unref the client
+// Unref the session
 //
-func (c *sshClient) unref() {
+func (c *sshSession) unref() {
 	c.refcnt--
 }
 
@@ -380,13 +376,13 @@ func (conn *sshConn) Close() error {
 	var err error
 
 	if atomic.SwapUint32(&conn.closed, 1) == 0 {
-		t := conn.client.transport
+		t := conn.session.transport
 
 		t.froxy.Debug("SSH: connection closed")
 
 		t.froxy.DecCounter(&t.froxy.Counters.SSHConnections)
 		err = conn.Conn.Close()
-		conn.client.unref()
+		conn.session.unref()
 	}
 
 	return err
