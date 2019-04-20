@@ -287,16 +287,6 @@ func (set *KeySet) load() {
 	// Update keyset
 	set.keys = loadedKeys
 	set.infos = loadedInfos
-
-	// Print debug messages
-	set.env.Debug("Loaded keys:")
-	for id, key := range set.keys {
-		s := id
-		if key.Comment != "" {
-			s += "   " + key.Comment
-		}
-		set.env.Debug(" %s", s)
-	}
 }
 
 //
