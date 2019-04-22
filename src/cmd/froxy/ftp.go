@@ -41,7 +41,7 @@ type ftpConn struct {
 	ftpp            *FTPProxy // Back link to owning FTPProxy
 	netconn         net.Conn  // Underlying net.Conn
 	site            string    // Site URL
-	reused          bool      // This is reused idle connection
+	reused          bool      // This is connection was idle and reused
 	closed          bool      // This is closed connection
 }
 
