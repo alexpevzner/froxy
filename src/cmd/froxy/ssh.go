@@ -238,20 +238,20 @@ func (t *SSHTransport) Reconnect(params ServerParams) {
 //
 func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	// Synchronize with disconnect logic
+	t.disconnectWait.Add(1)
+	defer t.disconnectWait.Done()
+
 	t.disconnectLock.RLock()
 	ctx := t.ctx
 	t.disconnectLock.RUnlock()
 
-	if ctx.ok {
-		t.disconnectWait.Add(1)
-	} else {
+	if !ctx.ok {
 		return nil, ErrServerNotConfigured
 	}
 
 	// Obtain SSH session
 	session, err := t.getSession(ctx)
 	if err != nil {
-		t.disconnectWait.Done()
 		err = fmt.Errorf("Can't connect to the server %q: %s", ctx.params.Addr, err)
 		return nil, err
 	}
@@ -382,6 +382,8 @@ func (t *SSHTransport) newSession(ctx *sshContext) (*sshSession, error) {
 	t.froxy.IncCounter(&t.froxy.Counters.SSHSessions)
 	t.sessions[session] = struct{}{}
 	t.sessionsLock.Unlock()
+
+	t.disconnectWait.Add(1)
 
 	// Wait in background for connection termination
 	go func() {
