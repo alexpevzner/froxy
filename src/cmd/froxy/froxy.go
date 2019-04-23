@@ -99,7 +99,7 @@ func (froxy *Froxy) GetConnState() (state ConnState, info string) {
 func (froxy *Froxy) SetConnState(state ConnState, info string) {
 	froxy.connStateLock.Lock()
 
-	if froxy.connState != state {
+	if froxy.connState != state || froxy.connStateInfo != info {
 		froxy.connState = state
 		froxy.connStateInfo = info
 

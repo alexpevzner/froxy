@@ -22,11 +22,9 @@ import (
 // The SSH transport for net.http
 //
 type SSHTransport struct {
-	http.Transport                 // SSH-backed http.Transport
-	froxy             *Froxy       // Back link to Froxy
-	params            ServerParams // Server parameters
-	key               *keys.Key    // SSH key to use, if any
-	paramsOkToConnect bool         // Server parameters OK to connect
+	http.Transport             // SSH-backed http.Transport
+	froxy          *Froxy      // Back link to Froxy
+	ctx            *sshContext // Current context
 
 	// Management of active sessions
 	sessionsLock      sync.Mutex               // Access lock
@@ -36,15 +34,83 @@ type SSHTransport struct {
 	sessionsCount     int                      // Count of sessions, active+planned
 
 	// Disconnect/reconnect machinery
-	reconnectLock       sync.Mutex         // Reconnect lock
-	disconnectLock      sync.Mutex         // Disconnect machinery lock
-	disconnectWait      sync.WaitGroup     // To wait for disconnect completion
-	disconnectCtx       context.Context    // To break dial-in-progress
-	disconnectCtxCancel context.CancelFunc // To cancel disconnectCtx
+	disconnectLock sync.RWMutex   // Disconnect machinery lock
+	disconnectWait sync.WaitGroup // To wait for disconnect completion
 }
 
 var _ = Transport(&SSHTransport{})
 
+// ----- SSH connection context -- wraps context.Context -----
+//
+// SSH connection context
+//
+type sshContext struct {
+	context.Context                    // Underlying context
+	cancel          context.CancelFunc // Context cancel function
+	froxy           *Froxy             // Back link to Froxy
+	params          *ServerParams      // Server parameters
+	key             *keys.Key          // SSH key to use, if any
+	ok              bool               // Server parameters OK to connect
+}
+
+//
+// Create new sshContext
+//
+func newSshContext(froxy *Froxy, params *ServerParams) *sshContext {
+	ctx := &sshContext{
+		froxy:  froxy,
+		params: params,
+		ok:     params.Addr != "" && params.Login != "",
+	}
+
+	if ctx.ok {
+		if params.Keyid != "" {
+			ctx.key = ctx.froxy.KeyById(params.Keyid)
+			ctx.ok = ctx.key != nil
+		} else {
+			ctx.ok = params.Password != ""
+		}
+	}
+
+	ctx.Context, ctx.cancel = context.WithCancel(context.Background())
+
+	return ctx
+}
+
+//
+// Cancel the context
+//
+func (ctx *sshContext) Cancel() {
+	ctx.cancel()
+}
+
+//
+// Check of server parameters are equal to those associated
+// with the context
+//
+func (ctx *sshContext) ServerParamsEqual(params *ServerParams) bool {
+	return reflect.DeepEqual(ctx.params, params)
+}
+
+//
+// Create SSH client configuration
+//
+func (ctx *sshContext) SshClientConfig() *ssh.ClientConfig {
+	var auth []ssh.AuthMethod
+	if ctx.key != nil {
+		auth = []ssh.AuthMethod{ssh.PublicKeys(ctx.key.Signer())}
+	} else {
+		auth = []ssh.AuthMethod{ssh.Password(ctx.params.Password)}
+	}
+
+	return &ssh.ClientConfig{
+		User:            ctx.params.Login,
+		Auth:            auth,
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
+	}
+}
+
+// ----- SSH session -----
 //
 // SSH session -- wraps ssh.Client
 //
@@ -55,6 +121,23 @@ type sshSession struct {
 }
 
 //
+// Unref the session
+//
+func (ssn *sshSession) unref() {
+	t := ssn.transport
+
+	t.sessionsLock.Lock()
+
+	ssn.refcnt--
+
+	t.sessionsConnCount--
+	t.sessionsCond.Signal()
+
+	t.sessionsLock.Unlock()
+}
+
+// ----- SSH-tunneled connection -----
+//
 // SSH-tunneled connection
 //
 type sshConn struct {
@@ -63,6 +146,26 @@ type sshConn struct {
 	session  *sshSession // Session that owns the connection
 }
 
+//
+// Close the connection
+//
+func (conn *sshConn) Close() error {
+	var err error
+
+	if atomic.SwapUint32(&conn.closed, 1) == 0 {
+		t := conn.session.transport
+
+		t.froxy.Debug("SSH: connection closed")
+		err = conn.Conn.Close()
+
+		t.froxy.DecCounter(&t.froxy.Counters.SSHConnections)
+		conn.session.unref()
+	}
+
+	return err
+}
+
+// ----- SSHTransport methods -----
 //
 // Create new SSH transport
 //
@@ -104,51 +207,29 @@ func NewSSHTransport(froxy *Froxy) *SSHTransport {
 // all active connections has gone away
 //
 func (t *SSHTransport) Reconnect(params ServerParams) {
-	// Only one Reconnect() in time allowed
-	t.reconnectLock.Lock()
-	defer t.reconnectLock.Unlock()
-
 	// Synchronize with disconnect logic
 	t.disconnectLock.Lock()
+	defer t.disconnectLock.Unlock()
 
 	// Something changed?
-	if reflect.DeepEqual(t.params, params) {
-		t.disconnectLock.Unlock()
+	if t.ctx != nil && t.ctx.ServerParamsEqual(&params) {
 		return
 	}
 
-	// Cancel previous connection and reconnect
-	if t.disconnectCtxCancel != nil {
-		t.disconnectCtxCancel()
+	// Disconnect if we were connected
+	if t.ctx != nil && t.ctx.ok {
+		t.ctx.Cancel()
+		t.ctx = nil
+		t.disconnectWait.Wait()
 	}
 
-	t.disconnectCtx, t.disconnectCtxCancel = context.WithCancel(
-		context.Background())
-	t.params = params
-
-	// Check that we have everything to proceed with connection
-	t.paramsOkToConnect = params.Addr != "" && params.Login != ""
-	if t.paramsOkToConnect {
-		if params.Keyid != "" {
-			t.key = t.froxy.KeyById(params.Keyid)
-			t.paramsOkToConnect = t.key != nil
-		} else {
-			t.paramsOkToConnect = params.Password != ""
-		}
-	}
+	t.ctx = newSshContext(t.froxy, &params)
 
 	// Update connection state
-	if t.paramsOkToConnect {
+	if t.ctx.ok {
 		t.froxy.SetConnState(ConnTrying, "")
 	} else {
 		t.froxy.SetConnState(ConnNotConfigured, "")
-	}
-
-	t.disconnectLock.Unlock()
-
-	// In a case of disconnect -- wait for completion
-	if !t.paramsOkToConnect {
-		t.disconnectWait.Wait()
 	}
 }
 
@@ -157,31 +238,21 @@ func (t *SSHTransport) Reconnect(params ServerParams) {
 //
 func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	// Synchronize with disconnect logic
-	t.disconnectLock.Lock()
+	t.disconnectLock.RLock()
+	ctx := t.ctx
+	t.disconnectLock.RUnlock()
 
-	ctx := t.disconnectCtx
-	params := t.params
-	key := t.key
-	var err error
-
-	if t.paramsOkToConnect {
+	if ctx.ok {
 		t.disconnectWait.Add(1)
 	} else {
-		err = ErrServerNotConfigured
-	}
-
-	t.disconnectLock.Unlock()
-
-	// Can connect?
-	if err != nil {
-		return nil, err
+		return nil, ErrServerNotConfigured
 	}
 
 	// Obtain SSH session
-	session, err := t.getSession(ctx, params, key)
+	session, err := t.getSession(ctx)
 	if err != nil {
 		t.disconnectWait.Done()
-		err = fmt.Errorf("Can't connect to the server %q: %s", params.Addr, err)
+		err = fmt.Errorf("Can't connect to the server %q: %s", ctx.params.Addr, err)
 		return nil, err
 	}
 
@@ -205,11 +276,7 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 // Either reuses a spare session, if available, or dials
 // a new session on demand
 //
-func (t *SSHTransport) getSession(
-	ctx context.Context,
-	params ServerParams,
-	key *keys.Key) (*sshSession, error) {
-
+func (t *SSHTransport) getSession(ctx *sshContext) (*sshSession, error) {
 	// Acquire the lock
 	t.sessionsLock.Lock()
 	defer t.sessionsLock.Unlock()
@@ -236,7 +303,7 @@ AGAIN:
 
 	// Dial a new session
 	t.sessionsLock.Unlock()
-	session, err := t.newSession(ctx, params, key)
+	session, err := t.newSession(ctx)
 	t.sessionsLock.Lock()
 
 	if err == nil {
@@ -277,30 +344,13 @@ func (t *SSHTransport) spareSession() *sshSession {
 //
 // Establish a new client session
 //
-func (t *SSHTransport) newSession(
-	ctx context.Context,
-	params ServerParams,
-	key *keys.Key) (*sshSession, error) {
-
+func (t *SSHTransport) newSession(ctx *sshContext) (*sshSession, error) {
 	// Create SSH configuration
-	t.froxy.Debug("params=%#v)", params)
-
-	auth := []ssh.AuthMethod{}
-	if key != nil {
-		auth = append(auth, ssh.PublicKeys(key.Signer()))
-	} else {
-		auth = append(auth, ssh.Password(params.Password))
-	}
-
-	cfg := &ssh.ClientConfig{
-		User:            params.Login,
-		Auth:            auth,
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
+	cfg := ctx.SshClientConfig()
 
 	// Dial a new network connection
 	dialer := &net.Dialer{Timeout: cfg.Timeout}
-	addr := NetDefaultPort(params.Addr, "22")
+	addr := NetDefaultPort(ctx.params.Addr, "22")
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
 
 	if err != nil {
@@ -354,41 +404,4 @@ func (t *SSHTransport) newSession(
 	}()
 
 	return session, nil
-}
-
-// ----- sshSession methods -----
-//
-// Unref the session
-//
-func (ssn *sshSession) unref() {
-	t := ssn.transport
-
-	t.sessionsLock.Lock()
-
-	ssn.refcnt--
-
-	t.sessionsConnCount--
-	t.sessionsCond.Signal()
-
-	t.sessionsLock.Unlock()
-}
-
-// ----- sshConn methods -----
-//
-// Close the connection
-//
-func (conn *sshConn) Close() error {
-	var err error
-
-	if atomic.SwapUint32(&conn.closed, 1) == 0 {
-		t := conn.session.transport
-
-		t.froxy.Debug("SSH: connection closed")
-		err = conn.Conn.Close()
-
-		t.froxy.DecCounter(&t.froxy.Counters.SSHConnections)
-		conn.session.unref()
-	}
-
-	return err
 }
