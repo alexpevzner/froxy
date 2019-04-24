@@ -50,7 +50,7 @@ title = "SSH Keys Management"
 			</tr>
 			<tr>
 			    <td><div style="padding-right:3em">Created:</div></td>
-			    <td><div id="add.ctime"></div>></td>
+			    <td><div id="add.ctime"></div></td>
 			</tr>
 			<tr>
 			    <td>Comment:</td>
