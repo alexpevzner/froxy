@@ -36,5 +36,6 @@
   {{ range (.Scratch.Get "js" | uniq) }}
   <script type="text/javascript" src="{{ .Permalink }}" integrity="{{ .Data.Integrity }}"></script>
   {{ end }}
+  <script src="/js/details-element-polyfill.js" defer> </script>
 </body>
 </html>
