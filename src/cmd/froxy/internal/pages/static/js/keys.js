@@ -14,7 +14,7 @@ var table = [];
 // Reset "generate key" form parameters
 //
 function ResetGenKeyParameters () {
-    froxy.UiSetInput("key-type", "rsa-4096");
+    froxy.UiSetInput("key-type", "ecdsa-384");
     froxy.UiSetInput("key-comment", "");
 }
 
