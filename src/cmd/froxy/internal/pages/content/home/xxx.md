@@ -3,7 +3,8 @@
 
 Here you can edit the Froxy configuration
 
-Use **Configuration** tab for common parameters, such as server address and
-user login/password and **Sites** tab to edit list of sites accessed via
-the server
+Use <a href="/conf/">Configuration</a> tab for common
+parameters, such as server address and user login/password
+and <a href="/sites/">Sites</a> tab to edit list of sites accessed
+via the server
 

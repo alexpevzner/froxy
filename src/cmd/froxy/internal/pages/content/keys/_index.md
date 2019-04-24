@@ -5,11 +5,12 @@ title = "SSH Keys Management"
 <script src="/js/keys.js" defer> </script>
 
 **Need more keys?**
+
 <table>
     <tbody>
         <tr>
             <td>Comment&nbsp;(optional):</td>
-            <td><input id="key-comment" type="text"" /></td>
+            <td><input id="key-comment" type="text" /></td>
         </tr>
         <tr>
             <td>Key Type:</td>
@@ -27,21 +28,23 @@ title = "SSH Keys Management"
         <tr>
             <td><input type="button" value="Generate" onclick="froxy.Ui(GenKey)"/></td>
         </tr>
-    <tbody>
+    </tbody>
 </table>
 
 **Manage keys you have:**
+
 <div id="nokeys">You don't have any key...</div>
+
 <table>
     <tbody id="tbody">
         <tr id="template" hidden><td>
-	    <fieldset><legend><div id="add.keytag"></div></legend>
+	    <fieldset><legend id="add.keytag"></legend>
 		<table>
 		    <tbody>
 			<tr>
-			    <td colspan=3>
+			    <td colspan="3">
 				<div style="overflow:hidden;height:0em">
-				    <textarea style="height:0;border:none;border-spacing:0" rows=1 cols=72 readonly></textarea>
+				    <textarea style="height:0;border:none;border-spacing:0" rows="1" cols="72" readonly></textarea>
 				</div>
 			    </td>
 			</tr>
@@ -67,7 +70,7 @@ title = "SSH Keys Management"
 			<tr>
 			    <td>
 				<details>
-				    <summary>**Fingerprints**</summary>
+				    <summary><strong>Fingerprints</strong></summary>
 					<table>
 					    <tbody>
 						<tr>
@@ -86,14 +89,14 @@ title = "SSH Keys Management"
 			<tr>
 			    <td>
 				<details>
-				    <summary>**Public Key**</summary>
+				    <summary><strong>Public Key</strong></summary>
 				    <table>
 					<tbody>
 					    <tr><td>
 						Add it into the the **$HOME/.ssh/authorized_keys** file at the server:
 					    </td></tr>
 					    <tr><td>
-						<textarea id="add.pubkey" style="overflow:auto;resize:none" rows=3 cols=70 readonly></textarea>
+						<textarea id="add.pubkey" style="overflow:auto;resize:none" rows="3" cols="70" readonly></textarea>
 					    </td></tr>
 					    <tr><td>
 						<input id="add.pub-copy" type="button" value="Copy to Clipboard"/>
