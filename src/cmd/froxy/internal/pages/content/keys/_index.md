@@ -93,7 +93,7 @@ title = "SSH Keys Management"
 				    <table>
 					<tbody>
 					    <tr><td>
-						Add it into the the **$HOME/.ssh/authorized_keys** file at the server:
+						Add it into the the <strong>$HOME/.ssh/authorized_keys</strong> file at the server:
 					    </td></tr>
 					    <tr><td>
 						<textarea id="add.pubkey" style="overflow:auto;resize:none" rows="3" cols="70" readonly></textarea>
