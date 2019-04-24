@@ -27,7 +27,7 @@ function AuthMethodUpdate() {
 
     // Purge selection options.
     while (auth.children.length > 2) {
-        auth.children[auth.children.length-1].remove();
+        auth.removeChild(auth.children[auth.children.length-1]);
     }
 
     // Rebuild selection options

@@ -50,7 +50,7 @@ title = "SSH Keys Management"
 			</tr>
 			<tr>
 			    <td><div style="padding-right:3em">Created:</div></td>
-			    <td><div id="add.ctime"/></td>
+			    <td><div id="add.ctime"></div>></td>
 			</tr>
 			<tr>
 			    <td>Comment:</td>
@@ -61,7 +61,7 @@ title = "SSH Keys Management"
 			</tr>
 			<tr>
 			    <td>Key Type:</td>
-			    <td><div id="add.type"/></td>
+			    <td><div id="add.type"></div></td>
 			</tr>
 		    </tbody>
 		</table>
@@ -75,11 +75,11 @@ title = "SSH Keys Management"
 					    <tbody>
 						<tr>
 						    <td>SHA-256</td><td>
-						    <div id="add.sha256"/></td>
+						    <div id="add.sha256"></div></td>
 						</tr>
 						<tr>
 						    <td>MD5</td><td>
-						    <div id="add.md5"/></td>
+						    <div id="add.md5"></div></td>
 						</tr>
 					    </tbody>
 					</table>

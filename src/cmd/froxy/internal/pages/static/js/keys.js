@@ -128,7 +128,7 @@ function TableInputAction (input, elm, row) {
 //
 function UpdateKeys (keys) {
     var sz = keys.length;
-
+    var row;
 
     // Update "you have no keys" notice
     var nokeys = document.getElementById("nokeys");
@@ -139,13 +139,14 @@ function UpdateKeys (keys) {
     // Resize table
     if (table.length > sz) {
         while(table.length > sz) {
-            table.pop().remove();
+            row = table.pop();
+            row.parentNode.removeChild(row);
         }
     } else {
         var tbody = document.getElementById("tbody");
 
         while(table.length < sz) {
-            var row = document.getElementById("template").cloneNode(true);
+            row = document.getElementById("template").cloneNode(true);
 
             row.hidden = false;
 
@@ -153,7 +154,7 @@ function UpdateKeys (keys) {
             for (var i = 0; i < children.length; i ++) {
                 var elm = children[i];
                 var id = elm.id;
-                if (id && id.startsWith("add.")) {
+                if (id && (id.substring(0,4) == "add.")) {
                     elm.id = table.length + id.slice(3);
                     if (elm.tagName == "INPUT") {
                         var f = TableInputAction.bind(

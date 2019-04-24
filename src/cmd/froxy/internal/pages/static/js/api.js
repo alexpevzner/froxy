@@ -343,11 +343,15 @@ froxy.DomChildren = function (element) {
         return [];
     }
 
-    var children = Array.from(element.children);
     var fulllist = [];
+    var children = [];
+    var i;
+    for (i = 0; i < element.children.length; i ++) {
+        children.push(element.children[i]);
+    }
 
     fulllist = fulllist.concat(children);
-    for (var i = 0; i < children.length; i ++) {
+    for (i = 0; i < children.length; i ++) {
         fulllist = fulllist.concat(froxy.DomChildren(children[i]));
     }
 

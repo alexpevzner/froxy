@@ -66,6 +66,7 @@ function TableButtonClicked (button, rownum) {
 //
 function UpdateTable (sites) {
     var sz = sites.length;
+    var row;
 
     // Sort sites
     sites.sort(function(a, b) { return a.host.localeCompare(b.host); });
@@ -73,14 +74,15 @@ function UpdateTable (sites) {
     // Resize table
     if (table.length > sz) {
         while(table.length > sz) {
-            table.pop().remove();
+            row = table.pop();
+            row.parentNode.removeChild(row);
             froxy.BgWatchStop(table.length + ".host");
         }
     } else {
         var tbody = document.getElementById("tbody");
 
         while(table.length < sz) {
-            var row = document.getElementById("template").cloneNode(true);
+            row = document.getElementById("template").cloneNode(true);
 
             row.hidden = false;
 
