@@ -68,12 +68,22 @@ function PubKeySave (row) {
     var pubkey = froxy.UiGetInput(row + ".pubkey");
     var keytype = froxy.UiGetInput(row + ".type");
 
-    if (pubkey) {
+    if (!pubkey) {
+        return;
+    }
+
+    var filename = type ? "id_" + type + ".pub": "id.pub";
+
+    if (navigator.msSaveOrOpenBlob) {
+        navigator.msSaveOrOpenBlob(
+            new Blob([pubkey], { type: "application/x-pem-file" }),
+            filename
+        );
+    } else {
         var a = document.createElement("a");
         var type = keytype ? keytype.split("-")[0] : "";
-        var filename = type ? "id_" + type + ".pub": "id.pub";
 
-        a.setAttribute("href", "data:text/plain;charset=utf-8," + encodeURIComponent(pubkey));
+        a.setAttribute("href", "data:application/x-pem-file," + encodeURIComponent(pubkey));
         a.setAttribute("download", filename);
 
         a.style.display = "none";
