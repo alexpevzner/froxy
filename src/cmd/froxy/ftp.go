@@ -260,7 +260,7 @@ func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
 	}
 
 	// Format HTML head
-	favicon := "http://" + ftpp.froxy.httpSrv.Addr + "/icons/froxy.png"
+	favicon := ftpp.froxy.BaseURL() + "icons/froxy.png"
 
 	w.Write([]byte("<html>"))
 	w.Write([]byte(`<head><meta charset="utf-8">` + "\n"))

@@ -346,7 +346,7 @@ func (froxy *Froxy) httpCanonicalizeURLs(input []byte) []byte {
 	return bytes.Replace(
 		input,
 		[]byte(`href="/`),
-		[]byte(`href="http://`+froxy.httpSrv.Addr+"/"),
+		[]byte(`href="`+froxy.BaseURL()),
 		-1,
 	)
 }
@@ -447,19 +447,7 @@ func (froxy *Froxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	}
 }
 
-//
-// Run Froxy
-//
-func (froxy *Froxy) Run() {
-	go froxy.eventGoroutine()
-	froxy.Raise(EventStartup)
-
-	err := froxy.httpSrv.Serve(froxy.listener)
-	if err != nil {
-		panic("Internal error: " + err.Error())
-	}
-}
-
+// ----- Events handling -----
 //
 // Event monitoring goroutine
 //
@@ -486,6 +474,15 @@ func (froxy *Froxy) sysEventCallback(se sysdep.SysEvent) {
 	}
 }
 
+// ----- Miscellaneous helpers -----
+//
+// Get Froxy base URL (i.e., "http://localhost:8888/"
+//
+func (froxy *Froxy) BaseURL() string {
+	return "http://" + froxy.httpSrv.Addr + "/"
+}
+
+// ----- Froxy initialization -----
 //
 // Create a Froxy instance
 //
@@ -541,4 +538,17 @@ func NewFroxy(env *Env, port int) (*Froxy, error) {
 	}
 
 	return froxy, nil
+}
+
+//
+// Run Froxy
+//
+func (froxy *Froxy) Run() {
+	go froxy.eventGoroutine()
+	froxy.Raise(EventStartup)
+
+	err := froxy.httpSrv.Serve(froxy.listener)
+	if err != nil {
+		panic("Internal error: " + err.Error())
+	}
 }
