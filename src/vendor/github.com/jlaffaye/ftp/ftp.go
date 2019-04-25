@@ -40,7 +40,7 @@ type ServerConn struct {
 	mlstSupported bool
 }
 
-// DialOption represents an option to start a new connection with DialWithOptions
+// DialOption represents an option to start a new connection with Dial
 type DialOption struct {
 	setup func(do *dialOptions)
 }
@@ -53,6 +53,7 @@ type dialOptions struct {
 	conn        net.Conn
 	disableEPSV bool
 	location    *time.Location
+	debugOutput io.Writer
 }
 
 // Entry describes a file and is returned by List().
@@ -70,8 +71,8 @@ type Response struct {
 	closed bool
 }
 
-// DialWithOptions connects to the specified address with optinal options
-func DialWithOptions(addr string, options ...DialOption) (*ServerConn, error) {
+// Dial connects to the specified address with optinal options
+func Dial(addr string, options ...DialOption) (*ServerConn, error) {
 	do := &dialOptions{}
 	for _, option := range options {
 		option.setup(do)
@@ -100,10 +101,15 @@ func DialWithOptions(addr string, options ...DialOption) (*ServerConn, error) {
 	// If we use the domain name, we might not resolve to the same IP.
 	remoteAddr := tconn.RemoteAddr().(*net.TCPAddr)
 
+	var sourceConn io.ReadWriteCloser = tconn
+	if do.debugOutput != nil {
+		sourceConn = newDebugWrapper(tconn, do.debugOutput)
+	}
+
 	c := &ServerConn{
 		options:  do,
 		features: make(map[string]string),
-		conn:     textproto.NewConn(tconn),
+		conn:     textproto.NewConn(sourceConn),
 		host:     remoteAddr.IP.String(),
 	}
 
@@ -178,14 +184,17 @@ func DialWithTLS(tlsConfig tls.Config) DialOption {
 	}}
 }
 
+// DialWithDebugOutput returns a DialOption that configures the ServerConn to write to the Writer
+// everything it reads from the server
+func DialWithDebugOutput(w io.Writer) DialOption {
+	return DialOption{func(do *dialOptions) {
+		do.debugOutput = w
+	}}
+}
+
 // Connect is an alias to Dial, for backward compatibility
 func Connect(addr string) (*ServerConn, error) {
 	return Dial(addr)
-}
-
-// Dial is like DialTimeout with no timeout
-func Dial(addr string) (*ServerConn, error) {
-	return DialTimeout(addr, 0)
 }
 
 // DialTimeout initializes the connection to the specified ftp server address.
@@ -193,7 +202,7 @@ func Dial(addr string) (*ServerConn, error) {
 // It is generally followed by a call to Login() as most FTP commands require
 // an authenticated user.
 func DialTimeout(addr string, timeout time.Duration) (*ServerConn, error) {
-	return DialWithOptions(addr, DialWithTimeout(timeout))
+	return Dial(addr, DialWithTimeout(timeout))
 }
 
 // Login authenticates the client with specified user and password.

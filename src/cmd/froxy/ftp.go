@@ -378,7 +378,7 @@ func (ftpp *FTPProxy) dialConn(transport Transport, site_url url.URL) (*ftpConn,
 	conn := &ftpConn{ftpp: ftpp, netconn: netconn, site: site_url.String()}
 
 	ftpp.froxy.Debug("FTP: trying %s", addr)
-	conn.ServerConn, err = ftp.DialWithOptions(addr, ftp.DialWithNetConn(netconn))
+	conn.ServerConn, err = ftp.Dial(addr, ftp.DialWithNetConn(netconn))
 	if err != nil {
 		ftpp.froxy.Debug("FTP: %s: %s", err)
 		netconn.Close()
