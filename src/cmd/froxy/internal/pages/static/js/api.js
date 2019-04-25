@@ -449,6 +449,7 @@ froxy.UiSetInput = function(id, value) {
 
     switch (obj.tagName) {
     case "DIV":
+    case "LEGEND":
         obj.innerText = value;
         break;
 
