@@ -272,11 +272,7 @@ func (webapi *WebAPI) handleKeys(w http.ResponseWriter, r *http.Request) {
 //
 // Handle /api/counters requests
 //
-// GET /api/counters[?tag] - returns Counters structure
-//
-// If query parameter present, GET waits until Counters.Tag
-// becomes different from the tag, specified in the query.
-// Note, Counters.Tag increments at every Counters update
+// GET /api/counters - returns Counters structure
 //
 func (webapi *WebAPI) handleCounters(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
