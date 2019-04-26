@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/jlaffaye/ftp"
+	"github.com/alexpevzner/ftp"
 )
 
 type FTPProxy struct {
@@ -378,7 +378,10 @@ func (ftpp *FTPProxy) dialConn(transport Transport, site_url url.URL) (*ftpConn,
 	conn := &ftpConn{ftpp: ftpp, netconn: netconn, site: site_url.String()}
 
 	ftpp.froxy.Debug("FTP: trying %s", addr)
-	conn.ServerConn, err = ftp.Dial(addr, ftp.DialWithNetConn(netconn))
+	conn.ServerConn, err = ftp.Dial(addr,
+		ftp.DialWithNetConn(netconn),
+		ftp.DialWithDialFunc(transport.Dial))
+
 	if err != nil {
 		ftpp.froxy.Debug("FTP: %s: %s", err)
 		netconn.Close()
