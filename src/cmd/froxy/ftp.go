@@ -17,7 +17,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/alexpevzner/ftp"
+	"github.com/jlaffaye/ftp"
 )
 
 type FTPProxy struct {
