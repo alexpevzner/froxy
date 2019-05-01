@@ -63,7 +63,7 @@ func (t *DirectTransport) DialContext(ctx context.Context,
 	network, addr string) (net.Conn, error) {
 
 	dialer := &net.Dialer{
-		Timeout:   10 * time.Second,
+		//Timeout:   10 * time.Second,
 		KeepAlive: 10 * time.Second,
 		DualStack: true,
 	}
