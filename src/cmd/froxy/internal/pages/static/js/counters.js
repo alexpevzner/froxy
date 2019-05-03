@@ -25,6 +25,6 @@ function init() {
     froxy.BgPoll("/api/counters", GetCountersCallback);
 }
 
-init();
+window.onload = init;
 
 // vim:ts=8:sw=2:et

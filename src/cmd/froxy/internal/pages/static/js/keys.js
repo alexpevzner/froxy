@@ -238,6 +238,6 @@ function init() {
 }
 
 
-init();
+window.onload = init;
 
 // vim:ts=8:sw=2:et

@@ -144,6 +144,6 @@ function init() {
     froxy.BgPoll("/api/keys", PollKeys);
 }
 
-init();
+window.onload = init;
 
 // vim:ts=8:sw=2:et

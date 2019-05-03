@@ -148,6 +148,6 @@ function init () {
     froxy.BgWatch("add.host", "/api/domain", DomainChecked);
 }
 
-init();
+window.onload = init;
 
 // vim:ts=8:sw=4:et

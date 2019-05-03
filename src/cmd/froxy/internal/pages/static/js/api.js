@@ -18,6 +18,11 @@ froxy._.debug = console.log;
 
 // ----- Internal variables. Don't use directly -----
 //
+// Init-on-demand flag
+//
+froxy._.init_done = false;
+
+//
 // Non-zero, when executing callback from input tag
 //
 froxy._.uiguard = 0;
@@ -54,6 +59,8 @@ froxy._.rq_count = 0;
 //                            }
 //
 froxy._.http_request = function(method, query, data) {
+    froxy._.init();
+
     // Adjust query
     query = location.origin + query;
 
@@ -522,13 +529,14 @@ froxy._.BgReloadWhenReady = function() {
         rq.OnSuccess = function () { location.reload(); };
         rq.OnError = froxy._.BgReloadWhenReady;
     }, 1000);
-
 };
 
 //
 // Poll particular WebApi resource for change
 //
 froxy.BgPoll = function (url, OnSuccess, OnError) {
+    froxy._.init();
+
     var poll = froxy._.poll[url];
     if (!poll) {
         poll = froxy._.poll[url] = {
@@ -726,19 +734,11 @@ froxy._.poll_sock_onclose = function (event) {
 // Initialize stuff
 //
 froxy._.init = function() {
-    // Preload /css/froxy.css
-    var head  = document.getElementsByTagName("head")[0];
-    var link  = document.createElement("link");
-    link.rel  = "stylesheet";
-    link.type = "text/css";
-    link.href = "/css/froxy.css";
-    link.media = "all";
-    head.appendChild(link);
-
-    froxy._.BgPollInit();
-    froxy._.BgStartStatus();
+    if (!froxy._.init_done) {
+        froxy._.init_done = true;
+        froxy._.BgPollInit();
+        froxy._.BgStartStatus();
+    }
 };
-
-froxy._.init();
 
 // vim:ts=8:sw=4:et
