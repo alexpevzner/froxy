@@ -703,7 +703,19 @@ froxy._.poll_sock_onerror = function (event) {
 //
 froxy._.poll_sock_onclose = function (event) {
     if (event.wasClean || !event.reason) {
-        froxy._.poll_sock_onerror("websocked suddenly closed");
+        // Note, this event can be raised either on Froxy disconnect
+        // or on window reload, and it is hard to distinguish between
+        // these cases
+        //
+        // If we react immediately, in a case of page reload the
+        // error status blinks for a moment before page reloaded.
+        // It's not a big harm, but looks inaccurate, To fix this
+        // cosmetic problem, we introduce a little delay here
+        //
+        // FIXME, this issue requires a better investigation
+        setTimeout( function () {
+            froxy._.poll_sock_onerror("websocked suddenly closed");
+        }, 100);
     } else {
         froxy._.poll_sock_onerror(event.reason);
     }
