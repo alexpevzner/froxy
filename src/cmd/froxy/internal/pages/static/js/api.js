@@ -505,7 +505,7 @@ froxy._.BgStartStatus = function () {
 
     var OnError = function () {
         froxy.UiSetStatus("red", "Froxy not responding");
-        froxy._.BgReloadWhenReady();
+        setTimeout(froxy._.BgReloadWhenReady, 1000);
     };
 
     froxy.BgPoll("/api/state", OnSuccess, OnError);
@@ -704,10 +704,11 @@ froxy._.poll_sock_onerror = function (event) {
 //
 froxy._.poll_sock_onclose = function (event) {
     if (event.wasClean || !event.reason) {
-        froxy._.poll_sock_onerror("websocked suddenly closed");
-    } else {
-        froxy._.poll_sock_onerror(event.reason);
+        // It's a normal event on window reload; ignore it
+        return;
     }
+
+    froxy._.poll_sock_onerror(event.reason);
 };
 
 // ----- Initialization -----
