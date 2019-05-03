@@ -259,6 +259,7 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	// Dial a new connection
 	conn, err := session.Dial(net, addr)
 	if err != nil {
+		t.froxy.Debug("SSH conn: %s", err)
 		session.unref()
 		err = fmt.Errorf("Server can't connect to %q: %s", addr, err)
 		return nil, err
@@ -354,6 +355,7 @@ func (t *SSHTransport) newSession(ctx *sshContext) (*sshSession, error) {
 	conn, err := dialer.DialContext(ctx, "tcp", addr)
 
 	if err != nil {
+		t.froxy.Debug("SSH connect: %s", err)
 		return nil, err
 	}
 
@@ -366,6 +368,7 @@ func (t *SSHTransport) newSession(ctx *sshContext) (*sshSession, error) {
 	// Perform SSH handshake
 	c, chans, reqs, err := ssh.NewClientConn(conn, addr, cfg)
 	if err != nil {
+		t.froxy.Debug("SSH auth: %s", err)
 		return nil, err
 	}
 
