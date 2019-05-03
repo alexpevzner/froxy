@@ -505,7 +505,7 @@ froxy._.BgStartStatus = function () {
 
     var OnError = function () {
         froxy.UiSetStatus("red", "Froxy not responding");
-        setTimeout(froxy._.BgReloadWhenReady, 1000);
+        froxy._.BgReloadWhenReady();
     };
 
     froxy.BgPoll("/api/state", OnSuccess, OnError);
@@ -517,13 +517,12 @@ froxy._.BgStartStatus = function () {
 // THIS IS INTERNAL FUNCTION, DON'T CALL IT DIRECTLY
 //
 froxy._.BgReloadWhenReady = function() {
-    var rq = froxy._.http_request("GET", "/api/state");
-    rq.OnSuccess = function () {
-        location.reload();
-    };
-    rq.OnError = function () {
-        setTimeout(froxy._.BgReloadWhenReady, 1000);
-    };
+    setTimeout(function () {
+        var rq = froxy._.http_request("GET", "/api/state");
+        rq.OnSuccess = function () { location.reload(); };
+        rq.OnError = froxy._.BgReloadWhenReady;
+    }, 1000);
+
 };
 
 //
@@ -704,11 +703,10 @@ froxy._.poll_sock_onerror = function (event) {
 //
 froxy._.poll_sock_onclose = function (event) {
     if (event.wasClean || !event.reason) {
-        // It's a normal event on window reload; ignore it
-        return;
+        froxy._.poll_sock_onerror("websocked suddenly closed");
+    } else {
+        froxy._.poll_sock_onerror(event.reason);
     }
-
-    froxy._.poll_sock_onerror(event.reason);
 };
 
 // ----- Initialization -----
