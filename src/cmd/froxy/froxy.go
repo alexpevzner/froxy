@@ -267,22 +267,18 @@ func (froxy *Froxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	onsuccess := func(w http.ResponseWriter,
-		status int) {
-		froxy.httpOnSuccess(w, r, status)
-	}
-
 	w = &ResponseWriterWithHooks{
 		ResponseWriter: w,
 		OnError:        froxy.httpOnError,
-		OnSuccess:      onsuccess,
+		OnSuccess: func(w http.ResponseWriter, status int) {
+			froxy.httpOnSuccess(w, r, status)
+		},
 	}
 
 	// This allows CSS to be loaded when we
 	// substitute a normal response with the
 	// error page
-	w.Header().Set(
-		"Access-Control-Allow-Origin", "*")
+	w.Header().Set("Access-Control-Allow-Origin", "*")
 
 	pages.FileServer.ServeHTTP(w, r)
 }
