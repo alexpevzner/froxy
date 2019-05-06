@@ -57,7 +57,7 @@ func NewAdm(env *Env, port int) (*Adm, error) {
 //
 // Install Froxy
 //
-func (adm *Adm) Install() error {
+func (adm *Adm) Install(flags OptFlags) error {
 	// Kill Froxy if it is running
 	err := adm.Kill()
 	if err != nil {
@@ -85,17 +85,19 @@ func (adm *Adm) Install() error {
 	}
 
 	// Create desktop entry
-	err = sysdep.CreateDesktopShortcut(
-		adm.PathUserDesktopFile,
-		adm.OsExecutable,
-		"-open",
-		adm.PathUserIconFile,
-		PROGRAM_ICON_NAME,
-		"Open Froxy configuration page in a web browser",
-		false,
-	)
+	if !flags.Test(OptFlgNoShortcut) {
+		err = sysdep.CreateDesktopShortcut(
+			adm.PathUserDesktopFile,
+			adm.OsExecutable,
+			"-open",
+			adm.PathUserIconFile,
+			PROGRAM_ICON_NAME,
+			"Open Froxy configuration page in a web browser",
+			false,
+		)
+	}
 
-	if err == nil {
+	if !flags.Test(OptFlgNoAutostart) && err == nil {
 		err = sysdep.CreateDesktopShortcut(
 			adm.PathUserStartupFile,
 			adm.OsExecutable,
@@ -108,7 +110,7 @@ func (adm *Adm) Install() error {
 	}
 
 	// Run the program
-	if err == nil {
+	if !flags.Test(OptFlgNoRun) && err == nil {
 		err = adm.Run()
 	}
 

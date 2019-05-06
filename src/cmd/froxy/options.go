@@ -43,6 +43,13 @@ const (
 )
 
 //
+// Test if some of particular flags are set
+//
+func (flags OptFlags) Test(mask OptFlags) bool {
+	return flags&mask != 0
+}
+
+//
 // Parsed options
 //
 type Options struct {

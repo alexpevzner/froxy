@@ -19,7 +19,7 @@ func FroxyAdm(env *Env, opt *Options) {
 
 	switch opt.Cmd {
 	case OptCmdInstall:
-		err = adm.Install()
+		err = adm.Install(opt.Flags)
 	case OptCmdUninstall:
 		err = adm.Uninstall()
 	case OptCmdKill:
