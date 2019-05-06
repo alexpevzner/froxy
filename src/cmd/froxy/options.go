@@ -8,6 +8,7 @@ import (
 	"errors"
 	"flag"
 	"fmt"
+	"io/ioutil"
 	"os"
 	"strconv"
 	"strings"
@@ -53,30 +54,38 @@ type Options struct {
 //
 // Parse options
 //
-func (opt *Options) Parse(env *Env, args []string) error {
+func (opt *Options) Parse(env *Env) error {
 	// No arguments is a special case
+	args := os.Args[1:]
 	if len(args) == 0 {
-		*opt = Options{Cmd: OptCmdHelp}
+		*opt = Options{Cmd: OptCmdNone}
 		return nil
 	}
 
 	// Setup parser
 	flagset := flag.NewFlagSet("", flag.ContinueOnError)
-	debug := flag.Bool("noautostart", false, "")
-	fg := flag.Bool("fg", false, "")
-	help := flag.Bool("h", false, "")
-	install := flag.Bool("i", false, "")
-	kill := flag.Bool("k", false, "")
-	open := flag.Bool("open", false, "")
-	run := flag.Bool("r", false, "")
-	uninstall := flag.Bool("u", false, "")
+	flagset.Usage = func() {}
+	flagset.SetOutput(ioutil.Discard)
 
-	norun := flag.Bool("norun", false, "")
-	noautostart := flag.Bool("noautostart", false, "")
-	port := flag.Int("p", env.GetPort(), "")
+	debug := flagset.Bool("debug", false, "")
+	fg := flagset.Bool("fg", false, "")
+	install := flagset.Bool("i", false, "")
+	kill := flagset.Bool("k", false, "")
+	open := flagset.Bool("open", false, "")
+	run := flagset.Bool("r", false, "")
+	uninstall := flagset.Bool("u", false, "")
+
+	norun := flagset.Bool("norun", false, "")
+	noautostart := flagset.Bool("noautostart", false, "")
+	port := flagset.Int("p", env.GetPort(), "")
 
 	// Parse arguments
 	err := flagset.Parse(args)
+	if err == flag.ErrHelp {
+		opt.Cmd = OptCmdHelp
+		return nil
+	}
+
 	if err != nil {
 		return err
 	}
@@ -92,7 +101,6 @@ func (opt *Options) Parse(env *Env, args []string) error {
 	}{
 		{*debug, OptCmdDebug},
 		{*fg, OptCmdRunFg},
-		{*help, OptCmdHelp},
 		{*install, OptCmdInstall},
 		{*kill, OptCmdKill},
 		{*open, OptCmdOpen},
@@ -103,7 +111,7 @@ func (opt *Options) Parse(env *Env, args []string) error {
 	var cmd OptCmd
 	for _, c := range commands {
 		if c.flg {
-			if cmd != OptCmdNone {
+			if cmd == OptCmdNone {
 				cmd = c.cmd
 			} else {
 				return errors.New("Multiple commands not allowed")
@@ -200,12 +208,14 @@ Advanced options:
 	})
 
 	print(usage)
+	os.Exit(0)
 }
 
 //
-// Print error message
+// Print error message and exit
 //
 func (opt *Options) Error(err error) {
 	println(err.Error())
 	println("Try " + strings.ToLower(PROGRAM_NAME) + " -h for more information.")
+	os.Exit(1)
 }

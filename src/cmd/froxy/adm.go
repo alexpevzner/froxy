@@ -172,7 +172,7 @@ func (adm *Adm) Run() error {
 	argv := []string{
 		adm.OsExecutable,
 		"-p", fmt.Sprintf("%d", adm.port),
-		"-detach",
+		"-fg",
 	}
 
 	// Start new process
