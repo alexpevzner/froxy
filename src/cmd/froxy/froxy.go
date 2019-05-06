@@ -275,7 +275,8 @@ func (froxy *Froxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) {
 		},
 	}
 
-	// This allows CSS to be loaded when we
+	// We allow static content to be loaded from any
+	// origin. This allows CSS to be loaded when we
 	// substitute a normal response with the
 	// error page
 	w.Header().Set("Access-Control-Allow-Origin", "*")
