@@ -128,7 +128,12 @@ RETRY:
 		}
 	}
 
-	// If it is reused connection, try to reconnect
+	// Drop the connection in a case of error - in many cases
+	// it's hard to tell if this connection useful for further
+	// operations
+	//
+	// If we've got an error on reused connection,
+	// retry the operation with a fresh connection
 	conn.Close()
 	if conn.reused {
 		goto RETRY
