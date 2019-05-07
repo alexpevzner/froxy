@@ -99,7 +99,7 @@ RETRY:
 	if conn == nil {
 		conn, err = ftpp.dialConn(transport, site_url)
 		if err != nil {
-			ftpp.sendError(w, 0, err)
+			ftpp.sendError(w, http.StatusServiceUnavailable, err)
 			return
 		}
 	}
