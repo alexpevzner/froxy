@@ -327,7 +327,7 @@ AGAIN:
 func (t *SSHTransport) spareSession() *sshSession {
 	session := (*sshSession)(nil)
 
-	for ssn, _ := range t.sessions {
+	for ssn := range t.sessions {
 		if ssn.refcnt < SSH_MAX_CONN_PER_CLIENT {
 			if session == nil || session.refcnt > ssn.refcnt {
 				session = ssn
