@@ -23,6 +23,7 @@ const (
 	EventSitesChanged
 	EventKeysChanged
 	EventShutdownRequested
+	EventIpAddrChanged
 )
 
 //
@@ -44,6 +45,8 @@ func (e Event) String() string {
 		return "EventKeysChanged"
 	case EventShutdownRequested:
 		return "EventShutdownRequested"
+	case EventIpAddrChanged:
+		return "EventIpAddrChanged"
 	}
 
 	panic("internal error")

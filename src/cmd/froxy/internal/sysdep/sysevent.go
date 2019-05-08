@@ -11,4 +11,13 @@ type SysEvent int
 
 const (
 	SysEventShutdown = iota
+	SysEventIpAddrChanged
 )
+
+//
+// System events notifier
+//
+type SysEventNotifier struct {
+	callback   func(SysEvent) // Event callback
+	ipnotifier ipNotifier     // System-specific IP events notifier
+}

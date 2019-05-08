@@ -13,17 +13,11 @@ import (
 )
 
 //
-// System events notifier
-//
-type SysEventNotifier struct {
-	callback func(SysEvent)
-}
-
-//
 // Create new SysEventNotifier
 //
 func NewSysEventNotifier(callback func(SysEvent)) *SysEventNotifier {
 	sn := &SysEventNotifier{callback: callback}
+	sn.ipNotifierInit()
 	go sn.goroutine()
 	return sn
 }

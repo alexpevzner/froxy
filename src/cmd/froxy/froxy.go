@@ -468,6 +468,9 @@ func (froxy *Froxy) sysEventCallback(se sysdep.SysEvent) {
 	case sysdep.SysEventShutdown:
 		froxy.Info("Shutdown requested")
 		froxy.Raise(EventShutdownRequested)
+	case sysdep.SysEventIpAddrChanged:
+		froxy.Info("IP addresses changed")
+		froxy.Raise(EventIpAddrChanged)
 	}
 }
 

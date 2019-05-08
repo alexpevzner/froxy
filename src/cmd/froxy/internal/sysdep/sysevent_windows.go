@@ -21,11 +21,11 @@ import (
 )
 
 //
-// System events notifier
+// IP events notifier -- Windows version
 //
-type SysEventNotifier struct {
-	callback func(SysEvent)
-	hWnd     C.HWND // Handle of hidden window for receiving system messages
+type ipNotifier struct {
+	hWnd             C.HWND   // Handle of hidden window for receiving system messages
+	addrChangeHandle C.HANDLE // Address change subscription handle
 }
 
 //
@@ -33,9 +33,10 @@ type SysEventNotifier struct {
 //
 func NewSysEventNotifier(callback func(SysEvent)) *SysEventNotifier {
 	sn := &SysEventNotifier{callback: callback}
+	sn.ipNotifierInit()
 	hWndChan := make(chan C.HWND)
 	go sn.winGoroutine(hWndChan)
-	sn.hWnd = <-hWndChan
+	sn.ipnotifier.hWnd = <-hWndChan
 	go sn.conGoroutine()
 	return sn
 }
@@ -48,7 +49,7 @@ func (sn *SysEventNotifier) conGoroutine() {
 	signal.Notify(c, os.Interrupt)
 
 	<-c
-	C.PostMessage(sn.hWnd, C.WM_CLOSE, 0, 0)
+	C.PostMessage(sn.ipnotifier.hWnd, C.WM_CLOSE, 0, 0)
 }
 
 //
