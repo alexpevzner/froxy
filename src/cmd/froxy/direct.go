@@ -8,7 +8,6 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"time"
 )
 
 //
@@ -26,10 +25,9 @@ func NewDirectTransport(froxy *Froxy) *DirectTransport {
 	t := &DirectTransport{
 		Transport: http.Transport{
 			Proxy:                 nil,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConns:          HTTP_MAX_IDLE_CONNS,
+			IdleConnTimeout:       HTTP_IDLE_CONN_TIMEOUT,
+			ExpectContinueTimeout: HTTP_EXPECT_CONTINUE_TIMEOUT,
 		},
 		froxy: froxy,
 	}

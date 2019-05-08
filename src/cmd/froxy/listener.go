@@ -7,7 +7,6 @@ package main
 import (
 	"net"
 	"sync/atomic"
-	"time"
 )
 
 //
@@ -59,8 +58,13 @@ func (l *Listener) Accept() (net.Conn, error) {
 	}
 
 	// Setup TCP keep-alive
-	c.SetKeepAlive(true)
-	c.SetKeepAlivePeriod(3 * time.Minute)
+	//
+	// FIXME. Seems, we don't need keep-alive at server
+	// side, because the server only works on a localhost
+	// where TCP keep-alive is meaningless
+	//
+	//c.SetKeepAlive(true)
+	//c.SetKeepAlivePeriod(TCP_KEEP_ALIVE)
 
 	// Update statistics
 	l.froxy.IncCounter(&l.froxy.Counters.UserConnections)

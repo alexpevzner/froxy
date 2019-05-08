@@ -13,7 +13,6 @@ import (
 	"reflect"
 	"sync"
 	"sync/atomic"
-	"time"
 
 	"golang.org/x/crypto/ssh"
 )
@@ -173,10 +172,9 @@ func NewSSHTransport(froxy *Froxy) *SSHTransport {
 	t := &SSHTransport{
 		Transport: http.Transport{
 			Proxy:                 nil,
-			MaxIdleConns:          100,
-			IdleConnTimeout:       90 * time.Second,
-			TLSHandshakeTimeout:   10 * time.Second,
-			ExpectContinueTimeout: 1 * time.Second,
+			MaxIdleConns:          HTTP_MAX_IDLE_CONNS,
+			IdleConnTimeout:       HTTP_IDLE_CONN_TIMEOUT,
+			ExpectContinueTimeout: HTTP_EXPECT_CONTINUE_TIMEOUT,
 		},
 		froxy:    froxy,
 		sessions: make(map[*sshSession]struct{}),

@@ -4,8 +4,12 @@
 
 package main
 
+import (
+	"time"
+)
+
 const (
-	// ----- Built-in HTTP server configuration -----
+	// ----- Program parameters -----
 	//
 	// Name of this program
 	//
@@ -16,6 +20,37 @@ const (
 	//
 	PROGRAM_ICON_NAME = PROGRAM_NAME + " Proxy"
 
+	// ----- TCP parameters -----
+	//
+	// TCP Keep-alive
+	//
+	TCP_KEEP_ALIVE = 20 * time.Second
+
+	//
+	// Enable TCP dual-stack (RFC 6555-compliant "Happy Eyeballs")
+	//
+	TCP_DUAL_STACK = true
+
+	// ----- HTTP transport parameters -----
+	//
+	// Max number of idle connections accross all hoshs.
+	//
+	HTTP_MAX_IDLE_CONNS = 100
+
+	//
+	// Max amount of time an idle connection will remain idle
+	// before closing
+	//
+	HTTP_IDLE_CONN_TIMEOUT = 90 * time.Second
+
+	//
+	// How long to wait for a server's first response headers after fully
+	// writing the request headers if the request has an
+	// "Expect: 100-continue" header.
+	//
+	HTTP_EXPECT_CONTINUE_TIMEOUT = 1 * time.Second
+
+	// ----- Built-in HTTP server configuration -----
 	//
 	// TCP port to run server on
 	//

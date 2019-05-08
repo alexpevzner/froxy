@@ -9,7 +9,6 @@ import (
 	"net"
 	"reflect"
 	"sync/atomic"
-	"time"
 )
 
 //
@@ -37,8 +36,8 @@ func NewConnMan(froxy *Froxy) *ConnMan {
 	connman := &ConnMan{
 		froxy: froxy,
 		dialer: net.Dialer{
-			KeepAlive: 10 * time.Second,
-			DualStack: true,
+			KeepAlive: TCP_KEEP_ALIVE,
+			DualStack: TCP_DUAL_STACK,
 		},
 		cmd: make(chan interface{}),
 	}
