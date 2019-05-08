@@ -38,3 +38,14 @@ func NetDefaultPort(hostport, defaultport string) string {
 		return host + ":" + port
 	}
 }
+
+//
+// Normalize IP address. Returns 16-byte IP address for
+// both IPv4 and IPv6 addresses
+//
+func NetNormalizeIP(ip net.IP) net.IP {
+	if len(ip) == 4 {
+		ip = net.IPv4(ip[0], ip[1], ip[2], ip[3])
+	}
+	return ip
+}

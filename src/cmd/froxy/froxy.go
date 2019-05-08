@@ -476,7 +476,7 @@ func (froxy *Froxy) sysEventCallback(se sysdep.SysEvent) {
 
 // ----- Miscellaneous helpers -----
 //
-// Get Froxy base URL (i.e., "http://localhost:8888/"
+// Get Froxy base URL (i.e., "http://localhost:8888/")
 //
 func (froxy *Froxy) BaseURL() string {
 	return "http://" + froxy.httpSrv.Addr + "/"
