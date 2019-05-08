@@ -78,6 +78,49 @@ func (connman *ConnMan) DialContext(ctx context.Context, network, addr string,
 // that correspond to addresses not longer available
 //
 func (connman *ConnMan) recheckAddresses(byAddr map[string]map[*Conn]struct{}) {
+	// Obtain all local addresses
+	interfaces, err := net.Interfaces()
+	if err != nil {
+		connman.froxy.Error("Can't obtain local addresses: %s", err)
+		return
+	}
+
+	all_addrs := make(map[string]struct{})
+	for _, iface := range interfaces {
+		addrs, err := iface.Addrs()
+		if err != nil {
+			connman.froxy.Error("%s: cant't get addresses: %s", iface.Name, err)
+			return
+		}
+
+		for _, a := range addrs {
+			ipnet, ok := a.(*net.IPNet)
+			if ok {
+				ip := NetNormalizeIP(ipnet.IP)
+				all_addrs[string(ip)] = struct{}{}
+			}
+		}
+	}
+
+	// Figure out connections without local addresses
+	conns := make([]*Conn, len(byAddr))
+	for addr := range byAddr {
+		_, ok := all_addrs[addr]
+		if !ok {
+			for conn := range byAddr[addr] {
+				conns = append(conns, conn)
+			}
+		}
+	}
+
+	// Close all dead connections
+	go func() {
+		for _, conn := range conns {
+			connman.froxy.Debug("local address gone, connection closed: %s/%s",
+				conn.LocalAddr(), conn.RemoteAddr())
+			conn.Close()
+		}
+	}()
 }
 
 //
