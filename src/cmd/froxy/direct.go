@@ -8,7 +8,6 @@ import (
 	"context"
 	"net"
 	"net/http"
-	"sync/atomic"
 	"time"
 )
 
@@ -18,15 +17,6 @@ import (
 type DirectTransport struct {
 	http.Transport        // Direct http.Transport
 	froxy          *Froxy // Back link to Froxy
-}
-
-//
-// Direct TCP connection
-//
-type directConn struct {
-	net.Conn                   // Underlying net.Conn
-	closed    uint32           // Non-zero when closed
-	transport *DirectTransport // Transport that owns the connection
 }
 
 //
@@ -62,39 +52,6 @@ func (t *DirectTransport) Dial(network, addr string) (net.Conn, error) {
 func (t *DirectTransport) DialContext(ctx context.Context,
 	network, addr string) (net.Conn, error) {
 
-	dialer := &net.Dialer{
-		//Timeout:   10 * time.Second,
-		KeepAlive: 10 * time.Second,
-		DualStack: true,
-	}
-
-	conn, err := dialer.DialContext(ctx, network, addr)
-	if err != nil {
-		return nil, err
-	}
-
-	t.froxy.IncCounter(&t.froxy.Counters.TCPConnections)
-
-	dirconn := &directConn{
-		Conn:      conn,
-		transport: t,
-	}
-
-	return dirconn, nil
-}
-
-//
-// Close directConn
-//
-func (conn *directConn) Close() error {
-	var err error
-
-	if atomic.SwapUint32(&conn.closed, 1) == 0 {
-		t := conn.transport
-		t.froxy.DecCounter(&t.froxy.Counters.TCPConnections)
-		err = conn.Conn.Close()
-	}
-
-	return err
-
+	return t.froxy.connMan.DialContext(ctx, network, addr,
+		&t.froxy.Counters.TCPConnections)
 }

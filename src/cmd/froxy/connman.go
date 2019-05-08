@@ -9,6 +9,7 @@ import (
 	"net"
 	"reflect"
 	"sync/atomic"
+	"time"
 )
 
 //
@@ -21,7 +22,6 @@ import (
 //      monitored. When connection's local address goes away, connection
 //      automatically closed
 //   3) It automatically manages statistics counter
-//   4) Provides optional OnClose notification
 //
 type ConnMan struct {
 	froxy        *Froxy           // Back link to Froxy
@@ -36,8 +36,14 @@ type ConnMan struct {
 func NewConnMan(froxy *Froxy) *ConnMan {
 	connman := &ConnMan{
 		froxy: froxy,
-		cmd:   make(chan interface{}),
+		dialer: net.Dialer{
+			KeepAlive: 10 * time.Second,
+			DualStack: true,
+		},
+		cmd: make(chan interface{}),
 	}
+
+	go connman.goroutine()
 
 	return connman
 }
@@ -45,8 +51,10 @@ func NewConnMan(froxy *Froxy) *ConnMan {
 //
 // Dial new connection
 //
-func (connman *ConnMan) DialContext(ctx context.Context, network, addr string,
-	counter *int32, onClose func()) (*Conn, error) {
+func (connman *ConnMan) DialContext(ctx context.Context,
+	network, addr string,
+	counter *int32) (*Conn, error) {
+
 	// Snapshot a addrChgCount
 	addrChgCount := atomic.LoadUint64(&connman.addrChgCount)
 
@@ -62,7 +70,6 @@ func (connman *ConnMan) DialContext(ctx context.Context, network, addr string,
 		connman: connman,
 		ctx:     ctx,
 		counter: counter,
-		onClose: onClose,
 	}
 
 	connman.froxy.IncCounter(counter)
@@ -103,7 +110,7 @@ func (connman *ConnMan) recheckAddresses(byAddr map[string]map[*Conn]struct{}) {
 	}
 
 	// Figure out connections without local addresses
-	conns := make([]*Conn, len(byAddr))
+	conns := make([]*Conn, 0, len(byAddr))
 	for addr := range byAddr {
 		_, ok := all_addrs[addr]
 		if !ok {
@@ -133,8 +140,8 @@ func (connman *ConnMan) goroutine() {
 	byCtx := make(map[context.Context]map[*Conn]struct{})
 	byAddr := make(map[string]map[*Conn]struct{})
 
-	cases := make([]reflect.SelectCase, 16)
-	contexts := make([]context.Context, 16)
+	cases := make([]reflect.SelectCase, 0, 16)
+	contexts := make([]context.Context, 0, 16)
 
 	cases = append(cases, reflect.SelectCase{
 		Dir:  reflect.SelectRecv,
@@ -265,7 +272,6 @@ type Conn struct {
 	connman  *ConnMan        // Back link to ConnMan
 	ctx      context.Context // Connection's context
 	counter  *int32          // Statistics counter
-	onClose  func()          // OnClose callback
 	closed   uint32          // Non-zero when closed
 }
 
@@ -279,9 +285,6 @@ func (conn *Conn) Close() error {
 		conn.connman.froxy.DecCounter(conn.counter)
 		err = conn.Conn.Close()
 		conn.connman.cmd <- connManCmdDel{conn: conn}
-		if conn.onClose != nil {
-			conn.onClose()
-		}
 	}
 
 	return err

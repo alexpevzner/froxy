@@ -42,6 +42,7 @@ type Froxy struct {
 	router      *Router                  // Request router
 	webapi      *WebAPI                  // JS API handler
 	sysNotifier *sysdep.SysEventNotifier // System events notifier
+	connMan     *ConnMan                 // TCP connections manager
 	localhosts  map[string]struct{}      // Hosts considered local
 	localport   string                   // Local port as string
 	listener    net.Listener             // TCP listener
@@ -510,6 +511,9 @@ func NewFroxy(env *Env, port int) (*Froxy, error) {
 	}
 
 	froxy.localport = fmt.Sprintf("%d", port)
+
+	// Create connections manager
+	froxy.connMan = NewConnMan(froxy)
 
 	// Create transports
 	froxy.sshTransport = NewSSHTransport(froxy)

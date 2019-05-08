@@ -350,20 +350,14 @@ func (t *SSHTransport) newSession(ctx *sshContext) (*sshSession, error) {
 	cfg := ctx.SshClientConfig()
 
 	// Dial a new network connection
-	dialer := &net.Dialer{Timeout: cfg.Timeout}
 	addr := NetDefaultPort(ctx.params.Addr, "22")
-	conn, err := dialer.DialContext(ctx, "tcp", addr)
+	conn, err := t.froxy.connMan.DialContext(ctx, "tcp", addr,
+		&t.froxy.Counters.SSHSessions)
 
 	if err != nil {
 		t.froxy.Debug("SSH connect: %s", err)
 		return nil, err
 	}
-
-	// Make sure connection closes when ctx is cancelled
-	go func() {
-		<-ctx.Done()
-		conn.Close()
-	}()
 
 	// Perform SSH handshake
 	c, chans, reqs, err := ssh.NewClientConn(conn, addr, cfg)
@@ -382,7 +376,6 @@ func (t *SSHTransport) newSession(ctx *sshContext) (*sshSession, error) {
 	}
 
 	t.sessionsLock.Lock()
-	t.froxy.IncCounter(&t.froxy.Counters.SSHSessions)
 	t.sessions[session] = struct{}{}
 	t.sessionsLock.Unlock()
 
@@ -396,7 +389,6 @@ func (t *SSHTransport) newSession(ctx *sshContext) (*sshSession, error) {
 
 		delete(t.sessions, session)
 
-		t.froxy.DecCounter(&t.froxy.Counters.SSHSessions)
 		t.sessionsCount--
 		if t.sessionsCount == 0 && ctx.Err() == nil {
 			t.froxy.SetConnState(ConnTrying, err.Error())
