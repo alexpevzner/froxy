@@ -175,6 +175,7 @@ func (connman *ConnMan) goroutine() {
 		switch num {
 		case 0:
 			// Ebus event channel
+			atomic.AddUint64(&connman.addrChgCount, 1)
 			connman.recheckAddresses(byAddr)
 
 		case 1:
