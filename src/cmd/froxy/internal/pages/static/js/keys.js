@@ -168,6 +168,10 @@ function UpdateKeys (keys) {
                         switch (elm.type) {
                         case "text":
                             elm.oninput = f;
+                            elm.onkeydown = froxy.UiClickOnEnter.bind(
+                                null,
+                                table.length + ".sendcomment"
+                            );
                             break;
                         case "checkbox":
                         case "button":

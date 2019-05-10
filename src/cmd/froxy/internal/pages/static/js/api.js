@@ -409,6 +409,26 @@ froxy.Ui = function(fn) {
 };
 
 //
+// This function intended to be used as an onkeydown event handler
+// to propagate Enter keypress into the button click
+//
+// Usage:
+//   <input type="text" onkeydown="froxy.UiClickOnEnter('buttonid',event)">
+//
+// In this example, if Enter is pressed while focus is in the input
+// field, button with 'buttonid" id will be "clicked"
+//
+froxy.UiClickOnEnter = function(id, event) {
+    var button = document.getElementById(id);
+
+console.log("button",button,"event",event,"id",id);
+
+    if (button && event.keyCode == 13 && !event.repeat) {
+        button.click();
+    }
+};
+
+//
 // Get value of particular control
 //
 froxy.UiGetInput = function(id) {

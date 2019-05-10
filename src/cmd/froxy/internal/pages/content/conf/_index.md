@@ -11,11 +11,11 @@ title = "Froxy Configuration"
     <tbody>
     <tr>
         <td>Server (host or host:port):</td>
-        <td><input id="addr" type="text"/></td>
+        <td><input id="addr" type="text" onkeydown="froxy.UiClickOnEnter('ok',event)"/></td>
     </tr>
     <tr>
         <td>Login:</td>
-        <td><input id="login" type="text"/></td>
+        <td><input id="login" type="text" onkeydown="froxy.UiClickOnEnter('ok',event)"/></td>
     </tr>
     <tr>
         <td>Authentication method:</td>
@@ -28,10 +28,10 @@ title = "Froxy Configuration"
     </tr>
     <tr>
         <td>Password:</td>
-        <td><input id="password" type="text" disabled/></td>
+        <td><input id="password" type="text" disabled onkeydown="froxy.UiClickOnEnter('ok',event)"/></td>
     </tr>
     <tr>
-        <td><input type="button" value="Ok" onclick="froxy.Ui(SubmitServerParams)"/></td>
+        <td><input id="ok" type="button" value="Ok" onclick="froxy.Ui(SubmitServerParams)"/></td>
     </tr>
     </tbody>
 </table>

@@ -93,6 +93,10 @@ function UpdateTable (sites) {
 
                 elm.id = table.length + "." + nm;
 
+                if (nm == "host") {
+                    elm.onkeydown = froxy.UiClickOnEnter.bind(null, table.length + ".update");
+                }
+
                 if (elm.type == "button") {
                     elm.onclick = function(n, i) {
                         return froxy.Ui.bind(null, function() {
