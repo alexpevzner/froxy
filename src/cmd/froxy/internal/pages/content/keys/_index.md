@@ -49,8 +49,8 @@ title = "SSH Keys Management"
 			    </td>
 			</tr>
 			<tr>
-			    <td><div style="padding-right:3em">Created:</div></td>
-			    <td><div id="add.ctime"></div></td>
+			    <td><div id="add.type"></div></td>
+			    <td>Created: <span id="add.ctime"></span></td>
 			</tr>
 			<tr>
 			    <td>Comment:</td>
@@ -58,10 +58,6 @@ title = "SSH Keys Management"
 			        <input id="add.comment" type="text"/>
 				<input id="add.sendcomment" type="button" value="Update"/>
 			    </td>
-			</tr>
-			<tr>
-			    <td>Key Type:</td>
-			    <td><div id="add.type"></div></td>
 			</tr>
 		    </tbody>
 		</table>

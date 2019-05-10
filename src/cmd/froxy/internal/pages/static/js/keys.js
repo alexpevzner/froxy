@@ -36,16 +36,6 @@ function GenKey () {
 // Delete the key
 //
 function DeleteKey (keyid) {
-    /*
-    var ok = confirm(
-        "Deleted keys cannot be recovered\n" +
-        "Are you sure you want to continue?"
-    );
-    if (!ok) {
-        return;
-    }
-    */
-
     froxy.DeleteKey(keyid);
 }
 
@@ -199,7 +189,15 @@ function UpdateKeys (keys) {
         froxy.UiSetInput(n + ".delete", false);
         document.getElementById(n + ".confirm-delete").hidden = true;
         froxy.UiSetInput(n + ".comment", keys[n].comment);
-        froxy.UiSetInput(n + ".type", keys[n].type);
+
+        var type = keys[n].type;
+        if (type == "ed25519") {
+            type = "Ed25519";
+        } else {
+            type = type.toUpperCase();
+        }
+        froxy.UiSetInput(n + ".type", type);
+
         froxy.UiSetInput(n + ".sha256", keys[n].fp_sha256);
         froxy.UiSetInput(n + ".md5", keys[n].fp_md5);
         froxy.UiSetInput(n + ".pubkey", keys[n].pubkey);
