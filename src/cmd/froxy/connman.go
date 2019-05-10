@@ -9,6 +9,7 @@ import (
 	"net"
 	"reflect"
 	"sync/atomic"
+	"unsafe"
 )
 
 //
@@ -124,7 +125,7 @@ func (connman *ConnMan) recheckAddresses(byAddr map[string]map[*Conn]struct{}) {
 		for _, conn := range conns {
 			connman.froxy.Debug("local address gone, connection closed: %s/%s",
 				conn.LocalAddr(), conn.RemoteAddr())
-			conn.Close()
+			conn.Abort(ErrNetDisconnected)
 		}
 	}()
 }
@@ -272,20 +273,58 @@ type Conn struct {
 	connman  *ConnMan        // Back link to ConnMan
 	ctx      context.Context // Connection's context
 	counter  *int32          // Statistics counter
-	closed   uint32          // Non-zero when closed
+	errptr   unsafe.Pointer  // Close reason, *error
 }
 
 //
-// Close the connection
+// Read from connection
 //
-func (conn *Conn) Close() error {
+func (conn *Conn) Read(b []byte) (n int, err error) {
+	n, err = conn.Conn.Read(b)
+	if err != nil {
+		errptr := (*error)(atomic.LoadPointer(&conn.errptr))
+		if errptr != nil && *errptr != nil {
+			err = *errptr
+		}
+	}
+	return
+}
+
+//
+// Write to connection
+//
+func (conn *Conn) Write(b []byte) (n int, err error) {
+	n, err = conn.Conn.Write(b)
+	if err != nil {
+		errptr := (*error)(atomic.LoadPointer(&conn.errptr))
+		if errptr != nil && *errptr != nil {
+			err = *errptr
+		}
+	}
+	return
+}
+
+//
+// Abort the connection
+//
+func (conn *Conn) Abort(reason error) error {
 	var err error
 
-	if atomic.SwapUint32(&conn.closed, 1) == 0 {
+	ok := atomic.CompareAndSwapPointer(&conn.errptr, nil,
+		unsafe.Pointer(&reason))
+
+	if ok {
 		conn.connman.froxy.DecCounter(conn.counter)
 		err = conn.Conn.Close()
 		conn.connman.cmd <- connManCmdDel{conn: conn}
 	}
 
 	return err
+}
+
+//
+// Close the connection
+//
+func (conn *Conn) Close() error {
+	return conn.Abort(nil)
 }
