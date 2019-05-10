@@ -15,7 +15,7 @@ var (
 	ErrHttpHostMissed      = errors.New("invalid query: host parameter missed")
 	ErrServerNotConfigured = errors.New("Server not configured")
 	ErrKeyIdMissed         = errors.New("invalid query: key ID missed")
-	ErrNoSuchKey           = errors.New("Now suck key")
+	ErrNoSuchKey           = errors.New("Now such key")
 	ErrSiteBlocked         = errors.New("Site blocked")
 	ErrNetDisconnected     = errors.New("Disconnected from the network")
 )
