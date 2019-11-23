@@ -177,6 +177,9 @@ func (adm *Adm) Run() error {
 		"-fg",
 	}
 
+	// Force CGO resolver
+	os.Setenv("GODEBUG", "netdns=cgo")
+
 	// Start new process
 	proc, err := os.StartProcess(adm.OsExecutable, argv, attr)
 	if err != nil {
