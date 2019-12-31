@@ -5,9 +5,9 @@
 package main
 
 import (
-	"cmd/froxy/internal/keys"
 	"context"
 	"fmt"
+	"froxy/src/cmd/froxy/internal/keys"
 	"net"
 	"net/http"
 	"reflect"

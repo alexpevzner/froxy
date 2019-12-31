@@ -14,7 +14,7 @@ import (
 	"sync"
 	"time"
 
-	"cmd/froxy/internal/keys"
+	"froxy/src/cmd/froxy/internal/keys"
 )
 
 //

@@ -17,8 +17,8 @@ import (
 	"time"
 	"unicode"
 
-	"cmd/froxy/internal/pages"
-	"cmd/froxy/internal/sysdep"
+	"froxy/src/cmd/froxy/internal/pages"
+	"froxy/src/cmd/froxy/internal/sysdep"
 )
 
 //
