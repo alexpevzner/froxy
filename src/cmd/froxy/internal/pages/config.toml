@@ -5,7 +5,10 @@ theme = "hugo-flex"
 themesDir = "../../../../vendor/themes"
 
 [params]
-footer = "Copyright (c) by Alexander Pevzner, 2019"
+  footer = "Copyright (c) by Alexander Pevzner, 2019"
+
+[markup.goldmark.renderer]
+  unsafe = true
 
 [[menu.nav]]
   name = "Configuration"
