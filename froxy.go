@@ -18,8 +18,8 @@ import (
 	"sync"
 	"sync/atomic"
 
-	"froxy/src/cmd/froxy/internal/pages"
-	"froxy/src/cmd/froxy/internal/sysdep"
+	"github.com/alexpevzner/froxy/internal/pages"
+	"github.com/alexpevzner/froxy/internal/sysdep"
 )
 
 //

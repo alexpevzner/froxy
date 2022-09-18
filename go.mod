@@ -1,4 +1,4 @@
-module froxy
+module github.com/alexpevzner/froxy
 
 go 1.13
 

@@ -1,4 +1,4 @@
-include ../../../../../Rules.mak
+include ../../Rules.mak
 
 deps := $(shell find archetypes content layouts static -type f)
 deps += config.toml

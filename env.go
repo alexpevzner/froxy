@@ -12,7 +12,7 @@ import (
 	"sync"
 	"syscall"
 
-	"froxy/src/cmd/froxy/internal/sysdep"
+	"github.com/alexpevzner/froxy/internal/sysdep"
 )
 
 //

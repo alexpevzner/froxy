@@ -7,13 +7,13 @@ package main
 import (
 	"context"
 	"fmt"
-	"froxy/src/cmd/froxy/internal/keys"
 	"net"
 	"net/http"
 	"reflect"
 	"sync"
 	"sync/atomic"
 
+	"github.com/alexpevzner/froxy/internal/keys"
 	"golang.org/x/crypto/ssh"
 )
 

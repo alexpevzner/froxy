@@ -1,6 +1,6 @@
 include Rules.mak
 
-SUBDIRS	= src
+SUBDIRS	= internal
 
 clean_local:
 	rm -rf bin pkg

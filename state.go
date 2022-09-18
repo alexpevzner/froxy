@@ -11,7 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 
-	"froxy/src/cmd/froxy/internal/sysdep"
+	"github.com/alexpevzner/froxy/internal/sysdep"
 )
 
 //
