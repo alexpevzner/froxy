@@ -1,6 +1,9 @@
+// Froxy - HTTP over SSH proxy
 //
-// System-dependent paths -- UNIX stuff
+// Copyright (C) 2019 and up by Alexander Pevzner (pzz@apevzner.com)
+// See LICENSE for license terms and conditions
 //
+// System-dependent paths -- Windows stuff
 
 package sysdep
 

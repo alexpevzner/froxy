@@ -1,6 +1,9 @@
+// Froxy - HTTP over SSH proxy
 //
-// System events notifications
+// Copyright (C) 2019 and up by Alexander Pevzner (pzz@apevzner.com)
+// See LICENSE for license terms and conditions
 //
+// System events notifications, common part
 
 package sysdep
 

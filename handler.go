@@ -1,6 +1,9 @@
+// Froxy - HTTP over SSH proxy
 //
-// Assortment of useful http.Handler implementation
+// Copyright (C) 2019 and up by Alexander Pevzner (pzz@apevzner.com)
+// See LICENSE for license terms and conditions
 //
+// Assortment of useful http.Handler implementations
 
 package main
 

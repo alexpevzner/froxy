@@ -1,7 +1,9 @@
+// Froxy - HTTP over SSH proxy
 //
-// Logger implements writing log to files, with size limit
-// and automatic rotation
+// Copyright (C) 2019 and up by Alexander Pevzner (pzz@apevzner.com)
+// See LICENSE for license terms and conditions
 //
+// Logger, with log file size limit and automatic rotation
 
 package main
 

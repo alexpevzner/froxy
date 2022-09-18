@@ -1,6 +1,9 @@
+// Froxy - HTTP over SSH proxy
 //
-// Froxy command-line options
+// Copyright (C) 2019 and up by Alexander Pevzner (pzz@apevzner.com)
+// See LICENSE for license terms and conditions
 //
+// Command-line options handling
 
 package main
 

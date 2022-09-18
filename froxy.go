@@ -1,6 +1,9 @@
+// Froxy - HTTP over SSH proxy
 //
-// Froxy instance
+// Copyright (C) 2019 and up by Alexander Pevzner (pzz@apevzner.com)
+// See LICENSE for license terms and conditions
 //
+// Froxy proxy instance
 
 package main
 

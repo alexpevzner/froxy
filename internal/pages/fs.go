@@ -1,6 +1,10 @@
+// Froxy - HTTP over SSH proxy
+//
+// Copyright (C) 2019 and up by Alexander Pevzner (pzz@apevzner.com)
+// See LICENSE for license terms and conditions
 //
 // http.FileSystem on a top of embedded pages
-//
+
 package pages
 
 import (

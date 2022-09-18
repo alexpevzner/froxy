@@ -1,6 +1,9 @@
+// Froxy - HTTP over SSH proxy
 //
-// Set of SSH keys
+// Copyright (C) 2019 and up by Alexander Pevzner (pzz@apevzner.com)
+// See LICENSE for license terms and conditions
 //
+// Set (collection) of SSH keys
 
 package main
 
