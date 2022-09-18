@@ -33,6 +33,13 @@ vet:	subdirs_vet do_vet
 clean:	subdirs_clean do_clean
 
 ifneq	($(GOFILES),)
+do_all:
+	go build
+else
+do_test:
+endif
+
+ifneq	($(GOFILES),)
 do_test:
 	go test
 else
