@@ -24,9 +24,8 @@ import (
 	"github.com/alexpevzner/froxy/internal/sysdep"
 )
 
-//
-// Froxy administration environment
-//
+// Adm represents Environment for Froxy administration
+// actions (install/uninstall etc)
 type Adm struct {
 	*Env                  // Environment
 	port           int    // -p port
@@ -34,9 +33,7 @@ type Adm struct {
 	FroxyIsRunning bool   // Froxy is running
 }
 
-//
-// Create new administrative environment
-//
+// NewAdm creates new administrative environment
 func NewAdm(env *Env, port int) (*Adm, error) {
 	// ----- Create Adm structure -----
 	adm := &Adm{Env: env, port: port}
@@ -57,9 +54,7 @@ func NewAdm(env *Env, port int) (*Adm, error) {
 	return adm, nil
 }
 
-//
-// Install Froxy
-//
+// Install performs Froxy installation
 func (adm *Adm) Install(flags OptFlags) error {
 	// Kill Froxy if it is running
 	err := adm.Kill()
@@ -125,9 +120,7 @@ func (adm *Adm) Install(flags OptFlags) error {
 	return err
 }
 
-//
-// Uninstall Froxy
-//
+// Uninstall performs Froxy uninstallation
 func (adm *Adm) Uninstall() error {
 	// Kill Froxy if it is running
 	err := adm.Kill()
@@ -143,9 +136,7 @@ func (adm *Adm) Uninstall() error {
 	return nil
 }
 
-//
-// Run Froxy in background
-//
+// Run starts Froxy in background
 func (adm *Adm) Run() error {
 	if adm.FroxyIsRunning {
 		return ErrFroxyRunning
@@ -214,9 +205,7 @@ func (adm *Adm) Run() error {
 	return nil
 }
 
-//
-// Kill running Froxy
-//
+// Kill terminates running Froxy
 func (adm *Adm) Kill() error {
 	// Froxy not running? Perfect, nothing to do
 	if !adm.FroxyIsRunning {
@@ -270,9 +259,7 @@ func (adm *Adm) Kill() error {
 	return err
 }
 
-//
-// Open configuration window
-//
+// Open opens Froxy configuration window in the default web brauser
 func (adm *Adm) Open() error {
 	err := adm.Run()
 	if err != nil && err != ErrFroxyRunning {
