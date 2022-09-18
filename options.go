@@ -167,12 +167,15 @@ func (opt *Options) Parse(env *Env) error {
 //
 func (opt *Options) Usage(env *Env, full bool) {
 	const short_usage = `Usage: froxy command [options]
+
 Common commands:
-  -i [-p port] [-norun] [-noshortcut] [-noautostart]
+  froxy -i [-p port] [-norun] [-noshortcut] [-noautostart]
 	Install and start the ${PROG}
-  -u
+
+  froxy -u
+
 	Uninstall the ${PROG}
-  -h
+  froxy -h
         Print all commands and options
 `
 
