@@ -63,7 +63,7 @@ clean_local:
 
 # tags target
 tags:
-	cd $(TOPDIR); gotags -R . | grep -v '^!' > tags; ctags -a -R
+	-cd $(TOPDIR); gotags -R . | grep -v '^!' > tags
 
 # Tools target
 tools:
