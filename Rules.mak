@@ -17,6 +17,27 @@ ifneq		($(GOPATH),)
 endif
 
 ########################################################################
+# Cross-compilation support
+#=======================================================================
+
+FROXY	:= froxy
+GO_CMD	:= go
+
+ifneq 	($(GOOS)-$(GOARCH),-)
+	GO_CMD := GOOS=$(GOOS) GOARCH=$(GOARCH) go
+endif
+
+ifeq 	($(GOOS)-$(GOARCH),windows-386)
+	FROXY := froxy32.exe
+	GO_CMD := GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 CC=i686-w64-mingw32-gcc go
+endif
+
+ifeq	($(GOOS)-$(GOARCH),windows-amd64)
+	FROXY := froxy64.exe
+	GO_CMD := GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc go
+endif
+
+########################################################################
 # Common targets
 ########################################################################
 
@@ -25,7 +46,6 @@ endif
 .PHONY:	test
 .PHONY:	vet
 .PHONY:	tags
-.PHONY:	tools
 
 all:	subdirs_all do_all
 test:	subdirs_test do_test
@@ -34,7 +54,7 @@ clean:	subdirs_clean do_clean
 
 ifneq	($(GOFILES),)
 do_all:
-	go build
+	$(GO_CMD) build -o $(FROXY)
 else
 do_test:
 endif
@@ -65,12 +85,9 @@ clean_local:
 tags:
 	-cd $(TOPDIR); gotags -R . | grep -v '^!' > tags
 
-# Tools target
-tools:
-
-# Automatic rebuilding of tags and tools
+# Automatic rebuilding of tags
 ifeq	($(MAKELEVEL),0)
-do_all do_test do_vet:    tags tools
+do_all do_test do_vet:    tags
 endif
 
 # Subdirs handling
