@@ -37,9 +37,11 @@ type ipNotifier struct {
 // Initialize ipNotifier part of the SysEventNotifier
 //
 func (sn *SysEventNotifier) ipNotifierInit() {
+	cb := syscall.NewCallback(ipNotifierCallback)
+
 	status := C.NotifyUnicastIpAddressChange(
 		C.AF_UNSPEC,
-		C.PUNICAST_IPADDRESS_CHANGE_CALLBACK(C.ipNotifierCallback),
+		C.PUNICAST_IPADDRESS_CHANGE_CALLBACK(unsafe.Pointer(cb)),
 		C.PVOID(unsafe.Pointer(sn)),
 		C.FALSE,
 		&sn.ipnotifier.addrChangeHandle,
