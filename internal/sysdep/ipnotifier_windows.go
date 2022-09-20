@@ -14,8 +14,6 @@ package sysdep
 #include <ws2ipdef.h>
 #include <iphlpapi.h>
 
-void ipNotifierCallback(PVOID, PMIB_UNICASTIPADDRESS_ROW, MIB_NOTIFICATION_TYPE);
-
 #cgo LDFLAGS: -l iphlpapi
 */
 import "C"
@@ -33,16 +31,33 @@ type ipNotifier struct {
 	addrChangeHandle C.HANDLE // Address change subscription handle
 }
 
+var sysEventNotifierPtr *SysEventNotifier
+
 //
 // Initialize ipNotifier part of the SysEventNotifier
 //
 func (sn *SysEventNotifier) ipNotifierInit() {
 	cb := syscall.NewCallback(ipNotifierCallback)
 
+	// Note, Cgo doesn't allow us to pass sn pointer to
+	// the NotifyUnicastIpAddressChange function as
+	// callback parameter, so we simple save it into
+	// the static pointer
+	//
+	// For now, we use only a single pointer per process,
+	// so it is OK to use single pointer. But if we for some
+	// reason will need to have multiple notifiers, a single
+	// pointer will not work for us. So lets put check with
+	// panic here, it will remind us to redesign this place
+	// when we will actually need it
+	if sysEventNotifierPtr != nil {
+		panic("internal error")
+	}
+
 	status := C.NotifyUnicastIpAddressChange(
 		C.AF_UNSPEC,
 		C.PUNICAST_IPADDRESS_CHANGE_CALLBACK(unsafe.Pointer(cb)),
-		C.PVOID(unsafe.Pointer(sn)),
+		C.PVOID(nil),
 		C.FALSE,
 		&sn.ipnotifier.addrChangeHandle,
 	)
@@ -53,8 +68,7 @@ func (sn *SysEventNotifier) ipNotifierInit() {
 	}
 }
 
-//export ipNotifierCallback
-func ipNotifierCallback(ctx C.PVOID, r C.PMIB_UNICASTIPADDRESS_ROW, t C.MIB_NOTIFICATION_TYPE) {
-	sn := (*SysEventNotifier)(unsafe.Pointer(ctx))
-	sn.callback(SysEventIpAddrChanged)
+func ipNotifierCallback(ctx C.PVOID, r C.PMIB_UNICASTIPADDRESS_ROW, t C.MIB_NOTIFICATION_TYPE) int {
+	sysEventNotifierPtr.callback(SysEventIpAddrChanged)
+	return 0
 }

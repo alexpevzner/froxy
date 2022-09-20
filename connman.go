@@ -18,19 +18,22 @@ import (
 //
 // ConnMan manages all outgoing TCP connections
 //
-// It adds the following functionality to standard net.Conn connections:
-//   1) Every connection is bound to its dial Context. When context
-//      canceled, connection automatically closed
-//   2) Changes in IP addresses, assigned to local interfaces, are
-//      monitored. When connection's local address goes away, connection
-//      automatically closed
-//   3) It automatically manages statistics counter
+// It adds the following functionality to standard net.Conn connections: 1)
+// Every connection is bound to its dial Context. When context canceled,
+// connection automatically closed 2) Changes in IP addresses, assigned to
+// local interfaces, are monitored. When connection's local address goes away,
+// connection automatically closed 3) It automatically manages statistics
+// counter
 //
 type ConnMan struct {
-	froxy        *Froxy           // Back link to Froxy
-	dialer       net.Dialer       // The dialer
-	cmd          chan interface{} // Command channel for ConnMan goroutine
-	addrChgCount uint64           // Incremented on each EventIpAddrChanged
+	// Note, due to a bug in Go runtime, on Win32 this 64-bit atomic field
+	// must be 64-bit aligned. The simplest way to ensure that is to place
+	// it at the very beginning of the structure
+	addrChgCount uint64 // Incremented on each EventIpAddrChanged
+
+	froxy  *Froxy           // Back link to Froxy
+	dialer net.Dialer       // The dialer
+	cmd    chan interface{} // Command channel for ConnMan goroutine
 }
 
 //
@@ -259,8 +262,12 @@ func (connman *ConnMan) goroutine() {
 // Add a connection
 //
 type connManCmdAdd struct {
-	conn         *Conn  // The connection
+	// Note, due to a bug in Go runtime, on Win32 this 64-bit atomic field
+	// must be 64-bit aligned. The simplest way to ensure that is to place
+	// it at the very beginning of the structure
 	addrChgCount uint64 // addrChgCount snapshot just before dial
+
+	conn *Conn // The connection
 }
 
 type connManCmdDel struct {
