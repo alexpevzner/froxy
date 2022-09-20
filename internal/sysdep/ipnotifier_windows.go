@@ -54,6 +54,7 @@ func (sn *SysEventNotifier) ipNotifierInit() {
 		panic("internal error")
 	}
 
+	sysEventNotifierPtr = sn
 	status := C.NotifyUnicastIpAddressChange(
 		C.AF_UNSPEC,
 		C.PUNICAST_IPADDRESS_CHANGE_CALLBACK(unsafe.Pointer(cb)),
