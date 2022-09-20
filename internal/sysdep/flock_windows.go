@@ -18,6 +18,7 @@ import (
 	"os"
 	"runtime"
 	"syscall"
+	"unsafe"
 )
 
 //
@@ -40,7 +41,7 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 	var ovp C.OVERLAPPED
 
 	ok := C.LockFileEx(
-		C.HANDLE(file.Fd()),
+		C.HANDLE(unsafe.Pointer(file.Fd())),
 		flags,
 		0,
 		0xffffffff,
@@ -70,7 +71,7 @@ func FileUnlock(file *os.File) error {
 	var ovp C.OVERLAPPED
 
 	ok := C.UnlockFileEx(
-		C.HANDLE(file.Fd()),
+		C.HANDLE(unsafe.Pointer(file.Fd())),
 		0,
 		0xffffffff,
 		0xffffffff,

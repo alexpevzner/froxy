@@ -16,6 +16,7 @@ import "C"
 import (
 	"os"
 	"syscall"
+	"unsafe"
 )
 
 //
@@ -34,9 +35,9 @@ func StdRedirect(stdin, stdout, stderr uintptr) error {
 	os.Stdout = os.NewFile(uintptr(syscall.Stdout), "/dev/stdout")
 	os.Stderr = os.NewFile(uintptr(syscall.Stderr), "/dev/stderr")
 
-	C.SetStdHandle(C.STD_INPUT_HANDLE, C.HANDLE(stdin))
-	C.SetStdHandle(C.STD_OUTPUT_HANDLE, C.HANDLE(stdout))
-	C.SetStdHandle(C.STD_ERROR_HANDLE, C.HANDLE(stderr))
+	C.SetStdHandle(C.STD_INPUT_HANDLE, C.HANDLE(unsafe.Pointer(stdin)))
+	C.SetStdHandle(C.STD_OUTPUT_HANDLE, C.HANDLE(unsafe.Pointer(stdout)))
+	C.SetStdHandle(C.STD_ERROR_HANDLE, C.HANDLE(unsafe.Pointer(stderr)))
 
 	return nil
 }
