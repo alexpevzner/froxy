@@ -21,20 +21,21 @@ endif
 #=======================================================================
 
 FROXY	:= froxy
-GO_CMD	:= go
+GO	:= go
+GO_CMD	:= $(GO)
 
 ifneq 	($(GOOS)-$(GOARCH),-)
-	GO_CMD := GOOS=$(GOOS) GOARCH=$(GOARCH) go
+	GO_CMD := GOOS=$(GOOS) GOARCH=$(GOARCH) $(GO)
 endif
 
 ifeq 	($(GOOS)-$(GOARCH),windows-386)
 	FROXY := froxy32.exe
-	GO_CMD := GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 CC=i686-w64-mingw32-gcc go
+	GO_CMD := GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 CC=i686-w64-mingw32-gcc $(GO)
 endif
 
 ifeq	($(GOOS)-$(GOARCH),windows-amd64)
 	FROXY := froxy64.exe
-	GO_CMD := GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc go
+	GO_CMD := GOOS=$(GOOS) GOARCH=$(GOARCH) CGO_ENABLED=1 CC=x86_64-w64-mingw32-gcc $(GO)
 endif
 
 ########################################################################
@@ -61,14 +62,14 @@ endif
 
 ifneq	($(GOFILES),)
 do_test:
-	go test
+	$(GO) test
 else
 do_test:
 endif
 
 ifneq	($(GOFILES),)
 do_vet:
-	go vet
+	$(GO) vet
 else
 do_vet:
 endif
