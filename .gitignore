@@ -7,3 +7,6 @@ tags
 core
 core.[0-9]*
 *.gen.go
+
+froxy
+froxy64.exe
