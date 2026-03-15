@@ -448,6 +448,7 @@ func (conn *ftpConn) putConn() {
 
 	select {
 	case conn.ftpp.idleChan <- struct{}{}:
+	default:
 	}
 }
 

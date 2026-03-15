@@ -28,14 +28,6 @@ type WebAPI struct {
 
 var _ = http.Handler(&WebAPI{})
 
-// WebAPI handler
-type webapiHandler struct {
-	event  Event         // Event to poll for changes in GET response
-	method func(*WebAPI, // WebAPI method to call
-		http.ResponseWriter,
-		*http.Request)
-}
-
 // Create new JS API handler instance
 func NewWebAPI(froxy *Froxy) *WebAPI {
 	webapi := &WebAPI{
