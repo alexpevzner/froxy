@@ -13,9 +13,7 @@ import (
 	"sync/atomic"
 )
 
-//
 // The event
-//
 type Event uint
 
 const (
@@ -29,9 +27,7 @@ const (
 	EventIpAddrChanged
 )
 
-//
 // Event->string
-//
 func (e Event) String() string {
 	switch e {
 	case EventStartup:
@@ -55,9 +51,7 @@ func (e Event) String() string {
 	panic("internal error")
 }
 
-//
 // The event bus
-//
 type Ebus struct {
 	lock        sync.Mutex                   // Access lock
 	subscribers map[<-chan Event]*subscriber // Table of subscribers
@@ -65,9 +59,7 @@ type Ebus struct {
 	wake        chan struct{}                // Wake-up delivery goroutine
 }
 
-//
 // The event subscriber
-//
 type subscriber struct {
 	out     reflect.Value // reflect.ValueOf from subscriber's channel send end
 	mask    uint32        // Mask of events the subscriber interested in
@@ -75,9 +67,7 @@ type subscriber struct {
 	last    Event         // Last delivered event
 }
 
-//
 // Create new event bus
-//
 func NewEbus() *Ebus {
 	ebus := &Ebus{
 		subscribers: make(map[<-chan Event]*subscriber),
@@ -88,10 +78,8 @@ func NewEbus() *Ebus {
 	return ebus
 }
 
-//
 // Subscribe to events
 // If no events are specified, subscriber will receive all events
-//
 func (ebus *Ebus) Sub(events ...Event) <-chan Event {
 	mask := ^uint32(1)
 	if len(events) != 0 {
@@ -114,18 +102,14 @@ func (ebus *Ebus) Sub(events ...Event) <-chan Event {
 	return c
 }
 
-//
 // Cancel events subscription
-//
 func (ebus *Ebus) Unsub(c <-chan Event) {
 	ebus.lock.Lock()
 	delete(ebus.subscribers, c)
 	ebus.lock.Unlock()
 }
 
-//
 // Raise an event
-//
 func (ebus *Ebus) Raise(e Event) {
 	bit := uint32(1 << e)
 	old := uint32(0)
@@ -142,9 +126,7 @@ func (ebus *Ebus) Raise(e Event) {
 	}
 }
 
-//
 // Ebus goroutine
-//
 func (ebus *Ebus) goroutine() {
 	// Acquire the lock
 	ebus.lock.Lock()
@@ -200,9 +182,7 @@ func (ebus *Ebus) goroutine() {
 	}
 }
 
-//
 // Get next pending event
-//
 func (s *subscriber) next() Event {
 	e := Event(0)
 	for (s.pending & (1 << e)) == 0 {

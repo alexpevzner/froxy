@@ -13,9 +13,7 @@ import (
 	"os/exec"
 )
 
-//
 // Open URL in a browser
-//
 func OpenURL(url string) error {
 	return exec.Command("xdg-open", url).Start()
 }

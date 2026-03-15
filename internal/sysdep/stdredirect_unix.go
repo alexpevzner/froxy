@@ -13,9 +13,7 @@ import (
 	"syscall"
 )
 
-//
 // Redirect stdin/stdout/stderr
-//
 func StdRedirect(stdin, stdout, stderr uintptr) error {
 	syscall.Dup2(int(stdin), syscall.Stdin)
 	syscall.Dup2(int(stdout), syscall.Stdout)

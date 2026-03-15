@@ -7,9 +7,7 @@
 
 package sysdep
 
-//
 // System events
-//
 type SysEvent int
 
 const (
@@ -17,9 +15,7 @@ const (
 	SysEventIpAddrChanged
 )
 
-//
 // System events notifier
-//
 type SysEventNotifier struct {
 	callback   func(SysEvent) // Event callback
 	ipnotifier ipNotifier     // System-specific IP events notifier

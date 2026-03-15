@@ -17,18 +17,14 @@ import (
 	"github.com/alexpevzner/froxy/internal/sysdep"
 )
 
-//
 // The persistent state
-//
 type State struct {
 	Port   int          `json:"port"`   // TCP port Froxy runs on
 	Server ServerParams `json:"server"` // Server parameters
 	Sites  []SiteParams `json:"sites"`  // List of forwarded sites
 }
 
-//
 // Server parameters
-//
 type ServerParams struct {
 	Addr     string `json:"addr,omitempty"`     // Server address
 	Login    string `json:"login,omitempty"`    // Server login
@@ -36,18 +32,14 @@ type ServerParams struct {
 	Keyid    string `json:"keyid,omitempty"`    // Key ID
 }
 
-//
 // Site parameters
-//
 type SiteParams struct {
 	Host  string `json:"host,omitempty"`  // Host name
 	Rec   bool   `json:"rec,omitempty"`   // Recursive (with subdomains)
 	Block bool   `json:"block,omitempty"` // Block the site
 }
 
-//
 // Load state
-//
 func (state *State) Load(file string) error {
 	// Reset the state
 	state.Server = ServerParams{}
@@ -79,9 +71,7 @@ func (state *State) Load(file string) error {
 	return err
 }
 
-//
 // Save state
-//
 func (state *State) Save(file string) error {
 	// Allocate buffer
 	buf := &bytes.Buffer{}

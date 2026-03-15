@@ -11,16 +11,12 @@ import (
 	"strings"
 )
 
-//
 // Request router
-//
 type Router struct {
 	froxy *Froxy // Back link to Froxy
 }
 
-//
 // Router answer
-//
 type RouterAnswer int
 
 const (
@@ -29,9 +25,7 @@ const (
 	RouterBlock
 )
 
-//
 // RouterAnswer->string (for debugging)
-//
 func (a RouterAnswer) String() string {
 	switch a {
 	case RouterBypass:
@@ -45,19 +39,15 @@ func (a RouterAnswer) String() string {
 	panic("internal error")
 }
 
-//
 // Create new router
-//
 func NewRouter(froxy *Froxy) *Router {
 	return &Router{
 		froxy: froxy,
 	}
 }
 
-//
 // Route the URL. Returns true if site must be routed via server,
 // false if site must be accessed directly
-//
 func (r *Router) Route(host string) (answer RouterAnswer) {
 	sites := r.froxy.GetSites()
 	found := (*SiteParams)(nil)

@@ -20,9 +20,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-//
 // The SSH transport for net.http
-//
 type SSHTransport struct {
 	http.Transport             // SSH-backed http.Transport
 	froxy          *Froxy      // Back link to Froxy
@@ -45,7 +43,6 @@ var _ = Transport(&SSHTransport{})
 // ----- SSH connection context -- wraps context.Context -----
 //
 // SSH connection context
-//
 type sshContext struct {
 	context.Context                    // Underlying context
 	cancel          context.CancelFunc // Context cancel function
@@ -55,9 +52,7 @@ type sshContext struct {
 	ok              bool               // Server parameters OK to connect
 }
 
-//
 // Create new sshContext
-//
 func newSshContext(froxy *Froxy, params *ServerParams) *sshContext {
 	ctx := &sshContext{
 		froxy:  froxy,
@@ -79,24 +74,18 @@ func newSshContext(froxy *Froxy, params *ServerParams) *sshContext {
 	return ctx
 }
 
-//
 // Cancel the context
-//
 func (ctx *sshContext) Cancel() {
 	ctx.cancel()
 }
 
-//
 // Check of server parameters are equal to those associated
 // with the context
-//
 func (ctx *sshContext) ServerParamsEqual(params *ServerParams) bool {
 	return reflect.DeepEqual(ctx.params, params)
 }
 
-//
 // Create SSH client configuration
-//
 func (ctx *sshContext) SshClientConfig() *ssh.ClientConfig {
 	var auth []ssh.AuthMethod
 	if ctx.key != nil {
@@ -115,16 +104,13 @@ func (ctx *sshContext) SshClientConfig() *ssh.ClientConfig {
 // ----- SSH session -----
 //
 // SSH session -- wraps ssh.Client
-//
 type sshSession struct {
 	*ssh.Client               // Underlying ssh.Client
 	transport   *SSHTransport // Transport that owns the session
 	refcnt      uint32        // Reference count
 }
 
-//
 // Unref the session
-//
 func (ssn *sshSession) unref() {
 	t := ssn.transport
 
@@ -141,16 +127,13 @@ func (ssn *sshSession) unref() {
 // ----- SSH-tunneled connection -----
 //
 // SSH-tunneled connection
-//
 type sshConn struct {
 	net.Conn             // Underlying SSH-backed net.Conn
 	closed   uint32      // Non-zero when closed
 	session  *sshSession // Session that owns the connection
 }
 
-//
 // Close the connection
-//
 func (conn *sshConn) Close() error {
 	var err error
 
@@ -170,7 +153,6 @@ func (conn *sshConn) Close() error {
 // ----- SSHTransport methods -----
 //
 // Create new SSH transport
-//
 func NewSSHTransport(froxy *Froxy) *SSHTransport {
 	t := &SSHTransport{
 		Transport: http.Transport{
@@ -194,7 +176,6 @@ func NewSSHTransport(froxy *Froxy) *SSHTransport {
 	return t
 }
 
-//
 // Reconnect to the server
 //
 // This function updates server connection parameters, which
@@ -206,7 +187,6 @@ func NewSSHTransport(froxy *Froxy) *SSHTransport {
 //
 // In a case of disconnect, this function synchronously waits until
 // all active connections has gone away
-//
 func (t *SSHTransport) Reconnect(params ServerParams) {
 	// Synchronize with disconnect logic
 	t.disconnectLock.Lock()
@@ -234,9 +214,7 @@ func (t *SSHTransport) Reconnect(params ServerParams) {
 	}
 }
 
-//
 // Dial new TCP connection, routed via server
-//
 func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	// Synchronize with disconnect logic
 	t.disconnectWait.Add(1)
@@ -272,12 +250,10 @@ func (t *SSHTransport) Dial(net, addr string) (net.Conn, error) {
 	return &sshConn{Conn: conn, session: session}, nil
 }
 
-//
 // Get a session for establishing new connection
 //
 // Either reuses a spare session, if available, or dials
 // a new session on demand
-//
 func (t *SSHTransport) getSession(ctx *sshContext) (*sshSession, error) {
 	// Acquire the lock
 	t.sessionsLock.Lock()
@@ -319,12 +295,10 @@ AGAIN:
 	return nil, err
 }
 
-//
 // Find a spare session for establishing new connection
 // May return nil if appropriate session is not found
 //
 // MUST be called under t.sessionsLock
-//
 func (t *SSHTransport) spareSession() *sshSession {
 	session := (*sshSession)(nil)
 
@@ -343,9 +317,7 @@ func (t *SSHTransport) spareSession() *sshSession {
 	return session
 }
 
-//
 // Establish a new client session
-//
 func (t *SSHTransport) newSession(ctx *sshContext) (*sshSession, error) {
 	// Create SSH configuration
 	cfg := ctx.SshClientConfig()

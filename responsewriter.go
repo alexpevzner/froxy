@@ -18,7 +18,6 @@ import (
 // ----- ResponseWriterWithHooks -----
 //
 // http.ResponseWriter wrapper with hooks on request completion
-//
 type ResponseWriterWithHooks struct {
 	http.ResponseWriter // Underlying http.ResponseWriter
 
@@ -54,9 +53,7 @@ var _ = http.ResponseWriter(&ResponseWriterWithHooks{})
 var _ = http.Hijacker(&ResponseWriterWithHooks{})
 var _ = http.Flusher(&ResponseWriterWithHooks{})
 
-//
 // Hijack a connection
-//
 func (w *ResponseWriterWithHooks) Hijack() (net.Conn, *bufio.ReadWriter, error) {
 	if h, ok := w.ResponseWriter.(http.Hijacker); ok {
 		return h.Hijack()
@@ -65,18 +62,14 @@ func (w *ResponseWriterWithHooks) Hijack() (net.Conn, *bufio.ReadWriter, error) 
 	}
 }
 
-//
 // Send any buffered data to the client
-//
 func (w *ResponseWriterWithHooks) Flush() {
 	if f, ok := w.ResponseWriter.(http.Flusher); ok {
 		f.Flush()
 	}
 }
 
-//
 // Write response header
-//
 func (w *ResponseWriterWithHooks) WriteHeader(status int) {
 	w.wroteHeader = true
 
@@ -99,9 +92,7 @@ func (w *ResponseWriterWithHooks) WriteHeader(status int) {
 	}
 }
 
-//
 // Write response data
-//
 func (w *ResponseWriterWithHooks) Write(data []byte) (int, error) {
 	if !w.wroteHeader {
 		w.WriteHeader(http.StatusOK)
@@ -118,7 +109,6 @@ func (w *ResponseWriterWithHooks) Write(data []byte) (int, error) {
 //
 // This ResponseWriter saves response bytes into its own
 // buffer instead of sending them to client
-//
 type ResponseWriterWithBuffer struct {
 	bytes.Buffer             // Underlying buffer
 	Status       int         // Response HTTP status
@@ -128,9 +118,7 @@ type ResponseWriterWithBuffer struct {
 
 var _ = http.ResponseWriter(&ResponseWriterWithBuffer{})
 
-//
 // Get response header
-//
 func (w *ResponseWriterWithBuffer) Header() http.Header {
 	if w.header == nil {
 		w.header = make(http.Header)
@@ -138,9 +126,7 @@ func (w *ResponseWriterWithBuffer) Header() http.Header {
 	return w.header
 }
 
-//
 // Write response header
-//
 func (w *ResponseWriterWithBuffer) WriteHeader(status int) {
 	if !w.wroteHeader {
 		w.wroteHeader = true
@@ -148,9 +134,7 @@ func (w *ResponseWriterWithBuffer) WriteHeader(status int) {
 	}
 }
 
-//
 // Write response data
-//
 func (w *ResponseWriterWithBuffer) Write(data []byte) (int, error) {
 	if !w.wroteHeader {
 		w.WriteHeader(http.StatusOK)
@@ -159,9 +143,7 @@ func (w *ResponseWriterWithBuffer) Write(data []byte) (int, error) {
 	return w.Buffer.Write(data)
 }
 
-//
 // Send collected response to http.ResponseWriter
-//
 func (w *ResponseWriterWithBuffer) Send(to http.ResponseWriter) {
 	if w.Status == 0 {
 		w.WriteHeader(http.StatusOK)
@@ -172,9 +154,7 @@ func (w *ResponseWriterWithBuffer) Send(to http.ResponseWriter) {
 	to.Write(w.Bytes())
 }
 
-//
 // Reset the ResponseWriterWithBuffer
-//
 func (w *ResponseWriterWithBuffer) Reset() {
 	// Reset all but Buffer and header
 	*w = ResponseWriterWithBuffer{Buffer: w.Buffer, header: w.header}

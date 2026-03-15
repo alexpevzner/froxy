@@ -25,9 +25,7 @@ import (
 	"github.com/alexpevzner/froxy/internal/sysdep"
 )
 
-//
 // froxy instance
-//
 type Froxy struct {
 	*Env    // Common environment
 	*Ebus   // Event bus
@@ -60,7 +58,6 @@ type Froxy struct {
 // ----- Connection state -----
 //
 // Connection states
-//
 type ConnState int
 
 const (
@@ -69,9 +66,7 @@ const (
 	ConnEstablished
 )
 
-//
 // ConnState -> ("name", "default info string")
-//
 func (s ConnState) Strings() (string, string) {
 	switch s {
 	case ConnNotConfigured:
@@ -85,9 +80,7 @@ func (s ConnState) Strings() (string, string) {
 	panic("internal error")
 }
 
-//
 // Get connection state
-//
 func (froxy *Froxy) GetConnState() (state ConnState, info string) {
 	froxy.connStateLock.Lock()
 	state = froxy.connState
@@ -97,9 +90,7 @@ func (froxy *Froxy) GetConnState() (state ConnState, info string) {
 	return
 }
 
-//
 // Set connection state
-//
 func (froxy *Froxy) SetConnState(state ConnState, info string) {
 	froxy.connStateLock.Lock()
 
@@ -116,7 +107,6 @@ func (froxy *Froxy) SetConnState(state ConnState, info string) {
 // ----- Connection management -----
 //
 // Set server parameters
-//
 func (froxy *Froxy) SetServerParams(s ServerParams) {
 	froxy.Env.SetServerParams(s)
 	froxy.sshTransport.Reconnect(s)
@@ -125,22 +115,17 @@ func (froxy *Froxy) SetServerParams(s ServerParams) {
 // ----- Statistics counters -----
 //
 // Add value to the statistics counter
-//
 func (froxy *Froxy) AddCounter(cnt *int32, val int32) {
 	atomic.AddInt32(cnt, val)
 	froxy.Raise(EventCountersChanged)
 }
 
-//
 // Increment the statistics counter
-//
 func (froxy *Froxy) IncCounter(cnt *int32) {
 	froxy.AddCounter(cnt, 1)
 }
 
-//
 // Decrement the statistics counter
-//
 func (froxy *Froxy) DecCounter(cnt *int32) {
 	froxy.AddCounter(cnt, -1)
 }
@@ -148,7 +133,6 @@ func (froxy *Froxy) DecCounter(cnt *int32) {
 // ----- Proxying regular HTTP requests (GET/PUT/HEAD etc) -----
 //
 // Regular HTTP request handler
-//
 func (froxy *Froxy) handleRegularHttp(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -193,9 +177,7 @@ func (froxy *Froxy) handleRegularHttp(
 	// TODO
 }
 
-//
 // Return HTTP response back to the client
-//
 func (froxy *Froxy) returnHttpResponse(w http.ResponseWriter, resp *http.Response) {
 	httpCopyHeaders(w.Header(), resp.Header)
 	w.WriteHeader(resp.StatusCode)
@@ -209,7 +191,6 @@ func (froxy *Froxy) returnHttpResponse(w http.ResponseWriter, resp *http.Respons
 // ----- Proxying CONNECT request -----
 //
 // HTTP CONNECT handler
-//
 func (froxy *Froxy) handleConnect(
 	w http.ResponseWriter,
 	r *http.Request,
@@ -243,7 +224,6 @@ func (froxy *Froxy) handleConnect(
 // ----- Handling requests to Froxy itself -----
 //
 // Handle local request
-//
 func (froxy *Froxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) {
 	// Handle webapi requests
 	if strings.HasPrefix(r.URL.Path, "/api/") {
@@ -291,7 +271,6 @@ func (froxy *Froxy) handleLocalRequest(w http.ResponseWriter, r *http.Request) {
 // ----- HTTP response generation helpers -----
 //
 // Format body of error response
-//
 func (froxy *Froxy) httpFormatError(status int, err error) (
 	contentType string, content []byte) {
 
@@ -339,10 +318,8 @@ func (froxy *Froxy) httpFormatError(status int, err error) (
 	return
 }
 
-//
 // Canonicalize URLs, embedded into HTML document, by replacing
 // relative links with absolute
-//
 func (froxy *Froxy) httpCanonicalizeURLs(input []byte) []byte {
 	return bytes.Replace(
 		input,
@@ -352,9 +329,7 @@ func (froxy *Froxy) httpCanonicalizeURLs(input []byte) []byte {
 	)
 }
 
-//
 // Reply with HTTP error
-//
 func (froxy *Froxy) httpError(w http.ResponseWriter, status int, err error) {
 	contentType, content := froxy.httpFormatError(status, err)
 	w.Header().Set("Content-Type", contentType)
@@ -366,9 +341,7 @@ func (froxy *Froxy) httpError(w http.ResponseWriter, status int, err error) {
 	w.Write(content)
 }
 
-//
 // ResponseWriterWithHooks.OnError hook
-//
 func (froxy *Froxy) httpOnError(w http.ResponseWriter, status int) []byte {
 	contentType, content := froxy.httpFormatError(status, nil)
 	w.Header().Set("Content-Type", contentType)
@@ -376,9 +349,7 @@ func (froxy *Froxy) httpOnError(w http.ResponseWriter, status int) []byte {
 	return content
 }
 
-//
 // ResponseWriterWithHooks.OnSuccess hook
-//
 func (froxy *Froxy) httpOnSuccess(w http.ResponseWriter,
 	r *http.Request, status int) {
 
@@ -397,7 +368,6 @@ func (froxy *Froxy) httpOnSuccess(w http.ResponseWriter,
 //
 // handle HTTP request. Provides multiplexing between regular request
 // and CONNECT request handlers
-//
 func (froxy *Froxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 	// Normalize hostname
 	host, port := NetSplitHostPort(strings.ToLower(r.Host), "")
@@ -451,7 +421,6 @@ func (froxy *Froxy) httpHandler(w http.ResponseWriter, r *http.Request) {
 // ----- Events handling -----
 //
 // Event monitoring goroutine
-//
 func (froxy *Froxy) eventGoroutine() {
 	events := froxy.Sub()
 	for {
@@ -464,9 +433,7 @@ func (froxy *Froxy) eventGoroutine() {
 	}
 }
 
-//
 // sysdep.SysEventNotifier callback
-//
 func (froxy *Froxy) sysEventCallback(se sysdep.SysEvent) {
 	switch se {
 	case sysdep.SysEventShutdown:
@@ -481,7 +448,6 @@ func (froxy *Froxy) sysEventCallback(se sysdep.SysEvent) {
 // ----- Miscellaneous helpers -----
 //
 // Get Froxy base URL (i.e., "http://localhost:8888/")
-//
 func (froxy *Froxy) BaseURL() string {
 	return "http://" + froxy.httpSrv.Addr + "/"
 }
@@ -489,7 +455,6 @@ func (froxy *Froxy) BaseURL() string {
 // ----- Froxy initialization -----
 //
 // Create a Froxy instance
-//
 func NewFroxy(env *Env, port int) (*Froxy, error) {
 	// Create Froxy structure
 	froxy := &Froxy{
@@ -547,9 +512,7 @@ func NewFroxy(env *Env, port int) (*Froxy, error) {
 	return froxy, nil
 }
 
-//
 // Run Froxy
-//
 func (froxy *Froxy) Run() {
 	go froxy.eventGoroutine()
 	froxy.Raise(EventStartup)

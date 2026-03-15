@@ -11,9 +11,7 @@ import (
 	"os"
 )
 
-//
 // Froxy administration (install/uninstall etc)
-//
 func FroxyAdm(env *Env, opt *Options) {
 	adm, err := NewAdm(env, opt.Port)
 	if err != nil {

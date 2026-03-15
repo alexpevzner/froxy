@@ -26,9 +26,7 @@ import (
 	"golang.org/x/crypto/ssh"
 )
 
-//
 // Key type
-//
 type KeyType int
 
 const (
@@ -40,9 +38,7 @@ const (
 	KeyEd25519
 )
 
-//
 // KeyType->string
-//
 func (t KeyType) String() string {
 	switch t {
 	case KeyRsa2048:
@@ -62,16 +58,12 @@ func (t KeyType) String() string {
 	return fmt.Sprintf("unknown(%d)", t)
 }
 
-//
 // Marshal KeyType to JSON
-//
 func (t KeyType) MarshalJSON() ([]byte, error) {
 	return []byte(`"` + t.String() + `"`), nil
 }
 
-//
 // Unmarshal KeyType from JSON
-//
 func (t *KeyType) UnmarshalJSON(data []byte) error {
 	switch s := string(data); s {
 	case `"rsa-2048"`:
@@ -92,9 +84,7 @@ func (t *KeyType) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-//
 // Key structure
-//
 type Key struct {
 	Type    KeyType     // Key type
 	Comment string      // Key comment
@@ -102,9 +92,7 @@ type Key struct {
 	priv    interface{} // Algo-specific private keys
 }
 
-//
 // JSON representation of the key
-//
 type keyJson struct {
 	Type    string `json:"type"`
 	Priv    []byte `json:"priv,omitempty"`
@@ -114,18 +102,14 @@ type keyJson struct {
 var _ = json.Marshaler(&Key{})
 var _ = json.Unmarshaler(&Key{})
 
-//
 // Panic on error
-//
 func check(err error) {
 	if err != nil {
 		panic(err)
 	}
 }
 
-//
 // Generate a key
-//
 func KeyGen(t KeyType) *Key {
 	var err error
 	key := &Key{Type: t}
@@ -176,9 +160,7 @@ func KeyGen(t KeyType) *Key {
 	return key
 }
 
-//
 // Marshal key to JSON
-//
 func (key *Key) MarshalJSON() ([]byte, error) {
 	jsn := keyJson{Comment: key.Comment}
 
@@ -201,9 +183,7 @@ func (key *Key) MarshalJSON() ([]byte, error) {
 	return json.Marshal(jsn)
 }
 
-//
 // Unmarshal key from JSON
-//
 func (key *Key) UnmarshalJSON(data []byte) error {
 	var jsn keyJson
 
@@ -258,9 +238,7 @@ func (key *Key) UnmarshalJSON(data []byte) error {
 	return nil
 }
 
-//
 // Encode key into PEM format
-//
 func (key *Key) EncodePEM() []byte {
 	var blk pem.Block
 
@@ -291,9 +269,7 @@ func (key *Key) EncodePEM() []byte {
 	return pem.EncodeToMemory(&blk)
 }
 
-//
 // Decode key from PEM format
-//
 func (key *Key) DecodePEM(data []byte) error {
 	priv, err := ssh.ParseRawPrivateKey(data)
 	if err != nil {
@@ -333,53 +309,39 @@ func (key *Key) DecodePEM(data []byte) error {
 	return nil
 }
 
-//
 // Obtain ssh.Signer
-//
 func (key *Key) Signer() ssh.Signer {
 	return key.signer
 }
 
-//
 // Get key id
-//
 func (key *Key) Id() string {
 	return fmt.Sprintf("%x", key.BinFingerprintMD5())
 }
 
-//
 // Generate SHA256 fingerprint in OpenSSH text format
-//
 func (key *Key) FingerprintSHA256() string {
 	return ssh.FingerprintSHA256(key.signer.PublicKey())
 }
 
-//
 // Generate MD5 fingerprin in OpenSSH text formatt
-//
 func (key *Key) FingerprintMD5() string {
 	return ssh.FingerprintLegacyMD5(key.signer.PublicKey())
 }
 
-//
 // Generate SHA256 binary fingerprint
-//
 func (key *Key) BinFingerprintSHA256() []byte {
 	sum := sha256.Sum256(key.signer.PublicKey().Marshal())
 	return sum[:]
 }
 
-//
 // Generate MD5 binary fingerprint
-//
 func (key *Key) BinFingerprintMD5() []byte {
 	sum := md5.Sum(key.signer.PublicKey().Marshal())
 	return sum[:]
 }
 
-//
 // Generate public key string for inclusion into authorized_keys file
-//
 func (key *Key) AuthorizedKey() string {
 	s := string(ssh.MarshalAuthorizedKey(key.signer.PublicKey()))
 	comment := strings.TrimFunc(key.Comment, unicode.IsSpace)
@@ -390,9 +352,7 @@ func (key *Key) AuthorizedKey() string {
 	return s
 }
 
-//
 // Decode RSA key type
-//
 func keyTypeRSA(priv *rsa.PrivateKey) (KeyType, error) {
 	switch bs := priv.N.BitLen(); bs {
 	case 2048:
@@ -404,9 +364,7 @@ func keyTypeRSA(priv *rsa.PrivateKey) (KeyType, error) {
 	}
 }
 
-//
 // Decode ECDSA key type
-//
 func keyTypeECDSA(priv *ecdsa.PrivateKey) (KeyType, error) {
 	switch bs := priv.Curve.Params().BitSize; bs {
 	case 256:

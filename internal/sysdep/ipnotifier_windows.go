@@ -23,9 +23,7 @@ import (
 	"unsafe"
 )
 
-//
 // IP events notifier -- Windows version
-//
 type ipNotifier struct {
 	hWnd             C.HWND   // Handle of hidden window for receiving system messages
 	addrChangeHandle C.HANDLE // Address change subscription handle
@@ -33,9 +31,7 @@ type ipNotifier struct {
 
 var sysEventNotifierPtr *SysEventNotifier
 
-//
 // Initialize ipNotifier part of the SysEventNotifier
-//
 func (sn *SysEventNotifier) ipNotifierInit() {
 	cb := syscall.NewCallback(ipNotifierCallback)
 

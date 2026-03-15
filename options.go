@@ -17,9 +17,7 @@ import (
 	"strings"
 )
 
-//
 // Froxy command
-//
 type OptCmd int
 
 const (
@@ -34,9 +32,7 @@ const (
 	OptCmdUninstall
 )
 
-//
 // Command flags
-//
 type OptFlags int
 
 const (
@@ -45,25 +41,19 @@ const (
 	OptFlgNoShortcut
 )
 
-//
 // Test if some of particular flags are set
-//
 func (flags OptFlags) Test(mask OptFlags) bool {
 	return flags&mask != 0
 }
 
-//
 // Parsed options
-//
 type Options struct {
 	Cmd   OptCmd   // Froxy command
 	Flags OptFlags // Command flags
 	Port  int      // TCP port
 }
 
-//
 // Parse options
-//
 func (opt *Options) Parse(env *Env) error {
 	// No arguments is a special case
 	args := os.Args[1:]
@@ -162,9 +152,7 @@ func (opt *Options) Parse(env *Env) error {
 	return nil
 }
 
-//
 // Print full usage
-//
 func (opt *Options) Usage(env *Env, full bool) {
 	const short_usage = `Usage: froxy command [options]
 
@@ -224,9 +212,7 @@ Advanced options:
 	os.Exit(0)
 }
 
-//
 // Print error message and exit
-//
 func (opt *Options) Error(err error) {
 	println(err.Error())
 	println("Try " + strings.ToLower(PROGRAM_NAME) + " -h for more information.")

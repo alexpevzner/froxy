@@ -21,9 +21,7 @@ import (
 	"unsafe"
 )
 
-//
 // Lock the file
-//
 func FileLock(file *os.File, exclusive, wait bool) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -61,9 +59,7 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 	}
 }
 
-//
 // Unlock the file
-//
 func FileUnlock(file *os.File) error {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()

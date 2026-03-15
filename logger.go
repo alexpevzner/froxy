@@ -17,9 +17,7 @@ import (
 	"time"
 )
 
-//
 // Log levels
-//
 type LogLevel int
 
 const (
@@ -33,7 +31,6 @@ const (
 // ----- The Logger -----
 //
 // The logger
-//
 type Logger struct {
 	level   LogLevel     // Current log level
 	path    string       // Path to log file
@@ -43,9 +40,7 @@ type Logger struct {
 	lock    sync.Mutex   // Access lock
 }
 
-//
 // Open log file
-//
 func (l *Logger) LogToFile(path string) error {
 	if l.file != nil {
 		panic("Internal error: (*Logger) LogToFile() called twice")
@@ -54,52 +49,38 @@ func (l *Logger) LogToFile(path string) error {
 	return l.reopen()
 }
 
-//
 // Write Trace-level log message
-//
 func (l *Logger) Trace(format string, args ...interface{}) {
 	l.format(LogLevelTrace, format, args...)
 }
 
-//
 // Write Debug-level log message
-//
 func (l *Logger) Debug(format string, args ...interface{}) {
 	l.format(LogLevelDebug, format, args...)
 }
 
-//
 // Write Info-level log message
-//
 func (l *Logger) Info(format string, args ...interface{}) {
 	l.format(LogLevelInfo, format, args...)
 }
 
-//
 // Write Warn-level log message
-//
 func (l *Logger) Warn(format string, args ...interface{}) {
 	l.format(LogLevelWarn, format, args...)
 }
 
-//
 // Write Error-level log message
-//
 func (l *Logger) Error(format string, args ...interface{}) {
 	l.format(LogLevelError, format, args...)
 }
 
-//
 // Write Error-level log message and terminate a program
-//
 func (l *Logger) Fatal(format string, args ...interface{}) {
 	l.format(LogLevelError, format, args...)
 	os.Exit(1)
 }
 
-//
 // Format a log line
-//
 func (l *Logger) format(level LogLevel, format string, args ...interface{}) {
 	l.lock.Lock()
 	defer l.lock.Unlock()
@@ -117,9 +98,7 @@ func (l *Logger) format(level LogLevel, format string, args ...interface{}) {
 	l.flush(level)
 }
 
-//
 // Format time prefix
-//
 func (l *Logger) fmtTime() {
 	now := time.Now()
 
@@ -132,9 +111,7 @@ func (l *Logger) fmtTime() {
 	l.buf.WriteString(": ")
 }
 
-//
 // Flush a line of log, collected in the buffer
-//
 func (l *Logger) flush(level LogLevel) {
 	l.buf.WriteByte('\n')
 	switch {
@@ -153,9 +130,7 @@ func (l *Logger) flush(level LogLevel) {
 	}
 }
 
-//
 // [Re]open the output file
-//
 func (l *Logger) reopen() error {
 	if l.file != nil {
 		l.file.Close()
@@ -167,9 +142,7 @@ func (l *Logger) reopen() error {
 	return err
 }
 
-//
 // gzip the log
-//
 func (l *Logger) gzip(ipath, opath string) error {
 	// Open input file
 	ifile, err := os.Open(ipath)
@@ -206,9 +179,7 @@ func (l *Logger) gzip(ipath, opath string) error {
 	return err
 }
 
-//
 // Rotate log files
-//
 func (l *Logger) rotate() {
 	prevpath := ""
 	for i := LOG_MAX_BACKUP_FILES; i >= 0; i-- {
@@ -237,7 +208,6 @@ func (l *Logger) rotate() {
 //
 // Log writer - implements io.Writer interface to
 // write to log files
-//
 type LogWriter struct {
 	logger *Logger  // Destination logger
 	level  LogLevel // Current log level
@@ -245,16 +215,12 @@ type LogWriter struct {
 
 var _ = io.Writer(&LogWriter{})
 
-//
 // Create new LogWriter
-//
 func (l *Logger) NewLogWriter(level LogLevel) *LogWriter {
 	return &LogWriter{l, level}
 }
 
-//
 // Write to log -- implements io.Writer interface
-//
 func (w *LogWriter) Write(data []byte) (int, error) {
 	l := w.logger
 

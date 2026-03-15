@@ -14,9 +14,7 @@ import (
 	"syscall"
 )
 
-//
 // Create os.ProcAttr to run process in background
-//
 func ProcAttrBackground() *os.ProcAttr {
 	sys := &syscall.SysProcAttr{
 		Setsid: true,

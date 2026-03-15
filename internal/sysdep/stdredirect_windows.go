@@ -19,9 +19,7 @@ import (
 	"unsafe"
 )
 
-//
 // Redirect stdin/stdout/stderr
-//
 func StdRedirect(stdin, stdout, stderr uintptr) error {
 	os.Stdin.Close()
 	os.Stdout.Close()

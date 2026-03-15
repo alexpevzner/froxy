@@ -27,58 +27,42 @@ import (
 	"unsafe"
 )
 
-//
 // Get system configuration directory for the program
-//
 func SysConfDir(program string) string {
 	return filepath.Join(getKnownFolder(&C.FOLDERID_ProgramData), program)
 }
 
-//
 // Get user home directory
-//
 func UserHomeDir() string {
 	return getKnownFolder(&C.FOLDERID_Profile)
 }
 
-//
 // Get user configuration directory for the program
-//
 func UserConfDir(program string) string {
 	return filepath.Join(getKnownFolder(&C.FOLDERID_LocalAppData), program)
 }
 
-//
 // Get user desktop directory
-//
 func UserDesktopDir() string {
 	return getKnownFolder(&C.FOLDERID_Desktop)
 }
 
-//
 // Get user startup (autostart) directory
-//
 func UserStartupDir() string {
 	return getKnownFolder(&C.FOLDERID_Startup)
 }
 
-//
 // Get user desktop file for the program
-//
 func UserDesktopFile(program, iconname string) string {
 	return filepath.Join(UserDesktopDir(), iconname+".lnk")
 }
 
-//
 // Get user startup file for the program
-//
 func UserStartupFile(program, iconname string) string {
 	return filepath.Join(UserStartupDir(), iconname+".lnk")
 }
 
-//
 // Get icon file extension
-//
 func IconExt() string {
 	return "ico"
 }

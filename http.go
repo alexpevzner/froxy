@@ -13,9 +13,7 @@ import (
 	"strings"
 )
 
-//
 // List of HTTP hop-by-hop headers
-//
 var httpHopByHopHeaders = []string{
 	"Connection",
 	"Keep-Alive",
@@ -27,21 +25,17 @@ var httpHopByHopHeaders = []string{
 	"Transfer-Encoding",
 }
 
-//
 // Copy HTTP headers
-//
 func httpCopyHeaders(dst, src http.Header) {
 	for k, v := range src {
 		dst[k] = v
 	}
 }
 
-//
 // Remove hop-by-hop headers.
 //
 // Upgrade headers are preserved, and if present, this function
 // returns true
-//
 func httpRemoveHopByHopHeaders(hdr http.Header) bool {
 	// We must delete headers listed in Connection
 	if c, ok := hdr["Connection"]; ok {
@@ -71,9 +65,7 @@ func httpRemoveHopByHopHeaders(hdr http.Header) bool {
 	return upgraded
 }
 
-//
 // Set response headers to disable cacheing
-//
 func httpNoCache(w http.ResponseWriter) {
 	w.Header().Set("Cache-Control", "no-cache, no-store, must-revalidate")
 	w.Header().Set("Pragma", "no-cache")

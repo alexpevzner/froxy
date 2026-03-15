@@ -21,16 +21,14 @@ const (
 	PollTag = "Froxy-Tag"
 )
 
-//
 // http.Handler with poll
 //
 // This handler modifies handling of GET requests as follows:
-// 1) For the returned data, a crypto hash of its content is
-//      calculated and returned as "Froxy-Tag" header
-// 2) If request contains a "Froxy-Tag" header, the handler
-//      waits until calculated hash of response content becomes
-//      different from hash in request
-//
+//  1. For the returned data, a crypto hash of its content is
+//     calculated and returned as "Froxy-Tag" header
+//  2. If request contains a "Froxy-Tag" header, the handler
+//     waits until calculated hash of response content becomes
+//     different from hash in request
 type HandlerWithPoll struct {
 	froxy   *Froxy // Back link to Froxy
 	event   Event  // Event that notifies about data change
@@ -38,9 +36,7 @@ type HandlerWithPoll struct {
 		w http.ResponseWriter, r *http.Request)
 }
 
-//
 // Serve HTTP request
-//
 func (h *HandlerWithPoll) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	if r.Method != "GET" {
 		h.handler(w, r)

@@ -14,9 +14,7 @@ import (
 	"syscall"
 )
 
-//
 // Lock the file
-//
 func FileLock(file *os.File, exclusive, wait bool) error {
 	var how int
 
@@ -38,9 +36,7 @@ func FileLock(file *os.File, exclusive, wait bool) error {
 	return err
 }
 
-//
 // Unlock the file
-//
 func FileUnlock(file *os.File) error {
 	return syscall.Flock(int(file.Fd()), syscall.LOCK_UN)
 }

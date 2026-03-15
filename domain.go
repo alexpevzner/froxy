@@ -13,7 +13,6 @@ import (
 	"strings"
 )
 
-//
 // Validate domain name
 //
 // This function validates international domain name, entered by user.
@@ -24,7 +23,6 @@ import (
 // In particular, it accepts URLs and domains with port. If function
 // accepts user input, the returned replacement will be a pure host
 // name, converted to lower case
-//
 func DomainValidate(domain string) (string, error) {
 	// Check for URL
 	domain = domainCheckURL(domain)
@@ -74,10 +72,8 @@ func DomainValidate(domain string) (string, error) {
 	return IDNDecode(domain), nil
 }
 
-//
 // If domain looks like URL, fetch and return the hostname
 // Otherwise, return the domain verbatim
-//
 func domainCheckURL(domain string) string {
 	// URL starts with scheme://host/...,
 	// where scheme must be [a-zA-Z][a-zA-Z0-9+-.]*

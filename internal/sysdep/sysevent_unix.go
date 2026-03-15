@@ -15,9 +15,7 @@ import (
 	"syscall"
 )
 
-//
 // Create new SysEventNotifier
-//
 func NewSysEventNotifier(callback func(SysEvent)) *SysEventNotifier {
 	sn := &SysEventNotifier{callback: callback}
 	sn.ipNotifierInit()
@@ -25,9 +23,7 @@ func NewSysEventNotifier(callback func(SysEvent)) *SysEventNotifier {
 	return sn
 }
 
-//
 // SysEventNotifier goroutine
-//
 func (sn *SysEventNotifier) goroutine() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, syscall.SIGINT)

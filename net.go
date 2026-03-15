@@ -12,12 +12,10 @@ import (
 	"strings"
 )
 
-//
 // Split network address into host and port
 //
 // Unlike net.SplitHostPort, port allowed to be missed and
 // will be substituted with defaultport at this case
-//
 func NetSplitHostPort(hostport, defaultport string) (host, port string) {
 	if strings.IndexByte(hostport, ':') != -1 {
 		var err error
@@ -30,9 +28,7 @@ func NetSplitHostPort(hostport, defaultport string) (host, port string) {
 	return hostport, defaultport
 }
 
-//
 // Provide default port, if port is missed in the address
-//
 func NetDefaultPort(hostport, defaultport string) string {
 	host, port := NetSplitHostPort(hostport, defaultport)
 	if port == "" {
@@ -42,10 +38,8 @@ func NetDefaultPort(hostport, defaultport string) string {
 	}
 }
 
-//
 // Normalize IP address. Returns 16-byte IP address for
 // both IPv4 and IPv6 addresses
-//
 func NetNormalizeIP(ip net.IP) net.IP {
 	if len(ip) == 4 {
 		ip = net.IPv4(ip[0], ip[1], ip[2], ip[3])

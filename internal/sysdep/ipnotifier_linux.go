@@ -15,16 +15,12 @@ import (
 	"syscall"
 )
 
-//
 // IP events notifier -- Linux version
-//
 type ipNotifier struct {
 	rtnetlink *os.File // rtnetlink socket wrapped into os.File
 }
 
-//
 // Initialize ipNotifier part of the SysEventNotifier
-//
 func (sn *SysEventNotifier) ipNotifierInit() {
 	// Open rtnetlink socket
 	sock, err := syscall.Socket(syscall.AF_NETLINK,
@@ -52,9 +48,7 @@ func (sn *SysEventNotifier) ipNotifierInit() {
 	go sn.ipNotifierGoroutine()
 }
 
-//
 // &ipNotifier goroutine
-//
 func (sn *SysEventNotifier) ipNotifierGoroutine() {
 	buf := make([]byte, 16384)
 

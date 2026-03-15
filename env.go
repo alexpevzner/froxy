@@ -18,9 +18,7 @@ import (
 	"github.com/alexpevzner/froxy/internal/sysdep"
 )
 
-//
 // Environment type
-//
 type Env struct {
 	Logger
 
@@ -54,9 +52,7 @@ type Env struct {
 	locksFiles map[EnvLock]*os.File // Currently open lock files
 }
 
-//
 // Global locks
-//
 type EnvLock string
 
 const (
@@ -68,7 +64,6 @@ const (
 // ----- Constructor -----
 //
 // Create new environment
-//
 func NewEnv() *Env {
 	env := &Env{
 		state:      &State{},
@@ -124,7 +119,6 @@ func NewEnv() *Env {
 // ----- Global locks -----
 //
 // Acquire the global lock
-//
 func (env *Env) LockAcquire(lock EnvLock, wait bool) error {
 	env.locksCond.L.Lock()
 	defer env.locksCond.L.Unlock()
@@ -165,23 +159,17 @@ EXIT:
 	return err
 }
 
-//
 // Convenience wrapper on LockAcquire() -- acquire lock with wait
-//
 func (env *Env) LockWait(lock EnvLock) error {
 	return env.LockAcquire(lock, true)
 }
 
-//
 // Convenience wrapper on LockAcquire() -- acquire lock without wait
-//
 func (env *Env) LockTry(lock EnvLock) error {
 	return env.LockAcquire(lock, false)
 }
 
-//
 // Release the global lock
-//
 func (env *Env) LockRelease(lock EnvLock) {
 	env.locksCond.L.Lock()
 	file := env.locksFiles[lock]
@@ -197,7 +185,6 @@ func (env *Env) LockRelease(lock EnvLock) {
 // ----- Multiple run avoidance -----
 //
 // Acquire froxy.lock
-//
 func (env *Env) FroxyLockAcquire() error {
 	err := env.LockTry(EnvLockRun)
 	if err == sysdep.ErrLockIsBusy {
@@ -206,9 +193,7 @@ func (env *Env) FroxyLockAcquire() error {
 	return err
 }
 
-//
 // Release froxy.lock
-//
 func (env *Env) FroxyLockRelease() {
 	env.LockRelease(EnvLockRun)
 }
@@ -216,7 +201,6 @@ func (env *Env) FroxyLockRelease() {
 // ----- stdin/stdout/stderr redirection -----
 //
 // Detach stdin/stdout/stderr from console
-//
 func (env *Env) Detach() error {
 	nul, err := syscall.Open(os.DevNull, syscall.O_RDONLY, 0644)
 	if err != nil {
@@ -235,7 +219,6 @@ func (env *Env) Detach() error {
 // ----- Persistent configuration -----
 //
 // Set TCP port
-//
 func (env *Env) SetPort(port int) {
 	env.stateLock.Lock()
 	env.state.Port = port
@@ -243,9 +226,7 @@ func (env *Env) SetPort(port int) {
 	env.stateLock.Unlock()
 }
 
-//
 // Get TCP port
-//
 func (env *Env) GetPort() int {
 	env.stateLock.RLock()
 	port := env.state.Port
@@ -257,9 +238,7 @@ func (env *Env) GetPort() int {
 	return port
 }
 
-//
 // Get server parameters
-//
 func (env *Env) GetServerParams() ServerParams {
 	env.stateLock.RLock()
 	s := env.state.Server
@@ -268,9 +247,7 @@ func (env *Env) GetServerParams() ServerParams {
 	return s
 }
 
-//
 // Set server parameters
-//
 func (env *Env) SetServerParams(s ServerParams) {
 	env.stateLock.Lock()
 	env.state.Server = s
@@ -278,9 +255,7 @@ func (env *Env) SetServerParams(s ServerParams) {
 	env.stateLock.Unlock()
 }
 
-//
 // Get sites
-//
 func (env *Env) GetSites() (sites []SiteParams) {
 	env.stateLock.RLock()
 	sites = env.state.Sites
@@ -291,13 +266,11 @@ func (env *Env) GetSites() (sites []SiteParams) {
 	return
 }
 
-//
 // Set (add or update) a single site entry
 //
 // Please note, a site is searched by `host' parameter,
 // but if site.Host != host, the existent site will be
 // renamed
-//
 func (env *Env) SetSite(host string, site SiteParams) {
 	host = strings.ToLower(host)
 	site.Host = strings.ToLower(site.Host)
@@ -331,9 +304,7 @@ SAVE:
 	env.state.Save(env.PathUserStateFile)
 }
 
-//
 // Del a site
-//
 func (env *Env) DelSite(host string) {
 	host = strings.ToLower(host)
 

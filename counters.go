@@ -7,9 +7,7 @@
 
 package main
 
-//
 // Collection of statistic counters
-//
 type Counters struct {
 	UserConnections int32 `json:"user_conns"`        // Local user connections
 	TCPConnections  int32 `json:"tcp_conns"`         // Direct TCP connections

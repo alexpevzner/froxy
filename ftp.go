@@ -30,15 +30,11 @@ type FTPProxy struct {
 	idleChan        chan struct{}                 // Signaling channel for idle expiration goroutine
 }
 
-//
 // Type ftpIddleConnBucket represents a bucket of
 // idle connections to the same site
-//
 type ftpIddleConnBucket map[*ftpConn]time.Time
 
-//
 // FTP connection
-//
 type ftpConn struct {
 	*ftp.ServerConn           // Underlying ftp.ServerConn
 	ftpp            *FTPProxy // Back link to owning FTPProxy
@@ -48,9 +44,7 @@ type ftpConn struct {
 	closed          bool      // This is closed connection
 }
 
-//
 // Create new FTP proxy
-//
 func NewFTPProxy(froxy *Froxy) *FTPProxy {
 	ftpp := &FTPProxy{
 		froxy:           froxy,
@@ -62,9 +56,7 @@ func NewFTPProxy(froxy *Froxy) *FTPProxy {
 	return ftpp
 }
 
-//
 // Handle a single "HTTP" GET request
-//
 func (ftpp *FTPProxy) Handle(w http.ResponseWriter, r *http.Request, transport Transport) {
 	// Check protocol and method
 	if r.URL.Scheme != "ftp" {
@@ -150,9 +142,7 @@ RETRY:
 	ftpp.sendError(w, httpStatus, err)
 }
 
-//
 // Read the file
-//
 func (ftpp *FTPProxy) readFile(conn *ftpConn, path string) (*ftp.Response, int, error) {
 	// Try to fetch the file
 	ftpp.froxy.Debug("FTP: RETR %q", path)
@@ -179,9 +169,7 @@ func (ftpp *FTPProxy) readFile(conn *ftpConn, path string) (*ftp.Response, int, 
 	return nil, httpStatus, err
 }
 
-//
 // Read the directory
-//
 func (ftpp *FTPProxy) readDir(conn *ftpConn, path string) ([]*ftp.Entry, int, error) {
 	ftpp.froxy.Debug("FTP: CWD %q", path)
 	err := conn.ChangeDir(path)
@@ -206,9 +194,7 @@ func (ftpp *FTPProxy) readDir(conn *ftpConn, path string) ([]*ftp.Entry, int, er
 	return files, 0, err
 }
 
-//
 // Send a error response
-//
 func (ftpp *FTPProxy) sendError(w http.ResponseWriter, httpStatus int, err error) {
 	if ftperr, ok := err.(*textproto.Error); ok {
 		err = fmt.Errorf("FTP: %s", err)
@@ -224,9 +210,7 @@ func (ftpp *FTPProxy) sendError(w http.ResponseWriter, httpStatus int, err error
 	ftpp.froxy.httpError(w, httpStatus, err)
 }
 
-//
 // Send a response with directory listing
-//
 func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
 	path string, files []*ftp.Entry) {
 
@@ -363,17 +347,13 @@ func (ftpp *FTPProxy) sendDirectory(w http.ResponseWriter, r *http.Request,
 	w.Write([]byte("</fieldset></body></html>\n"))
 }
 
-//
 // Send a response with directory listing
-//
 func (ftpp *FTPProxy) sendFile(w http.ResponseWriter, body *ftp.Response) {
 	io.Copy(w, body)
 	body.Close()
 }
 
-//
 // Dial a connection
-//
 func (ftpp *FTPProxy) dialConn(transport Transport, site_url url.URL) (*ftpConn, error) {
 	// Connect
 	addr := NetDefaultPort(site_url.Host, "21")
@@ -418,9 +398,7 @@ func (ftpp *FTPProxy) dialConn(transport Transport, site_url url.URL) (*ftpConn,
 	return conn, nil
 }
 
-//
 // Get a connection
-//
 func (ftpp *FTPProxy) getConn(site string) *ftpConn {
 	ftpp.idleLock.Lock()
 	defer ftpp.idleLock.Unlock()
@@ -447,9 +425,7 @@ func (ftpp *FTPProxy) getConn(site string) *ftpConn {
 	return conn
 }
 
-//
 // Put a connection
-//
 func (conn *ftpConn) putConn() {
 	if conn.closed {
 		return
@@ -475,9 +451,7 @@ func (conn *ftpConn) putConn() {
 	}
 }
 
-//
 // Close a connection
-//
 func (conn *ftpConn) Close() {
 	if !conn.closed {
 		conn.closed = true
@@ -486,9 +460,7 @@ func (conn *ftpConn) Close() {
 	}
 }
 
-//
 // This function expires idle connections. It runs as a goroutine
-//
 func (ftpp *FTPProxy) expireIdleConnections() {
 	timer := time.NewTimer(time.Hour)
 	timer.Stop()

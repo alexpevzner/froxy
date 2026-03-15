@@ -23,9 +23,7 @@ import (
 	"unsafe"
 )
 
-//
 // Create new SysEventNotifier
-//
 func NewSysEventNotifier(callback func(SysEvent)) *SysEventNotifier {
 	sn := &SysEventNotifier{callback: callback}
 	sn.ipNotifierInit()
@@ -36,9 +34,7 @@ func NewSysEventNotifier(callback func(SysEvent)) *SysEventNotifier {
 	return sn
 }
 
-//
 // This goroutine waits for console events, using Go's os/signal wrapper
-//
 func (sn *SysEventNotifier) conGoroutine() {
 	c := make(chan os.Signal, 1)
 	signal.Notify(c, os.Interrupt)
@@ -47,9 +43,7 @@ func (sn *SysEventNotifier) conGoroutine() {
 	C.PostMessage(sn.ipnotifier.hWnd, C.WM_CLOSE, 0, 0)
 }
 
-//
 // This goroutine creates invisible window and waits for system messages
-//
 func (sn *SysEventNotifier) winGoroutine(hWndChan chan C.HWND) {
 	runtime.LockOSThread()
 	defer runtime.UnlockOSThread()
@@ -100,9 +94,7 @@ func (sn *SysEventNotifier) winGoroutine(hWndChan chan C.HWND) {
 	}
 }
 
-//
 // SysEventNotifier window procedure
-//
 func (sn *SysEventNotifier) wndProc(hWnd C.HWND, msg C.UINT, wParam C.WPARAM, lParam C.LPARAM) C.LRESULT {
 	switch msg {
 	case C.WM_CLOSE:

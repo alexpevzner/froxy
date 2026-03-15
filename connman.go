@@ -15,7 +15,6 @@ import (
 	"unsafe"
 )
 
-//
 // ConnMan manages all outgoing TCP connections
 //
 // It adds the following functionality to standard net.Conn connections: 1)
@@ -24,7 +23,6 @@ import (
 // local interfaces, are monitored. When connection's local address goes away,
 // connection automatically closed 3) It automatically manages statistics
 // counter
-//
 type ConnMan struct {
 	// Note, due to a bug in Go runtime, on Win32 this 64-bit atomic field
 	// must be 64-bit aligned. The simplest way to ensure that is to place
@@ -36,9 +34,7 @@ type ConnMan struct {
 	cmd    chan interface{} // Command channel for ConnMan goroutine
 }
 
-//
 // Create new ConnMan
-//
 func NewConnMan(froxy *Froxy) *ConnMan {
 	connman := &ConnMan{
 		froxy: froxy,
@@ -54,9 +50,7 @@ func NewConnMan(froxy *Froxy) *ConnMan {
 	return connman
 }
 
-//
 // Dial new connection
-//
 func (connman *ConnMan) DialContext(ctx context.Context,
 	network, addr string,
 	counter *int32) (*Conn, error) {
@@ -86,10 +80,8 @@ func (connman *ConnMan) DialContext(ctx context.Context,
 	return conn, nil
 }
 
-//
 // Check local IP addresses and close connections
 // that correspond to addresses not longer available
-//
 func (connman *ConnMan) recheckAddresses(byAddr map[string]map[*Conn]struct{}) {
 	// Obtain all local addresses
 	interfaces, err := net.Interfaces()
@@ -136,9 +128,7 @@ func (connman *ConnMan) recheckAddresses(byAddr map[string]map[*Conn]struct{}) {
 	}()
 }
 
-//
 // Connection manager goroutine
-//
 func (connman *ConnMan) goroutine() {
 	events := connman.froxy.Sub(EventIpAddrChanged)
 	defer connman.froxy.Unsub(events)
@@ -260,7 +250,6 @@ func (connman *ConnMan) goroutine() {
 // ----- Connection manager goroutine commands -----
 //
 // Add a connection
-//
 type connManCmdAdd struct {
 	// Note, due to a bug in Go runtime, on Win32 this 64-bit atomic field
 	// must be 64-bit aligned. The simplest way to ensure that is to place
@@ -277,7 +266,6 @@ type connManCmdDel struct {
 // ----- The managed connection -----
 //
 // Type Conn represents a single TCP connection
-//
 type Conn struct {
 	net.Conn                 // Underlying connection
 	connman  *ConnMan        // Back link to ConnMan
@@ -286,9 +274,7 @@ type Conn struct {
 	errptr   unsafe.Pointer  // Close reason, *error
 }
 
-//
 // Read from connection
-//
 func (conn *Conn) Read(b []byte) (n int, err error) {
 	n, err = conn.Conn.Read(b)
 	if err != nil {
@@ -300,9 +286,7 @@ func (conn *Conn) Read(b []byte) (n int, err error) {
 	return
 }
 
-//
 // Write to connection
-//
 func (conn *Conn) Write(b []byte) (n int, err error) {
 	n, err = conn.Conn.Write(b)
 	if err != nil {
@@ -314,9 +298,7 @@ func (conn *Conn) Write(b []byte) (n int, err error) {
 	return
 }
 
-//
 // Abort the connection
-//
 func (conn *Conn) Abort(reason error) error {
 	var err error
 
@@ -332,9 +314,7 @@ func (conn *Conn) Abort(reason error) error {
 	return err
 }
 
-//
 // Close the connection
-//
 func (conn *Conn) Close() error {
 	return conn.Abort(nil)
 }

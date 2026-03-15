@@ -20,9 +20,7 @@ import (
 	"github.com/alexpevzner/froxy/internal/keys"
 )
 
-//
 // Set of keys with disk persistence
-//
 type KeySet struct {
 	env   *Env                 // Back link to environment
 	lock  sync.Mutex           // Access lock
@@ -30,9 +28,7 @@ type KeySet struct {
 	infos map[string]*KeyInfo  // Key id->KeyInfo
 }
 
-//
 // Create a KeySet
-//
 func NewKeySet(env *Env) *KeySet {
 	set := &KeySet{
 		env:   env,
@@ -44,9 +40,7 @@ func NewKeySet(env *Env) *KeySet {
 	return set
 }
 
-//
 // Key information structure, for WebAPI
-//
 type KeyInfo struct {
 	Id       string       `json:"id"`                  // Key id
 	Type     keys.KeyType `json:"type"`                // Key type
@@ -57,9 +51,7 @@ type KeyInfo struct {
 	Date     time.Time    `json:"date,omitempty"`      // Creation date
 }
 
-//
 // Create KeyInfo from key
-//
 func NewKeyInfo(key *keys.Key) *KeyInfo {
 	return &KeyInfo{
 		Id:       key.Id(),
@@ -71,9 +63,7 @@ func NewKeyInfo(key *keys.Key) *KeyInfo {
 	}
 }
 
-//
 // Get keys
-//
 func (set *KeySet) GetKeys() []KeyInfo {
 	set.lock.Lock()
 	defer set.lock.Unlock()
@@ -94,9 +84,7 @@ func (set *KeySet) GetKeys() []KeyInfo {
 	return infos
 }
 
-//
 // Get key by id
-//
 func (set *KeySet) KeyById(id string) *keys.Key {
 	set.lock.Lock()
 	defer set.lock.Unlock()
@@ -104,9 +92,7 @@ func (set *KeySet) KeyById(id string) *keys.Key {
 	return set.keys[id]
 }
 
-//
 // Modify the key
-//
 func (set *KeySet) KeyMod(id string, newinfo *KeyInfo) error {
 	// Acquire the lock
 	set.lock.Lock()
@@ -140,9 +126,7 @@ func (set *KeySet) KeyMod(id string, newinfo *KeyInfo) error {
 	return nil
 }
 
-//
 // Del key from KeySet.
-//
 func (set *KeySet) KeyDel(id string) error {
 	// Acquire the lock
 	set.lock.Lock()
@@ -161,9 +145,7 @@ func (set *KeySet) KeyDel(id string) error {
 	return set.deleteKey(key)
 }
 
-//
 // Generate new key
-//
 func (set *KeySet) KeyGen(info *KeyInfo) (*KeyInfo, error) {
 	// Generate a key
 	key := keys.KeyGen(info.Type)
@@ -194,14 +176,11 @@ func (set *KeySet) KeyGen(info *KeyInfo) (*KeyInfo, error) {
 // ----- On-disk key storage -----
 //
 // Get key's full path
-//
 func (set *KeySet) filePath(key *keys.Key) string {
 	return filepath.Join(set.env.PathUserKeysDir, key.Id())
 }
 
-//
 // Check that file name is a valid key's filename
-//
 func (set *KeySet) checkName(name string) bool {
 	if len(name) != md5.Size*2 {
 		return false
@@ -220,9 +199,7 @@ func (set *KeySet) checkName(name string) bool {
 	return true
 }
 
-//
 // Load all keys from disk
-//
 func (set *KeySet) load() {
 	// Acquire keys lock
 	err := set.env.LockWait(EnvLockKeys)
@@ -292,9 +269,7 @@ func (set *KeySet) load() {
 	set.infos = loadedInfos
 }
 
-//
 // Update key at disk
-//
 func (set *KeySet) updateKey(key *keys.Key, info *KeyInfo) error {
 
 	// Acquire keys lock
@@ -316,9 +291,7 @@ func (set *KeySet) updateKey(key *keys.Key, info *KeyInfo) error {
 	return err
 }
 
-//
 // Delete key from disk
-//
 func (set *KeySet) deleteKey(key *keys.Key) error {
 	// Acquire keys lock
 	err := set.env.LockWait(EnvLockKeys)

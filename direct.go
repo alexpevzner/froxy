@@ -13,17 +13,13 @@ import (
 	"net/http"
 )
 
-//
 // Transport that connects directly
-//
 type DirectTransport struct {
 	http.Transport        // Direct http.Transport
 	froxy          *Froxy // Back link to Froxy
 }
 
-//
 // Create new DirectTransport
-//
 func NewDirectTransport(froxy *Froxy) *DirectTransport {
 	t := &DirectTransport{
 		Transport: http.Transport{
@@ -40,16 +36,12 @@ func NewDirectTransport(froxy *Froxy) *DirectTransport {
 	return t
 }
 
-//
 // Dial new TCP connection
-//
 func (t *DirectTransport) Dial(network, addr string) (net.Conn, error) {
 	return t.DialContext(context.Background(), network, addr)
 }
 
-//
 // Dial new TCP connection with context
-//
 func (t *DirectTransport) DialContext(ctx context.Context,
 	network, addr string) (net.Conn, error) {
 

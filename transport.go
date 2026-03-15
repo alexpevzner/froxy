@@ -12,9 +12,7 @@ import (
 	"net/http"
 )
 
-//
 // Transport interface
-//
 type Transport interface {
 	http.RoundTripper
 	Dial(net, addr string) (net.Conn, error)
