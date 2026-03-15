@@ -161,8 +161,8 @@ Common commands:
 	Install and start the ${PROG}
 
   froxy -u
-
 	Uninstall the ${PROG}
+
   froxy -h
         Print all commands and options
 `
